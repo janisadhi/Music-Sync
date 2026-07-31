@@ -1,0 +1,59 @@
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: music-sync-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: "music_sync"
+      POSTGRES_USER: "music_sync"
+      POSTGRES_PASSWORD: "music_sync"
+
+    ports:
+      - "127.0.0.1:5432:5432"
+
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U music_sync -d music_sync
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: music-sync-app
+    restart: unless-stopped
+
+    environment:
+      DATABASE_URL: "postgresql+psycopg://music_sync:music_sync@postgres:5432/music_sync"
+
+      APP_NAME: "music-sync"
+      APP_ENV: "production"
+      APP_DEBUG: "false"
+
+      MUSIC_ROOT: "/app/data/music"
+
+      SYNC_INTERVAL_SECONDS: "60"
+
+      YOUTUBE_PLAYLIST_URL: "${YOUTUBE_PLAYLIST_URL}"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    volumes:
+      - ./data/music:/app/data/music
+      - ./data/no-lyrics:/app/data/no-lyrics

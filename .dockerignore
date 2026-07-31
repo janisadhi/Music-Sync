@@ -1,0 +1,14 @@
+.venv
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+.env
+
+data/postgres
+data/music
+data/no-lyrics
+
+*.md
