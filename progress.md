@@ -1,16 +1,16 @@
-# Music Sync — Project Progress
+# Music Sync — Development Progress
 
-## 1. Project Overview
+## Project Overview
 
-**Music Sync** is an automated music synchronization service that monitors a YouTube playlist and maintains a local music library.
+**Music Sync** is an automated service that synchronizes a YouTube playlist with a local music library.
 
-The system currently performs the following workflow:
+The current architecture is:
 
 ```text
 YouTube Playlist
        │
        ▼
-Playlist Watcher
+YouTube Watcher
        │
        ▼
 Playlist Reconciler
@@ -18,730 +18,541 @@ Playlist Reconciler
        ▼
 PostgreSQL
        │
-       ▼
-MP3 Downloader
+       ├── Download Service ──► Local Music Library
        │
-       ▼
-Synced Lyrics Service
-       │
-       ├── Lyrics found
-       │      └── MP3 + LRC → data/music/
-       │
-       └── No synced lyrics
-              └── MP3 → data/no-lyrics/
-```
+       └── Lyrics Service ───► .lrc Files
+       
+FastAPI
+   │
+   ├── Health API
+   ├── Songs API
+   ├── Audio API
+   └── Lyrics API
 
-The system is designed to be idempotent, meaning running the synchronization repeatedly should not download or process the same song again.
+APScheduler
+   │
+   └── Periodic Sync
+```
 
 ---
 
-# 2. Current Project Structure
+# 1. Current Status
+
+| Component                    | Status                                    |
+| ---------------------------- | ----------------------------------------- |
+| Python project structure     | Complete                                  |
+| Environment configuration    | Complete                                  |
+| PostgreSQL                   | Working                                   |
+| SQLAlchemy models            | Working                                   |
+| Alembic setup                | Added                                     |
+| YouTube playlist watcher     | Working                                   |
+| Playlist reconciliation      | Working                                   |
+| New song detection           | Working                                   |
+| Song database persistence    | Working                                   |
+| Song downloader              | Working, needs final refinement           |
+| MP3 conversion               | Implemented but requires FFmpeg in Docker |
+| Lyrics search                | Working                                   |
+| Synced `.lrc` generation     | Working                                   |
+| No-lyrics handling           | Implemented/tested                        |
+| FastAPI                      | Working                                   |
+| Health endpoint              | Working                                   |
+| Songs endpoint               | Working                                   |
+| Audio endpoint               | Working                                   |
+| Lyrics endpoint              | Working                                   |
+| APScheduler                  | Working                                   |
+| Immediate sync on startup    | Working                                   |
+| Periodic sync                | Working                                   |
+| Docker Compose               | Working                                   |
+| PostgreSQL Docker container  | Working                                   |
+| Application Docker container | Working                                   |
+| Docker networking            | Working                                   |
+| Persistent music volume      | Configured                                |
+| Production environment       | Working                                   |
+| Clean database reset         | Supported                                 |
+| End-to-end clean sync test   | Next step                                 |
+
+---
+
+# 2. Project Structure
+
+Current application structure:
 
 ```text
-music-sync/
+app/
+├── api/
+│   ├── __init__.py
+│   ├── playlists.py
+│   ├── schemas.py
+│   └── songs.py
+│
+├── core/
+│   ├── __init__.py
+│   └── config.py
+│
+├── database/
+│   ├── __init__.py
+│   ├── models.py
+│   └── session.py
+│
+├── downloader/
+│   ├── __init__.py
+│   ├── service.py
+│   └── test_run.py
+│
+├── library/
+│   └── __init__.py
+│
+├── lyrics/
+│   ├── __init__.py
+│   ├── service.py
+│   └── test_run.py
+│
+├── reconciler/
+│   ├── __init__.py
+│   ├── service.py
+│   └── test_run.py
+│
+├── scheduler/
+│   ├── __init__.py
+│   ├── service.py
+│   └── test_run.py
+│
+├── sync/
+│   ├── __init__.py
+│   ├── service.py
+│   └── test_run.py
+│
+├── watcher/
+│   ├── __init__.py
+│   └── youtube.py
+│
+├── main.py
+│
 ├── alembic/
-├── alembic.ini
-├── app/
-│   ├── core/
-│   │   └── config.py
-│   │
-│   ├── database/
-│   │   ├── models.py
-│   │   └── session.py
-│   │
-│   ├── downloader/
-│   │   ├── service.py
-│   │   └── test_run.py
-│   │
-│   ├── lyrics/
-│   │   ├── __init__.py
-│   │   ├── service.py
-│   │   └── test_run.py
-│   │
-│   ├── reconciler/
-│   │   ├── service.py
-│   │   └── test_run.py
-│   │
-│   ├── sync/
-│   │   ├── __init__.py
-│   │   ├── service.py
-│   │   └── test_run.py
-│   │
-│   └── watcher/
-│       └── youtube.py
-│
-├── config/
-├── data/
-│   ├── music/
-│   ├── no-lyrics/
-│   └── postgres/
-│
-├── tests/
 ├── docker-compose.yml
+├── Dockerfile
 ├── requirements.txt
-└── .env
+├── .env
+├── .env.example
+├── .gitignore
+├── progress.md
+└── README.md
 ```
 
 ---
 
-# 3. Technology Stack
+# 3. Configuration
 
-## Backend
+`app/core/config.py` uses Pydantic Settings.
 
-* Python
-* SQLAlchemy
-* PostgreSQL
-* Alembic
-* Pydantic Settings
+Current important settings:
 
-## YouTube
+```text
+APP_NAME
+APP_ENV
+APP_DEBUG
+DATABASE_URL
+MUSIC_ROOT
+SYNC_INTERVAL_SECONDS
+YOUTUBE_PLAYLIST_URL
+```
 
-* `yt-dlp`
+Production Docker configuration currently uses:
 
-Used for:
+```text
+APP_ENV=production
+APP_DEBUG=false
+MUSIC_ROOT=/app/data/music
+SYNC_INTERVAL_SECONDS=60
+```
 
-* Reading YouTube playlists
-* Extracting playlist entries
-* Downloading audio
-* Converting audio to MP3
-
-## Lyrics
-
-* LRCLIB API
-* `httpx`
-
-Used to retrieve synchronized lyrics in `.lrc` format.
-
-## Scheduling
-
-* APScheduler
-
-Used to execute the synchronization process periodically.
-
-## Infrastructure
-
-* Docker
-* Docker Compose
-* PostgreSQL container
+The application receives the YouTube playlist URL through Docker Compose environment configuration.
 
 ---
 
-# 4. Database
+# 4. PostgreSQL
 
-The project currently uses PostgreSQL.
+PostgreSQL is running inside Docker.
 
-The main tables implemented so far are:
+Current container:
 
 ```text
-playlists
-songs
+music-sync-postgres
 ```
+
+Image:
+
+```text
+postgres:17
+```
+
+Database:
+
+```text
+music_sync
+```
+
+User:
+
+```text
+music_sync
+```
+
+PostgreSQL is exposed locally through:
+
+```text
+127.0.0.1:5432
+```
+
+Persistent database storage:
+
+```text
+./data/postgres
+```
+
+Healthcheck is configured using:
+
+```text
+pg_isready
+```
+
+The application waits for PostgreSQL to become healthy before starting.
 
 ---
 
-# 5. Playlist Model
+# 5. Database Models
 
-The `playlists` table stores information about monitored YouTube playlists.
+Two primary models currently exist.
 
-Important fields:
+## Playlist
 
-```text
-id
-youtube_playlist_id
-name
-url
-enabled
-created_at
-updated_at
-```
+Contains:
 
-The YouTube playlist ID is unique.
+* YouTube playlist ID
+* playlist name
+* playlist URL
+* enabled state
+* timestamps
 
-This prevents the same playlist from being registered multiple times.
+## Song
 
----
+Contains:
 
-# 6. Song Model
+* playlist ID
+* YouTube video ID
+* title
+* artist
+* album
+* duration
+* playlist position
+* download status
+* lyrics status
+* audio file path
+* lyrics file path
+* error message
+* timestamps
 
-The `songs` table stores individual playlist songs.
-
-Current fields include:
-
-```text
-id
-playlist_id
-youtube_video_id
-title
-artist
-album
-duration
-position
-
-download_status
-lyrics_status
-
-file_path
-lyrics_path
-
-error_message
-
-created_at
-updated_at
-```
-
-### Download states
-
-The downloader currently uses states such as:
+Current status values include:
 
 ```text
+download_status:
 pending
 downloading
 downloaded
 failed
 ```
 
-### Lyrics states
-
-The lyrics service uses:
+and:
 
 ```text
+lyrics_status:
 pending
+downloading
 downloaded
 unavailable
 failed
 ```
 
-The distinction between `unavailable` and `failed` is important.
-
-### `unavailable`
-
-Means the service successfully checked LRCLIB but could not find synchronized lyrics.
-
-The song is therefore moved to:
-
-```text
-data/no-lyrics/
-```
-
-### `failed`
-
-Usually indicates a temporary or technical failure, such as:
-
-```text
-503 Service Unavailable
-429 Too Many Requests
-network failure
-```
-
-The song remains:
-
-```text
-lyrics_status = pending
-```
-
-so that the next synchronization cycle can retry it.
-
 ---
 
-# 7. YouTube Playlist Watcher
+# 6. YouTube Playlist Watcher
 
-File:
+The watcher successfully retrieves songs from the configured YouTube playlist.
 
-```text
-app/watcher/youtube.py
-```
-
-The watcher uses `yt-dlp` to inspect the configured YouTube playlist.
-
-It runs with:
-
-```python
-extract_flat = True
-skip_download = True
-```
-
-This allows the system to discover playlist entries without downloading them.
-
-Each entry is converted into a:
-
-```python
-YouTubeSong
-```
-
-object containing:
+Example result:
 
 ```text
-video_id
+Playlist songs discovered: 13
+```
+
+The watcher provides information such as:
+
+```text
+YouTube video ID
 title
-artist
-album
 duration
 position
 ```
 
-Example:
-
-```text
-0  No Surprises (Remastered)  7374CZQoS2Y
-1  Fake Plastic Trees          6gDhsUWCHrg
-2  Let Down (Remastered)      ZVgHPSyEIqk
-...
-```
-
-The watcher has been successfully tested against the real playlist.
+The application is currently able to detect changes in the playlist.
 
 ---
 
-# 8. Playlist Reconciliation
+# 7. Playlist Reconciliation
 
-File:
+The reconciler compares the YouTube playlist with the local database.
 
-```text
-app/reconciler/service.py
+Test command:
+
+```bash
+python -m app.reconciler.test_run
 ```
 
-The reconciler compares the current YouTube playlist against the database.
-
-For every YouTube song it checks:
+Successful result:
 
 ```text
-playlist_id
-youtube_video_id
-```
-
-If the song already exists, it is skipped.
-
-If it does not exist, a new `Song` record is created.
-
-Example output:
-
-```text
-YouTube songs: 9
-New songs: 1
-```
-
-After adding a song:
-
-```text
+YouTube songs: 11
 New songs: 0
 ```
 
-on subsequent runs.
+The reconciler correctly avoids inserting duplicate songs.
 
-This confirms that duplicate prevention is working.
-
----
-
-# 9. Removed Song Handling
-
-The reconciler was extended to detect songs that no longer exist in the YouTube playlist.
-
-Example:
+When a new YouTube song is added:
 
 ```text
-Removed from playlist: Bohemian Rhapsody (yl3TsqL0ZPw)
+New songs added: 1
 ```
 
-The corresponding database record was removed.
-
-This is important because the local database should represent the current playlist rather than permanently accumulating deleted playlist entries.
-
----
-
-# 10. Song Downloader
-
-File:
-
-```text
-app/downloader/service.py
-```
-
-The downloader selects:
+The song is inserted with:
 
 ```text
 download_status = pending
-```
-
-songs.
-
-Example:
-
-```text
-Pending songs selected: 1
-Downloading: 9 - Kendrick Lamar - Count Me Out
-```
-
-The YouTube URL is generated from:
-
-```text
-youtube_video_id
-```
-
-and passed to `yt-dlp`.
-
----
-
-# 11. Audio Download
-
-The downloader uses:
-
-```text
-bestaudio/best
-```
-
-and then FFmpeg extracts MP3 audio.
-
-The resulting file is stored under:
-
-```text
-data/music/
-```
-
-Example:
-
-```text
-data/music/Kendrick Lamar - Count Me Out.mp3
-```
-
-The database is then updated:
-
-```text
-download_status = downloaded
-file_path = data/music/Kendrick Lamar - Count Me Out.mp3
-```
-
----
-
-# 12. Failed YouTube Downloads
-
-The system correctly handles unavailable YouTube videos.
-
-For example:
-
-```text
-Bohemian Rhapsody
-```
-
-returned:
-
-```text
-Video unavailable. This video is not available
-```
-
-The database recorded:
-
-```text
-download_status = failed
-```
-
-with the error message.
-
-This song was later removed from the playlist during reconciliation, so it no longer remains in the active playlist database.
-
----
-
-# 13. YouTube JavaScript Runtime Warning
-
-`yt-dlp` currently reports:
-
-```text
-WARNING: No supported JavaScript runtime could be found.
-```
-
-Despite the warning, downloads are currently working.
-
-For example:
-
-```text
-Downloading 1 format(s): 251
-```
-
-followed by successful MP3 conversion.
-
-This warning should eventually be addressed by installing/configuring a supported JavaScript runtime for `yt-dlp`.
-
-It is currently a **known technical improvement**, not a blocker.
-
----
-
-# 14. Lyrics Service
-
-File:
-
-```text
-app/lyrics/service.py
-```
-
-The lyrics service uses:
-
-```text
-https://lrclib.net/api/search
-```
-
-to search for synchronized lyrics.
-
-The returned `syncedLyrics` field is stored directly as an `.lrc` file.
-
----
-
-# 15. Time-Synchronized Lyrics
-
-The system specifically requires **time-synchronized lyrics**.
-
-The resulting file uses standard LRC timestamps:
-
-```text
-[00:25.41] A heart that's full up like a landfill
-[00:35.23] A job that slowly kills you
-[00:41.56] Bruises that won't heal
-[00:47.42]
-[00:51.35] You look so tired, unhappy
-```
-
-Therefore the lyrics are suitable for synchronized playback.
-
-Plain unsynchronized lyrics are not accepted as a successful lyrics result.
-
----
-
-# 16. LRC File Location
-
-When synchronized lyrics are found, the `.lrc` file is created in the **same directory as the MP3**.
-
-Example:
-
-```text
-data/music/
-├── No Surprises (Remastered).mp3
-└── No Surprises (Remastered).lrc
-```
-
-Another example:
-
-```text
-data/music/
-├── Radiohead - All I Need.mp3
-└── Radiohead - All I Need.lrc
-```
-
-This satisfies the requirement that the MP3 and its synchronized lyrics remain together.
-
----
-
-# 17. Lyrics Filename
-
-The lyrics path is derived directly from the music path:
-
-```python
-Path(song.file_path).with_suffix(".lrc")
-```
-
-For example:
-
-```text
-song.mp3
-```
-
-becomes:
-
-```text
-song.lrc
-```
-
-This ensures the MP3 and LRC filenames remain synchronized.
-
----
-
-# 18. Lyrics Matching
-
-The lyrics service does more than simply accept the first LRCLIB result.
-
-It attempts to match:
-
-1. Song title
-2. Artist
-3. Synchronized lyrics availability
-
-It also cleans common title modifiers.
-
-For example:
-
-```text
-No Surprises (Remastered)
-```
-
-can be searched as:
-
-```text
-No Surprises
-```
-
-The title cleaner currently handles common variants such as:
-
-```text
-Remastered
-Remaster
-Live
-Acoustic
-Radio Edit
-```
-
-in both parentheses and square brackets.
-
----
-
-# 19. Lyrics Search Strategy
-
-The service uses multiple matching levels.
-
-### First priority
-
-Title + artist match.
-
-### Second priority
-
-Title match without requiring artist.
-
-### Third priority
-
-First available synchronized result.
-
-This improves the chance of finding lyrics when YouTube metadata is incomplete.
-
----
-
-# 20. LRCLIB Error Handling
-
-LRCLIB can occasionally return temporary errors.
-
-One example encountered during testing:
-
-```text
-503 Service Unavailable
-```
-
-Initially this caused:
-
-```text
-lyrics_status = failed
-```
-
-The service was then improved to retry temporary failures.
-
-The current retry behavior supports:
-
-```text
-503
-5xx errors
-429
-network/request failures
-```
-
-with multiple attempts and increasing delays.
-
----
-
-# 21. Temporary vs Permanent Lyrics Failure
-
-This distinction is now implemented.
-
-### Temporary failure
-
-Example:
-
-```text
-503 Service Unavailable
-```
-
-Result:
-
-```text
 lyrics_status = pending
 ```
 
-The song remains in `data/music/`.
+---
 
-The next sync cycle can retry.
+# 8. Synchronization Service
 
-### Permanent unavailability
+The main synchronization pipeline is:
+
+```text
+1. Fetch YouTube playlist
+2. Reconcile playlist with database
+3. Download one pending song
+4. Fetch lyrics for one downloaded song
+```
+
+Current service:
+
+```text
+app/sync/service.py
+```
+
+Test:
+
+```bash
+python -m app.sync.test_run
+```
+
+Example successful output:
+
+```text
+============================================================
+Music Sync
+============================================================
+Playlist songs discovered: 11
+New songs added: 0
+Pending songs selected: 0
+Songs waiting for lyrics: 0
+============================================================
+Sync cycle completed
+============================================================
+```
+
+The service currently processes one pending download and one pending lyrics operation per sync cycle.
+
+---
+
+# 9. Downloader
+
+The downloader uses `yt-dlp`.
+
+Current flow:
+
+```text
+YouTube
+   ↓
+yt-dlp
+   ↓
+best audio format
+   ↓
+FFmpeg post-processing
+   ↓
+music file
+```
+
+The original downloader was configured to convert audio to:
+
+```text
+MP3
+192 kbps
+```
+
+However, the current desired direction is to use:
+
+```text
+Opus
+high bitrate
+```
+
+This still requires final downloader configuration.
+
+---
+
+# 10. FFmpeg Issue
+
+A Docker test exposed the following error:
+
+```text
+ERROR: Postprocessing: ffprobe and ffmpeg not found.
+Please install or provide the path using --ffmpeg-location
+```
+
+The current Docker image is:
+
+```dockerfile
+FROM python:3.13-slim
+```
+
+The image currently installs Python dependencies but does not install FFmpeg.
+
+This means yt-dlp can download the original YouTube audio stream, but cannot perform post-processing/conversion.
+
+### Required fix
+
+Install FFmpeg inside the Docker image.
+
+The Dockerfile should eventually include the required Debian packages before installing Python dependencies.
+
+This is required for:
+
+* Opus conversion
+* MP3 conversion
+* audio post-processing
+* metadata handling
+* reliable output extension
+
+---
+
+# 11. Current Audio Download Problem
+
+During testing, yt-dlp selected:
+
+```text
+format 251
+```
+
+and downloaded:
+
+```text
+.webm
+```
+
+The log showed:
+
+```text
+[info] HxfE6PJmGS8: Downloading 1 format(s): 251
+```
+
+followed by:
+
+```text
+Jeff Buckley - Lover, You Should've Come Over (Official Audio).webm
+```
+
+The download itself succeeded, but post-processing failed because FFmpeg was unavailable.
+
+Therefore:
+
+```text
+YouTube download
+        ↓
+WebM/Opus stream
+        ↓
+FFmpeg
+        ↓
+desired .opus output
+```
+
+is the correct architecture.
+
+---
+
+# 12. Lyrics Service
+
+Lyrics are retrieved from:
+
+```text
+LRCLIB
+```
+
+The service searches using the song title and optionally artist/album information.
+
+It supports title cleaning for common variants such as:
+
+```text
+(Remastered)
+(Remaster)
+(Live)
+(Acoustic)
+(Radio Edit)
+```
+
+The service searches for synchronized lyrics using:
+
+```text
+syncedLyrics
+```
+
+---
+
+# 13. Lyrics Testing
+
+The lyrics service was tested independently.
 
 Example:
 
-```text
-No synchronized lyrics found
+```python
+result = service._find_synced_lyrics(
+    title="Kendrick Lamar - Count Me Out",
+)
 ```
 
 Result:
 
 ```text
-lyrics_status = unavailable
+Status: available
+Lyrics found: True
+Error: None
 ```
 
-The MP3 is moved to:
-
-```text
-data/no-lyrics/
-```
+Lyrics were successfully written to `.lrc` files for the existing songs.
 
 ---
 
-# 22. No-Lyrics Folder
+# 14. No-Lyrics Handling
 
-The project requirement is:
-
-> Songs without synchronized lyrics should be placed in a different folder.
-
-This is implemented as:
-
-```text
-data/no-lyrics/
-```
-
-Example:
-
-```text
-data/no-lyrics/
-└── NO_LYRICS_TEST.mp3
-```
-
-The corresponding database record contains:
-
-```text
-lyrics_status = unavailable
-```
-
-and:
-
-```text
-file_path = data/no-lyrics/NO_LYRICS_TEST.mp3
-```
-
----
-
-# 23. No-Lyrics Test
-
-A fake song was manually inserted into the database:
+A fake test song was inserted into PostgreSQL:
 
 ```text
 This Song Definitely Does Not Exist 987654321
 ```
 
-The lyrics service returned:
+The lyrics service correctly detected:
 
 ```text
 No synced lyrics
-```
-
-The MP3 was successfully moved:
-
-```text
-data/music/NO_LYRICS_TEST.mp3
-```
-
-to:
-
-```text
-data/no-lyrics/NO_LYRICS_TEST.mp3
 ```
 
 Database result:
@@ -750,565 +561,661 @@ Database result:
 lyrics_status = unavailable
 ```
 
-This confirms that the fallback mechanism works.
-
----
-
-# 24. Sync Service
-
-File:
+and:
 
 ```text
-app/sync/service.py
+error_message = No synchronized lyrics found
 ```
 
-The sync service combines the individual components into one workflow.
-
-The current synchronization pipeline is:
-
-```text
-1. Fetch YouTube playlist
-2. Reconcile playlist with database
-3. Find pending downloads
-4. Download songs
-5. Find pending lyrics
-6. Download synchronized LRC files
-7. Move songs without lyrics to no-lyrics
-```
-
----
-
-# 25. Full Sync Test
-
-The full sync command:
-
-```bash
-python -m app.sync.test_run
-```
-
-produces output similar to:
-
-```text
-============================================================
-Music Sync
-============================================================
-Playlist songs discovered: 11
-New songs added: 1
-Pending songs selected: 1
-Downloading: 10 - JAY-Z - Empire State Of Mind (Lyrics) ft. Alicia Keys
-...
-Downloaded: JAY-Z - Empire State Of Mind (Lyrics) ft. Alicia Keys
-File: data/music/JAY-Z - Empire State Of Mind (Lyrics) ft. Alicia Keys.mp3
-Songs waiting for lyrics: 1
-Fetching lyrics: 10 - JAY-Z - Empire State Of Mind (Lyrics) ft. Alicia Keys
-Lyrics downloaded: JAY-Z - Empire State Of Mind (Lyrics) ft. Alicia Keys
-LRC: data/music/JAY-Z - Empire State Of Mind (Lyrics) ft. Alicia Keys.lrc
-============================================================
-Sync cycle completed
-============================================================
-```
-
-This confirms the entire pipeline works in one execution.
-
----
-
-# 26. Scheduler
-
-The scheduler has also been tested successfully.
-
-The application periodically executes the complete sync process.
-
-Example:
-
-```text
-Scheduler started. Press Ctrl+C to stop.
-
-Starting scheduled sync
-
-Music Sync
-Playlist songs discovered: 9
-New songs added: 0
-Pending songs selected: 0
-Songs waiting for lyrics: 0
-
-Sync cycle completed
-
-Scheduled sync completed
-```
-
-When a new song was added to the playlist, the scheduler detected it automatically.
-
-Example:
-
-```text
-Playlist songs discovered: 10
-New songs added: 1
-Pending songs selected: 1
-Downloading: Kendrick Lamar - Count Me Out
-...
-Songs waiting for lyrics: 1
-Fetching lyrics: Kendrick Lamar - Count Me Out
-Lyrics downloaded
-```
-
-This confirms the scheduled synchronization workflow is operational.
-
----
-
-# 27. Idempotency
-
-Repeated sync cycles do not duplicate existing songs.
-
-Example:
-
-```text
-Playlist songs discovered: 9
-New songs added: 0
-Pending songs selected: 0
-Songs waiting for lyrics: 0
-```
-
-Running the sync repeatedly produces the same result when nothing has changed.
-
-This is a major requirement for an automated synchronization service.
-
----
-
-# 28. Current Music Library
-
-The successfully processed music library currently contains MP3/LRC pairs such as:
-
-```text
-Creep
-Fake Plastic Trees
-Gigi Perez - Sailor Song
-I Thought I Saw Your Face Today
-JAY-Z - Empire State Of Mind
-Kendrick Lamar - Count Me Out
-Kiss Me
-Let Down (Remastered)
-No Surprises (Remastered)
-Radiohead - All I Need
-Sign of the Times
-```
-
-Each successfully processed song has:
-
-```text
-.mp3
-.lrc
-```
-
-in the same directory.
-
----
-
-# 29. Current Database State
-
-The active playlist currently contains songs with states similar to:
-
-```text
-No Surprises (Remastered)       downloaded / downloaded
-Fake Plastic Trees              downloaded / downloaded
-Let Down (Remastered)           downloaded / downloaded
-Creep                           downloaded / downloaded
-Sign of the Times               downloaded / downloaded
-Gigi Perez - Sailor Song        downloaded / downloaded
-I Thought I Saw Your Face Today downloaded / downloaded
-Kiss Me                         downloaded / downloaded
-Radiohead - All I Need           downloaded / downloaded
-Kendrick Lamar - Count Me Out   downloaded / downloaded
-JAY-Z - Empire State Of Mind    downloaded / downloaded
-```
-
-The manually created no-lyrics test entry is:
-
-```text
-This Song Definitely Does Not Exist 987654321
-```
-
-with:
-
-```text
-lyrics_status = unavailable
-```
-
-and its MP3 located under:
+The test also confirmed that the song was moved into:
 
 ```text
 data/no-lyrics/
 ```
 
+This prevents songs without synchronized lyrics from continuously being retried.
+
 ---
 
-# 30. Important Path Behavior
+# 15. Music Library
 
-Music:
+The application uses:
 
 ```text
 data/music/
 ```
 
-No synchronized lyrics:
+as the host music directory.
+
+Docker mounts:
+
+```yaml
+- ./data/music:/app/data/music
+```
+
+Therefore:
+
+```text
+Host:
+./data/music
+
+Container:
+/app/data/music
+```
+
+refer to the same physical files.
+
+Lyrics are stored alongside the audio files:
+
+```text
+Song.opus
+Song.lrc
+```
+
+---
+
+# 16. No-Lyrics Library
+
+Songs without synchronized lyrics are moved to:
 
 ```text
 data/no-lyrics/
 ```
 
-PostgreSQL data:
+Docker mounts this directory as:
 
 ```text
-data/postgres/
+/app/data/no-lyrics
 ```
 
-The PostgreSQL directory may produce:
-
-```text
-Permission denied
-```
-
-when inspected by a normal user because it is owned/managed by the PostgreSQL container.
-
-This is expected and does not affect the application.
+This keeps songs without lyrics separate from the main music library.
 
 ---
 
-# 31. Known Issues
+# 17. FastAPI
 
-## 31.1 YouTube JavaScript Runtime
+FastAPI is running successfully inside Docker.
 
-`yt-dlp` currently reports:
+Application:
 
 ```text
-No supported JavaScript runtime could be found
+http://localhost:8000
 ```
 
-Downloads still work, but the runtime should eventually be configured properly.
-
----
-
-## 31.2 Failed YouTube Videos
-
-Some YouTube videos can become:
+The health endpoint:
 
 ```text
-Video unavailable
+GET /health
 ```
 
-The downloader correctly records the failure.
+returns:
 
-If the video remains in the playlist, the system may need a policy for repeated download failures.
-
-Potential future improvement:
-
-```text
-failed
-retry_count
-last_error
-last_attempt_at
+```json
+{
+  "status": "ok",
+  "service": "music-sync",
+  "environment": "production",
+  "database": "ok"
+}
 ```
 
 ---
 
-## 31.3 LRCLIB Availability
+# 18. Songs API
 
-LRCLIB occasionally returns:
-
-```text
-503 Service Unavailable
-```
-
-Retry logic has been implemented.
-
-The song remains pending rather than being incorrectly classified as having no lyrics.
-
----
-
-## 31.4 Artist Metadata
-
-Some YouTube playlist entries do not provide reliable:
+The songs API is available at:
 
 ```text
-artist
-album
+GET /songs
 ```
 
-metadata.
+It returns all songs ordered by playlist position.
 
-The lyrics service therefore does not depend entirely on artist matching.
+Example:
+
+```text
+curl http://localhost:8000/songs
+```
+
+Individual song:
+
+```text
+GET /songs/{song_id}
+```
 
 ---
 
-## 31.5 Position Changes
+# 19. Audio API
 
-The reconciler currently uses the YouTube playlist position when adding songs.
+Audio files can be retrieved using:
 
-Existing songs should eventually have their position updated if the order of the playlist changes.
+```text
+GET /songs/{song_id}/audio
+```
 
-This should be considered for a future improvement.
-
----
-
-# 32. Testing Performed
-
-The following tests have successfully been performed.
-
-### YouTube playlist discovery
+Example:
 
 ```bash
-python -c "from app.core.config import settings; from app.watcher.youtube import YouTubePlaylistWatcher; songs=YouTubePlaylistWatcher(settings.youtube_playlist_url).fetch(); print('Songs:', len(songs)); [print(s.position, s.title, s.video_id) for s in songs]"
+curl -o /tmp/test.mp3 \
+http://localhost:8000/songs/1/audio
 ```
 
-### Reconciliation
+The endpoint successfully returned an audio file during testing.
 
-```bash
-python -m app.reconciler.test_run
-```
+The endpoint validates:
 
-### MP3 downloading
-
-```bash
-python -m app.downloader.test_run
-```
-
-### Lyrics service
-
-```bash
-python -m app.lyrics.test_run
-```
-
-### Full synchronization
-
-```bash
-python -m app.sync.test_run
-```
-
-### Scheduler
-
-The scheduler has successfully detected newly added playlist songs and processed them.
-
-### No-lyrics behavior
-
-A fake song was inserted and successfully moved from:
-
-```text
-data/music/
-```
-
-to:
-
-```text
-data/no-lyrics/
-```
-
-### Temporary LRCLIB failure
-
-A `503` error was reproduced and retry handling was implemented.
+1. Song exists
+2. Download status is `downloaded`
+3. File path exists
+4. File is returned using `FileResponse`
 
 ---
 
-# 33. Current End-to-End Status
+# 20. Lyrics API
 
-The following components are **working**:
+Lyrics are available through:
 
-| Component                | Status  |
-| ------------------------ | ------- |
-| PostgreSQL               | Working |
-| SQLAlchemy models        | Working |
-| YouTube playlist watcher | Working |
-| Playlist reconciliation  | Working |
-| Duplicate prevention     | Working |
-| Removed-song detection   | Working |
-| MP3 downloader           | Working |
-| FFmpeg MP3 conversion    | Working |
-| Synced lyrics lookup     | Working |
-| LRC file creation        | Working |
-| Title normalization      | Working |
-| Lyrics retry handling    | Working |
-| No-lyrics fallback       | Working |
-| Full sync pipeline       | Working |
-| APScheduler              | Working |
-| Repeated/idempotent sync | Working |
+```text
+GET /songs/{song_id}/lyrics
+```
+
+Example:
+
+```bash
+curl http://localhost:8000/songs/1/lyrics
+```
+
+Response contains:
+
+```json
+{
+  "song_id": 1,
+  "title": "No Surprises (Remastered)",
+  "lyrics_status": "downloaded",
+  "lyrics": "..."
+}
+```
+
+The `.lrc` file is read from the path stored in the database.
 
 ---
 
-# 34. Current Architecture
+# 21. Scheduler
+
+The scheduler uses:
 
 ```text
-                    ┌─────────────────────┐
-                    │   YouTube Playlist  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ YouTubeSongWatcher  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ PlaylistReconciler  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                       ┌──────────────┐
-                       │  PostgreSQL  │
-                       └──────┬───────┘
-                              │
-                    ┌─────────┴─────────┐
-                    │                   │
-                    ▼                   ▼
-             ┌──────────────┐    ┌──────────────┐
-             │ Song         │    │ Lyrics       │
-             │ Downloader   │    │ Service      │
-             └──────┬───────┘    └──────┬───────┘
-                    │                   │
-                    ▼                   ▼
-             ┌──────────────┐    ┌──────────────┐
-             │ data/music/  │    │ LRCLIB       │
-             │ *.mp3        │◄───│ API          │
-             │ *.lrc        │    └──────────────┘
-             └──────────────┘
-                    │
-                    │ no synced lyrics
-                    ▼
-             ┌────────────────┐
-             │ data/no-lyrics │
-             │     *.mp3      │
-             └────────────────┘
+APScheduler
+AsyncIOScheduler
+```
+
+The scheduler runs:
+
+```text
+SyncService.run()
+```
+
+on a configured interval.
+
+Current interval:
+
+```text
+60 seconds
+```
+
+The scheduler also performs one sync immediately when the application starts.
+
+This was changed because the previous scheduler only waited for the first interval before running.
+
+Current behavior:
+
+```text
+Application starts
+       ↓
+Immediate sync
+       ↓
+Wait 60 seconds
+       ↓
+Sync
+       ↓
+Wait 60 seconds
+       ↓
+Sync
+       ↓
+...
 ```
 
 ---
 
-# 35. Next Development Phase
+# 22. Docker Application
 
-The core application is now functional.
-
-The next phase should focus on **productionization and reliability** rather than adding another core feature.
-
-Recommended order:
-
-### 1. Dockerize the application
-
-Create a production application container containing:
+Application container:
 
 ```text
-Python
-dependencies
-application code
-FFmpeg
-yt-dlp
+music-sync-app
+```
+
+The container runs:
+
+```text
+uvicorn app.main:app
+```
+
+on:
+
+```text
+0.0.0.0:8000
+```
+
+Host mapping:
+
+```text
+127.0.0.1:8000 -> container:8000
+```
+
+Current Docker Compose status has successfully shown:
+
+```text
+music-sync-app       Up
+music-sync-postgres  Up (healthy)
 ```
 
 ---
 
-### 2. Update Docker Compose
+# 23. Docker Networking
 
-The final Compose stack should contain at least:
+The application communicates with PostgreSQL using the Docker service name:
 
 ```text
-music-sync
 postgres
 ```
 
-with persistent volumes for:
+Database URL:
 
 ```text
-data/music
-data/no-lyrics
-data/postgres
+postgresql+psycopg://music_sync:music_sync@postgres:5432/music_sync
+```
+
+This works correctly.
+
+Database health check:
+
+```text
+database: ok
 ```
 
 ---
 
-### 3. Environment Configuration
+# 24. DNS / Internet Connectivity
 
-Move all runtime configuration into `.env`, including:
+A temporary YouTube DNS problem was observed inside the application container.
 
-```text
-DATABASE_URL
-YOUTUBE_PLAYLIST_URL
-SYNC_INTERVAL_SECONDS
-MUSIC_ROOT
-```
-
----
-
-### 4. Configure YouTube JavaScript Runtime
-
-Resolve the current `yt-dlp` warning by installing/configuring a supported JavaScript runtime.
-
----
-
-### 5. Improve Error Tracking
-
-Consider adding:
+The container initially reported:
 
 ```text
-retry_count
-last_error
-last_attempt_at
+Temporary failure in name resolution
 ```
 
-to the `songs` table.
+Docker DNS was later verified.
 
-This would make failed downloads and lyric requests easier to manage.
-
----
-
-### 6. Improve Playlist Position Synchronization
-
-When a song moves within the YouTube playlist, update:
+Inside the container:
 
 ```text
-Song.position
+youtube.com
+lrclib.net
 ```
 
-rather than keeping the original position.
+resolved successfully.
 
----
-
-### 7. Add Automated Tests
-
-Create proper tests for:
+HTTP connectivity was also verified:
 
 ```text
-watcher
-reconciler
-downloader
-lyrics service
-no-lyrics behavior
-retry behavior
-full sync
+Google: HTTP 200
+LRCLIB: HTTP 200
 ```
 
-Mock external APIs where appropriate.
+After restarting the application container, YouTube synchronization worked successfully.
 
 ---
 
-### 8. Production Scheduler
+# 25. Database Reset
 
-Run the scheduler as a long-running Docker service rather than manually:
+For clean end-to-end testing, the database can be completely reset with:
 
 ```bash
-python ...
+sudo docker exec music-sync-postgres \
+psql -U music_sync -d music_sync \
+-c "TRUNCATE TABLE songs, playlists RESTART IDENTITY CASCADE;"
 ```
 
-The final system should start automatically with:
+This removes all playlist and song records and resets their IDs.
+
+Verify:
 
 ```bash
-docker compose up -d
+sudo docker exec music-sync-postgres \
+psql -U music_sync -d music_sync \
+-c "SELECT COUNT(*) AS playlists FROM playlists; SELECT COUNT(*) AS songs FROM songs;"
+```
+
+Expected:
+
+```text
+playlists = 0
+songs = 0
 ```
 
 ---
 
-# 36. Project Milestone
+# 26. Current Clean-Test State
 
-## Milestone: Core Music Synchronization — COMPLETE
+The local music directory was emptied:
 
-The core requirement has been successfully implemented:
+```text
+data/music/
+```
 
-> Monitor a YouTube playlist, download new songs as MP3, retrieve time-synchronized lyrics as LRC, keep MP3/LRC pairs together, and move songs without synchronized lyrics into a separate directory.
+The database still contained previous records before the reset.
 
-The complete workflow has been tested against real playlist changes and has successfully processed newly added songs automatically.
+The next clean test should:
 
-The project is now ready to move from **functional development** into **production deployment and hardening**.
+```text
+1. Truncate database
+2. Ensure data/music is empty
+3. Ensure data/no-lyrics is empty
+4. Restart application
+5. Allow immediate sync
+6. Verify all playlist songs are inserted
+7. Verify downloads
+8. Verify lyrics
+9. Verify database file paths
+10. Verify files exist on the host
+```
+
+---
+
+# 27. Current Known Issues
+
+## Issue 1 — FFmpeg missing from Docker
+
+Current error:
+
+```text
+ffprobe and ffmpeg not found
+```
+
+Impact:
+
+```text
+yt-dlp downloads WebM
+        ↓
+FFmpeg conversion fails
+        ↓
+download marked failed
+```
+
+### Priority
+
+**High**
+
+### Required action
+
+Install FFmpeg in the Docker image.
+
+---
+
+## Issue 2 — Audio format
+
+The downloader currently uses:
+
+```text
+MP3 192 kbps
+```
+
+The desired format is:
+
+```text
+Opus
+high bitrate
+```
+
+### Priority
+
+**High**
+
+### Required action
+
+Update `SongDownloader` to request the best audio and convert/store it as Opus.
+
+---
+
+## Issue 3 — Lyrics processing
+
+Lyrics worked during standalone testing and for the initial library.
+
+However, the downloader failure prevents newly downloaded songs from reaching the lyrics stage.
+
+Pipeline must remain:
+
+```text
+download successful
+        ↓
+download_status = downloaded
+        ↓
+lyrics processor sees pending lyrics
+        ↓
+LRCLIB search
+        ↓
+.lrc generated
+```
+
+---
+
+## Issue 4 — Failed downloads
+
+A song that reaches:
+
+```text
+download_status = failed
+```
+
+is currently not automatically retried because the downloader selects:
+
+```text
+download_status == pending
+```
+
+A retry strategy should eventually be implemented.
+
+---
+
+# 28. Next Development Tasks
+
+## Phase 1 — Fix Audio Pipeline
+
+* [ ] Install FFmpeg in Docker image
+* [ ] Verify `ffmpeg` inside container
+* [ ] Verify `ffprobe` inside container
+* [ ] Change output format to Opus
+* [ ] Select high-quality audio
+* [ ] Verify final file extension is `.opus`
+* [ ] Verify database `file_path`
+* [ ] Verify host `data/music` contains the file
+
+---
+
+## Phase 2 — Verify Lyrics Pipeline
+
+* [ ] Download a fresh song
+* [ ] Confirm `lyrics_status = pending`
+* [ ] Run lyrics processing
+* [ ] Confirm `.lrc` file creation
+* [ ] Confirm `lyrics_path`
+* [ ] Test `/songs/{id}/lyrics`
+* [ ] Test song with unavailable lyrics
+* [ ] Confirm unavailable songs move to `data/no-lyrics`
+
+---
+
+## Phase 3 — Clean End-to-End Test
+
+Run:
+
+```bash
+sudo docker exec music-sync-postgres \
+psql -U music_sync -d music_sync \
+-c "TRUNCATE TABLE songs, playlists RESTART IDENTITY CASCADE;"
+```
+
+Then:
+
+```bash
+rm -f data/music/*
+rm -f data/no-lyrics/*
+```
+
+Restart:
+
+```bash
+sudo docker compose restart app
+```
+
+Watch:
+
+```bash
+sudo docker compose logs -f app
+```
+
+Expected flow:
+
+```text
+Playlist songs discovered: 13
+New songs added: 13
+
+Pending songs selected: 1
+Downloading: ...
+
+Downloaded: ...
+
+Songs waiting for lyrics: 1
+
+Lyrics downloaded: ...
+```
+
+Repeated scheduler cycles should gradually process the entire playlist.
+
+---
+
+# 29. Verification Checklist
+
+After the clean sync:
+
+### Database
+
+```bash
+sudo docker exec music-sync-postgres \
+psql -U music_sync -d music_sync \
+-c "SELECT id, position, title, download_status, lyrics_status, file_path, lyrics_path FROM songs ORDER BY position;"
+```
+
+Expected:
+
+```text
+download_status = downloaded
+```
+
+and preferably:
+
+```text
+lyrics_status = downloaded
+```
+
+for songs with available synchronized lyrics.
+
+---
+
+### Host files
+
+```bash
+find data/music -maxdepth 1 -type f | sort
+```
+
+Expected:
+
+```text
+Song 1.opus
+Song 1.lrc
+Song 2.opus
+Song 2.lrc
+...
+```
+
+---
+
+### API
+
+```bash
+curl http://localhost:8000/health
+```
+
+```bash
+curl http://localhost:8000/songs
+```
+
+```bash
+curl http://localhost:8000/songs/1/lyrics
+```
+
+```bash
+curl -o /tmp/test.opus \
+http://localhost:8000/songs/1/audio
+```
+
+---
+
+# 30. Current Milestone
+
+## Milestone: Core Music Synchronization System
+
+**Status: ~80% complete**
+
+The following core functionality is operational:
+
+```text
+YouTube playlist discovery       ✓
+Database persistence              ✓
+Playlist reconciliation           ✓
+New song detection                ✓
+Docker deployment                 ✓
+PostgreSQL                        ✓
+FastAPI                           ✓
+Health API                        ✓
+Songs API                         ✓
+Audio API                         ✓
+Lyrics API                        ✓
+Lyrics lookup                     ✓
+LRC generation                    ✓
+No-lyrics handling                ✓
+Automatic scheduler               ✓
+Immediate startup sync            ✓
+Periodic sync                     ✓
+Persistent music volume           ✓
+```
+
+The major remaining work is the **production-quality audio pipeline**, particularly:
+
+```text
+FFmpeg installation
+       ↓
+Opus conversion
+       ↓
+High-quality audio selection
+       ↓
+Reliable file-path handling
+       ↓
+Lyrics processing
+       ↓
+Retry/error handling
+```
+
+Once this is complete, the project will have a reliable end-to-end synchronization pipeline suitable for the next stage of development.
