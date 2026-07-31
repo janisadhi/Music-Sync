@@ -1,16 +1,14 @@
 from contextlib import asynccontextmanager
-
+from app.core.runtime import scheduler
 from fastapi import FastAPI
 from sqlalchemy import text
-
+from app.api.sync import router as sync_router
 from app.api.playlists import router as playlists_router
 from app.api.songs import router as songs_router
 from app.core.config import settings
 from app.database.session import engine
-from app.scheduler.service import MusicSyncScheduler
 
 
-scheduler = MusicSyncScheduler()
 
 
 @asynccontextmanager
@@ -27,7 +25,7 @@ async def lifespan(app: FastAPI):
     print("Shutting down Music Sync application")
     print("=" * 60)
 
-    scheduler.shutdown()
+    scheduler.stop()
 
 
 app = FastAPI(
@@ -39,7 +37,7 @@ app = FastAPI(
 
 app.include_router(songs_router)
 app.include_router(playlists_router)
-
+app.include_router(sync_router)
 
 @app.get("/health")
 def health_check():

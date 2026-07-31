@@ -1,0 +1,117 @@
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel, Field
+
+from app.core.runtime import scheduler
+
+router = APIRouter(
+    prefix="/sync",
+    tags=["Sync"],
+)
+
+
+class SyncIntervalRequest(BaseModel):
+    seconds: int = Field(
+        ge=10,
+        description="Synchronization interval in seconds",
+    )
+
+
+@router.get("/status")
+def get_sync_status():
+    return scheduler.get_status()
+
+
+@router.post("")
+def trigger_sync(background_tasks: BackgroundTasks):
+    if scheduler.sync_running:
+        return {
+            "status": "already_running",
+            "message": "Synchronization is already running.",
+        }
+
+    background_tasks.add_task(
+        scheduler.run_sync
+    )
+
+    return {
+        "status": "started",
+        "message": "Synchronization started.",
+    }
+
+
+@router.get("/history")
+def get_sync_history():
+    return {
+        "items": scheduler.get_history(),
+    }
+
+
+@router.get("/scheduler")
+def get_scheduler_status():
+    job = scheduler.scheduler.get_job("music-sync")
+
+    return {
+        "running": scheduler.running,
+        "interval_seconds": (
+            job.trigger.interval.total_seconds()
+            if job
+            else None
+        ),
+    }
+
+
+@router.post("/scheduler/start")
+def start_scheduler():
+    started = scheduler.start(
+        run_immediately=True
+    )
+
+    if not started:
+        return {
+            "status": "already_running",
+            "message": "Scheduler is already running.",
+        }
+
+    return {
+        "status": "started",
+        "message": "Scheduler started.",
+    }
+
+
+@router.post("/scheduler/stop")
+def stop_scheduler():
+    stopped = scheduler.stop()
+
+    if not stopped:
+        return {
+            "status": "already_stopped",
+            "message": "Scheduler is already stopped.",
+        }
+
+    return {
+        "status": "stopped",
+        "message": "Scheduler stopped.",
+    }
+
+
+@router.patch("/scheduler")
+def update_scheduler(
+    request: SyncIntervalRequest,
+):
+    try:
+        scheduler.update_interval(
+            request.seconds
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    return {
+        "status": "updated",
+        "interval_seconds": request.seconds,
+        "interval_minutes": request.seconds / 60,
+    }
