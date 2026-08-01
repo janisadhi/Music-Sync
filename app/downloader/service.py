@@ -19,35 +19,40 @@ class SongDownloader:
             self.music_root / "%(title)s.%(ext)s"
         )
 
+        video_url = (
+            f"https://www.youtube.com/watch?v={song.youtube_video_id}"
+        )
+
         ydl_opts = {
-            # Prefer Opus audio.
-            # YouTube commonly provides Opus in WebM containers.
-            "format": "bestaudio[acodec=opus]/bestaudio",
+            # Best available audio.
+            "format": "bestaudio/best",
 
             "outtmpl": output_template,
+
             "noplaylist": True,
+
             "quiet": False,
             "no_warnings": False,
 
-            # Convert the WebM/Opus container to a standalone
-            # .opus file using FFmpeg.
+            # Download the thumbnail so it can be embedded
+            # into the final audio file.
+            "writethumbnail": True,
+
+            # Convert audio to Opus.
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "opus",
                     "preferredquality": "0",
-                }
+                },
+                {
+                    "key": "EmbedThumbnail",
+                },
             ],
 
-            "postprocessor_args": [
-                "-metadata",
-                f"title={song.title}",
-            ],
+            # Write metadata into the audio file.
+            "addmetadata": True,
         }
-
-        video_url = (
-            f"https://www.youtube.com/watch?v={song.youtube_video_id}"
-        )
 
         try:
             song.download_status = "downloading"
@@ -60,6 +65,7 @@ class SongDownloader:
                 )
 
                 prepared = ydl.prepare_filename(info)
+
                 opus_path = Path(prepared).with_suffix(".opus")
 
             if not opus_path.exists():
@@ -72,12 +78,15 @@ class SongDownloader:
             song.error_message = None
 
             print(f"Downloaded: {song.title}")
+            print(f"Artist: {song.artist or 'Unknown'}")
+            print(f"Album: {song.album or 'Unknown'}")
             print(f"File: {opus_path}")
 
             return True
 
         except Exception as exc:
             song.download_status = "failed"
+
             song.error_message = re.sub(
                 r"\x1B\[[0-?]*[ -/]*[@-~]",
                 "",
@@ -101,18 +110,18 @@ class SongDownloader:
                 .order_by(Song.position)
                 .limit(limit)
             ).all()
-    
+
             print(
                 f"Songs selected for download: {len(songs)}"
             )
-    
+
             for song in songs:
                 print(
                     f"Downloading: "
                     f"{song.position} - {song.title} "
                     f"({song.youtube_video_id})"
                 )
-    
+
                 self.download_song(song)
-    
+
             session.commit()

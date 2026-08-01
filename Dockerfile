@@ -5,9 +5,15 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install FFmpeg for yt-dlp audio extraction/post-processing.
+# Install FFmpeg and dependencies for yt-dlp.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        curl \
+        unzip \
+    && curl -fsSL https://deno.land/install.sh | sh \
+    && ln -s /root/.deno/bin/deno /usr/local/bin/deno \
+    && apt-get remove -y curl unzip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
