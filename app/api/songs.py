@@ -116,7 +116,7 @@ def retry_song_lyrics(
         "song_id": song.id,
         "lyrics_status": song.lyrics_status,
     }
-    
+
 @router.get("", response_model=list[SongResponse])
 def get_songs(
     db: Session = Depends(get_db),
@@ -200,23 +200,52 @@ def get_song_lyrics(
             detail="Song not found",
         )
 
-    lyrics = None
+    # No lyrics file registered
+    if not song.lyrics_path:
+        return LyricsResponse(
+            song_id=song.id,
+            title=song.title,
+            lyrics_status="unavailable",
+            lyrics=None,
+        )
 
-    if song.lyrics_path:
-        lyrics_path = resolve_file_path(song.lyrics_path)
+    lyrics_path = resolve_file_path(
+        song.lyrics_path
+    )
 
-        if lyrics_path.exists():
-            lyrics = lyrics_path.read_text(
-                encoding="utf-8"
-            )
+    # Database says lyrics exist, but the actual
+    # file is missing.
+    if not lyrics_path.exists():
+        return LyricsResponse(
+            song_id=song.id,
+            title=song.title,
+            lyrics_status="unavailable",
+            lyrics=None,
+        )
+
+    try:
+        lyrics = lyrics_path.read_text(
+            encoding="utf-8"
+        )
+    except OSError as exc:
+        print(
+            f"Failed to read lyrics file "
+            f"for song {song.id}: {exc}"
+        )
+
+        return LyricsResponse(
+            song_id=song.id,
+            title=song.title,
+            lyrics_status="unavailable",
+            lyrics=None,
+        )
 
     return LyricsResponse(
         song_id=song.id,
         title=song.title,
-        lyrics_status=song.lyrics_status,
+        lyrics_status="completed",
         lyrics=lyrics,
     )
-
 @router.post("/{song_id}/retry-download", response_model=SongResponse)
 def retry_download(
     song_id: int,

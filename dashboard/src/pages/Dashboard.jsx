@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import { getSongs } from "../services/songs";
 import "../styles/dashboard.css";
-
 
 function StatusBadge({ status, type = "default" }) {
     let className = "badge";
 
     if (type === "running") {
-        className += status ? " badge-success" : " badge-danger";
+        className += status
+            ? " badge-success"
+            : " badge-danger";
     } else if (status === "success") {
         className += " badge-success";
     } else if (status === "failed") {
@@ -30,7 +30,13 @@ function StatusBadge({ status, type = "default" }) {
     );
 }
 
-function StatCard({ label, value, description, icon, variant }) {
+function StatCard({
+    label,
+    value,
+    description,
+    icon,
+    variant,
+}) {
     return (
         <div className="stat-card">
             <div className={`stat-icon ${variant}`}>
@@ -38,8 +44,13 @@ function StatCard({ label, value, description, icon, variant }) {
             </div>
 
             <div className="stat-content">
-                <div className="stat-label">{label}</div>
-                <div className="stat-value">{value}</div>
+                <div className="stat-label">
+                    {label}
+                </div>
+
+                <div className="stat-value">
+                    {value}
+                </div>
 
                 {description && (
                     <div className="stat-description">
@@ -52,8 +63,6 @@ function StatCard({ label, value, description, icon, variant }) {
 }
 
 function Dashboard() {
-    const [songs, setSongs] = useState([]);
-
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -97,20 +106,6 @@ function Dashboard() {
 
     useEffect(() => {
         fetchDashboard();
-
-        const loadSongs = async () => {
-            try {
-                const data = await getSongs();
-                setSongs(data);
-            } catch (error) {
-                console.error(
-                    "Failed to fetch songs:",
-                    error
-                );
-            }
-        };
-
-        loadSongs();
 
         const timer = setInterval(
             fetchDashboard,
@@ -306,30 +301,22 @@ function Dashboard() {
 
     return (
         <div className="dashboard-layout">
-
-
-
-            {/* Main */}
-
             <main className="main-content">
-
                 {/* Header */}
-
                 <header className="page-header">
-
                     <div>
                         <h1>
                             Music Sync Dashboard
                         </h1>
 
                         <p>
-                            Manage synchronization and
-                            monitor your music library.
+                            Manage synchronization
+                            and monitor your music
+                            library.
                         </p>
                     </div>
 
                     <div className="header-status">
-
                         <StatusBadge
                             status={
                                 scheduler.running
@@ -340,29 +327,24 @@ function Dashboard() {
                         <span className="refresh-status">
                             ↻ Auto-refresh: 5s
                         </span>
-
                     </div>
-
                 </header>
 
                 {/* Message */}
-
                 {message && (
                     <div
-                        className={`alert ${message.type ===
-                            "error"
-                            ? "alert-error"
-                            : "alert-success"
-                            }`}
+                        className={`alert ${
+                            message.type === "error"
+                                ? "alert-error"
+                                : "alert-success"
+                        }`}
                     >
                         {message.text}
                     </div>
                 )}
 
                 {/* Stats */}
-
                 <section className="stats-grid">
-
                     <StatCard
                         label="Total Songs"
                         value={stats.total_songs}
@@ -403,7 +385,9 @@ function Dashboard() {
 
                     <StatCard
                         label="Lyrics Completed"
-                        value={stats.completed_lyrics}
+                        value={
+                            stats.completed_lyrics
+                        }
                         description="With lyrics"
                         icon="▤"
                         variant="green"
@@ -411,7 +395,9 @@ function Dashboard() {
 
                     <StatCard
                         label="Lyrics Pending"
-                        value={stats.pending_lyrics}
+                        value={
+                            stats.pending_lyrics
+                        }
                         description="Waiting for lyrics"
                         icon="◷"
                         variant="orange"
@@ -419,7 +405,9 @@ function Dashboard() {
 
                     <StatCard
                         label="Lyrics Unavailable"
-                        value={stats.unavailable_lyrics}
+                        value={
+                            stats.unavailable_lyrics
+                        }
                         description="No synced lyrics found"
                         icon="—"
                         variant="orange"
@@ -427,20 +415,18 @@ function Dashboard() {
 
                     <StatCard
                         label="Lyrics Failed"
-                        value={stats.failed_lyrics}
+                        value={
+                            stats.failed_lyrics
+                        }
                         description="Lyrics failures"
                         icon="!"
                         variant="red"
                     />
-
                 </section>
 
                 {/* Scheduler + Sync */}
-
                 <section className="two-column">
-
                     <div className="card">
-
                         <div className="card-header">
                             <div className="card-icon blue">
                                 ◫
@@ -452,11 +438,8 @@ function Dashboard() {
                         </div>
 
                         <div className="status-list">
-
                             <div className="status-row">
-                                <span>
-                                    Status
-                                </span>
+                                <span>Status</span>
 
                                 <StatusBadge
                                     status={
@@ -467,9 +450,7 @@ function Dashboard() {
                             </div>
 
                             <div className="status-row">
-                                <span>
-                                    Sync
-                                </span>
+                                <span>Sync</span>
 
                                 <span
                                     className={
@@ -485,9 +466,7 @@ function Dashboard() {
                             </div>
 
                             <div className="status-row">
-                                <span>
-                                    Interval
-                                </span>
+                                <span>Interval</span>
 
                                 <strong>
                                     {
@@ -495,9 +474,10 @@ function Dashboard() {
                                     }{" "}
                                     minute
                                     {scheduler.interval_minutes !==
-                                        1
+                                    1
                                         ? "s"
                                         : ""}
+
                                     <span className="muted-inline">
                                         {" "}
                                         (
@@ -508,11 +488,9 @@ function Dashboard() {
                                     </span>
                                 </strong>
                             </div>
-
                         </div>
 
                         <div className="button-row">
-
                             <button
                                 className="btn btn-success-outline"
                                 onClick={
@@ -538,13 +516,10 @@ function Dashboard() {
                             >
                                 ■ Stop Scheduler
                             </button>
-
                         </div>
-
                     </div>
 
                     <div className="card">
-
                         <div className="card-header">
                             <div className="card-icon blue">
                                 ↻
@@ -556,7 +531,6 @@ function Dashboard() {
                         </div>
 
                         <div className="sync-summary">
-
                             <div>
                                 <span>
                                     Last status
@@ -575,7 +549,6 @@ function Dashboard() {
                                     last_sync.completed_at
                                 )}
                             </p>
-
                         </div>
 
                         <button
@@ -593,17 +566,12 @@ function Dashboard() {
                                     ? "Starting..."
                                     : "Sync Now"}
                         </button>
-
                     </div>
-
                 </section>
 
                 {/* Interval + Playlist */}
-
                 <section className="two-column">
-
                     <div className="card">
-
                         <div className="card-header">
                             <div className="card-icon blue">
                                 ◷
@@ -619,7 +587,6 @@ function Dashboard() {
                         </label>
 
                         <div className="interval-input-row">
-
                             <input
                                 type="number"
                                 min="10"
@@ -632,10 +599,7 @@ function Dashboard() {
                                 }
                             />
 
-                            <span>
-                                seconds
-                            </span>
-
+                            <span>seconds</span>
                         </div>
 
                         <button
@@ -649,19 +613,15 @@ function Dashboard() {
                         >
                             ▣ Update Interval
                         </button>
-
                     </div>
 
                     <div className="card">
-
                         <div className="card-header">
                             <div className="card-icon blue">
                                 ☷
                             </div>
 
-                            <h2>
-                                Playlist
-                            </h2>
+                            <h2>Playlist</h2>
                         </div>
 
                         {playlist.length === 0 ? (
@@ -669,101 +629,76 @@ function Dashboard() {
                                 No playlists configured.
                             </p>
                         ) : (
-                            playlist.map(
-                                (item) => (
-                                    <div
-                                        className="playlist-content"
-                                        key={
-                                            item.id
-                                        }
-                                    >
+                            playlist.map((item) => (
+                                <div
+                                    className="playlist-content"
+                                    key={item.id}
+                                >
+                                    <h3>
+                                        {item.name}
+                                    </h3>
 
-                                        <h3>
+                                    <div className="playlist-row">
+                                        <span>
+                                            Songs
+                                        </span>
+
+                                        <span className="number-badge">
                                             {
-                                                item.name
+                                                item.song_count
                                             }
-                                        </h3>
-
-                                        <div className="playlist-row">
-
-                                            <span>
-                                                Songs
-                                            </span>
-
-                                            <span className="number-badge">
-                                                {
-                                                    item.song_count
-                                                }
-                                            </span>
-
-                                        </div>
-
-                                        <div className="playlist-row">
-
-                                            <span>
-                                                Status
-                                            </span>
-
-                                            <span className="badge badge-success">
-                                                {item.enabled
-                                                    ? "Enabled"
-                                                    : "Disabled"}
-                                            </span>
-
-                                        </div>
-
-                                        <div className="playlist-actions">
-
-                                            <span className="playlist-id">
-                                                {
-                                                    item.youtube_playlist_id
-                                                }
-                                            </span>
-
-                                            <a
-                                                href={
-                                                    item.url
-                                                }
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="btn btn-secondary"
-                                            >
-                                                ↗ Open on YouTube
-                                            </a>
-
-                                        </div>
-
+                                        </span>
                                     </div>
-                                )
-                            )
+
+                                    <div className="playlist-row">
+                                        <span>
+                                            Status
+                                        </span>
+
+                                        <span className="badge badge-success">
+                                            {item.enabled
+                                                ? "Enabled"
+                                                : "Disabled"}
+                                        </span>
+                                    </div>
+
+                                    <div className="playlist-actions">
+                                        <span className="playlist-id">
+                                            {
+                                                item.youtube_playlist_id
+                                            }
+                                        </span>
+
+                                        <a
+                                            href={
+                                                item.url
+                                            }
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="btn btn-secondary"
+                                        >
+                                            ↗ Open on YouTube
+                                        </a>
+                                    </div>
+                                </div>
+                            ))
                         )}
-
                     </div>
-
                 </section>
 
                 {/* Last Sync */}
-
                 <section className="card last-sync-card">
-
                     <div className="card-header">
-
                         <div className="card-icon blue">
                             ◷
                         </div>
 
-                        <h2>
-                            Last Sync
-                        </h2>
-
+                        <h2>Last Sync</h2>
                     </div>
 
                     <div className="last-sync-grid">
-
                         <div>
-                            <span>
-                                Status
-                            </span>
+                            <span>Status</span>
 
                             <StatusBadge
                                 status={
@@ -773,9 +708,7 @@ function Dashboard() {
                         </div>
 
                         <div>
-                            <span>
-                                Started At
-                            </span>
+                            <span>Started At</span>
 
                             <strong>
                                 {formatDate(
@@ -797,9 +730,7 @@ function Dashboard() {
                         </div>
 
                         <div>
-                            <span>
-                                Duration
-                            </span>
+                            <span>Duration</span>
 
                             <strong>
                                 {calculateDuration(
@@ -808,7 +739,6 @@ function Dashboard() {
                                 )}
                             </strong>
                         </div>
-
                     </div>
 
                     {last_sync.error && (
@@ -816,16 +746,11 @@ function Dashboard() {
                             {last_sync.error}
                         </div>
                     )}
-
                 </section>
 
-
                 {/* Recent History */}
-
                 <section className="card history-card">
-
                     <div className="card-header">
-
                         <div className="card-icon blue">
                             ◷
                         </div>
@@ -833,27 +758,20 @@ function Dashboard() {
                         <h2>
                             Recent Sync History
                         </h2>
-
                     </div>
 
-                    {recent_syncs.length ===
-                        0 ? (
+                    {recent_syncs.length === 0 ? (
                         <div className="empty-state">
-                            No synchronization history
-                            available.
+                            No synchronization
+                            history available.
                         </div>
                     ) : (
                         <div className="table-wrapper">
-
                             <table>
-
                                 <thead>
-
                                     <tr>
                                         <th>#</th>
-                                        <th>
-                                            Status
-                                        </th>
+                                        <th>Status</th>
                                         <th>
                                             Started At
                                         </th>
@@ -863,15 +781,11 @@ function Dashboard() {
                                         <th>
                                             Duration
                                         </th>
-                                        <th>
-                                            Error
-                                        </th>
+                                        <th>Error</th>
                                     </tr>
-
                                 </thead>
 
                                 <tbody>
-
                                     {recent_syncs.map(
                                         (
                                             sync,
@@ -882,7 +796,6 @@ function Dashboard() {
                                                     index
                                                 }
                                             >
-
                                                 <td>
                                                     {index +
                                                         1}
@@ -919,15 +832,11 @@ function Dashboard() {
                                                     {sync.error ||
                                                         "-"}
                                                 </td>
-
                                             </tr>
                                         )
                                     )}
-
                                 </tbody>
-
                             </table>
-
                         </div>
                     )}
 
@@ -935,14 +844,11 @@ function Dashboard() {
                         Showing{" "}
                         {recent_syncs.length}{" "}
                         sync
-                        {recent_syncs.length !==
-                            1
+                        {recent_syncs.length !== 1
                             ? "s"
                             : ""}
                     </div>
-
                 </section>
-           
             </main>
         </div>
     );

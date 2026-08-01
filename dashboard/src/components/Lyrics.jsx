@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSongLyrics } from "../services/songs";
 import { parseLRC } from "../utils/lrcParser";
-
-function Lyrics({ song, currentTime }) {
+import "../styles/songs.css";
+function Lyrics({ song, currentTime = 0 }) {
     const [lyrics, setLyrics] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
+    const activeLineRef = useRef(null);
     useEffect(() => {
         if (!song) {
             setLyrics([]);
@@ -20,9 +20,12 @@ function Lyrics({ song, currentTime }) {
 
                 const data = await getSongLyrics(song.id);
 
-                const parsedLyrics = parseLRC(
-                    data.lyrics
-                );
+                if (!data?.lyrics) {
+                    setLyrics([]);
+                    return;
+                }
+
+                const parsedLyrics = parseLRC(data.lyrics);
 
                 setLyrics(parsedLyrics);
             } catch (error) {
@@ -42,36 +45,68 @@ function Lyrics({ song, currentTime }) {
 
     if (!song) {
         return (
-            <section>
-                <h2>Lyrics</h2>
-                <p>Select a song to view lyrics.</p>
+            <section className="lyrics-panel">
+                <div className="lyrics-heading">
+                    <div>
+                        <span className="lyrics-icon">♪</span>
+                        <h3>Lyrics</h3>
+                    </div>
+                </div>
+
+                <div className="lyrics-message">
+                    Select a song to view lyrics.
+                </div>
             </section>
         );
     }
 
     if (loading) {
         return (
-            <section>
-                <h2>Lyrics</h2>
-                <p>Loading lyrics...</p>
+            <section className="lyrics-panel">
+                <div className="lyrics-heading">
+                    <div>
+                        <span className="lyrics-icon">♪</span>
+                        <h3>Lyrics</h3>
+                    </div>
+                </div>
+
+                <div className="lyrics-message">
+                    Loading lyrics...
+                </div>
             </section>
         );
     }
 
     if (error) {
         return (
-            <section>
-                <h2>Lyrics</h2>
-                <p>{error}</p>
+            <section className="lyrics-panel">
+                <div className="lyrics-heading">
+                    <div>
+                        <span className="lyrics-icon">♪</span>
+                        <h3>Lyrics</h3>
+                    </div>
+                </div>
+
+                <div className="lyrics-message lyrics-unavailable">
+                    {error}
+                </div>
             </section>
         );
     }
 
     if (lyrics.length === 0) {
         return (
-            <section>
-                <h2>Lyrics</h2>
-                <p>No timestamped lyrics available.</p>
+            <section className="lyrics-panel">
+                <div className="lyrics-heading">
+                    <div>
+                        <span className="lyrics-icon">♪</span>
+                        <h3>Lyrics</h3>
+                    </div>
+                </div>
+
+                <div className="lyrics-message lyrics-unavailable">
+                    No timestamped lyrics available.
+                </div>
             </section>
         );
     }
@@ -87,27 +122,30 @@ function Lyrics({ song, currentTime }) {
     }
 
     return (
-        <section>
-            <h2>Lyrics</h2>
+        <section className="lyrics-panel">
+            <div className="lyrics-heading">
+                <div>
+                    <span className="lyrics-icon">♪</span>
 
-            <div>
+                    <div>
+                        <h3>Lyrics</h3>
+
+                        <span>
+                            Synced lyrics
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="lyrics-content">
                 {lyrics.map((line, index) => (
                     <p
                         key={`${line.time}-${index}`}
-                        style={{
-                            fontWeight:
-                                index === activeIndex
-                                    ? "bold"
-                                    : "normal",
-
-                            opacity:
-                                index === activeIndex
-                                    ? 1
-                                    : 0.5,
-
-                            transition:
-                                "all 0.2s ease",
-                        }}
+                        className={
+                            index === activeIndex
+                                ? "lyric-line active"
+                                : "lyric-line"
+                        }
                     >
                         {line.text}
                     </p>
