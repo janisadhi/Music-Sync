@@ -9,10 +9,16 @@ function SongList({ onSelectSong }) {
     const fetchSongs = async () => {
         try {
             setLoading(true);
+
             const data = await getSongs();
+
             setSongs(data);
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error(
+                "Failed to fetch songs:",
+                error
+            );
+
             setError("Failed to load songs.");
         } finally {
             setLoading(false);
@@ -42,27 +48,38 @@ function SongList({ onSelectSong }) {
                     {songs.map((song) => (
                         <div
                             key={song.id}
-                            onClick={() => onSelectSong(song)}
+                            onClick={() =>
+                                onSelectSong(song)
+                            }
                             style={{
-                                padding: "12px",
-                                borderBottom: "1px solid #ddd",
+                                padding: "15px",
+                                marginBottom: "10px",
+                                border: "1px solid #ddd",
                                 cursor: "pointer",
                             }}
                         >
-                            <strong>{song.title}</strong>
+                            <h3>{song.title}</h3>
 
-                            <div>
+                            <p>
+                                Duration:{" "}
                                 {song.duration
-                                    ? `${Math.floor(song.duration / 60)}:${String(
+                                    ? `${Math.floor(
+                                          song.duration / 60
+                                      )}:${String(
                                           song.duration % 60
                                       ).padStart(2, "0")}`
-                                    : "Unknown duration"}
-                            </div>
+                                    : "Unknown"}
+                            </p>
 
-                            <small>
-                                Download: {song.download_status} | Lyrics:{" "}
+                            <p>
+                                Download:{" "}
+                                {song.download_status}
+                            </p>
+
+                            <p>
+                                Lyrics:{" "}
                                 {song.lyrics_status}
-                            </small>
+                            </p>
                         </div>
                     ))}
                 </div>

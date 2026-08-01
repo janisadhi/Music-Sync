@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import { getSongs } from "../services/songs";
 import "../styles/dashboard.css";
 import SongList from "../components/SongList";
 import AudioPlayer from "../components/AudioPlayer";
+import Lyrics from "../components/Lyrics";
 
 function StatusBadge({ status, type = "default" }) {
     let className = "badge";
@@ -52,7 +54,10 @@ function StatCard({ label, value, description, icon, variant }) {
 }
 
 function Dashboard() {
+    const [currentTime, setCurrentTime] = useState(0);
+    const [songs, setSongs] = useState([]);
     const [selectedSong, setSelectedSong] = useState(null);
+
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -96,6 +101,20 @@ function Dashboard() {
 
     useEffect(() => {
         fetchDashboard();
+
+        const loadSongs = async () => {
+            try {
+                const data = await getSongs();
+                setSongs(data);
+            } catch (error) {
+                console.error(
+                    "Failed to fetch songs:",
+                    error
+                );
+            }
+        };
+
+        loadSongs();
 
         const timer = setInterval(
             fetchDashboard,
@@ -288,7 +307,35 @@ function Dashboard() {
         last_sync,
         recent_syncs,
     } = data;
+    const currentIndex = songs.findIndex(
+        (song) => song.id === selectedSong?.id
+    );
 
+    const playNext = () => {
+        if (songs.length === 0) {
+            return;
+        }
+
+        const nextIndex =
+            currentIndex === songs.length - 1
+                ? 0
+                : currentIndex + 1;
+
+        setSelectedSong(songs[nextIndex]);
+    };
+
+    const playPrevious = () => {
+        if (songs.length === 0) {
+            return;
+        }
+
+        const previousIndex =
+            currentIndex <= 0
+                ? songs.length - 1
+                : currentIndex - 1;
+
+        setSelectedSong(songs[previousIndex]);
+    };
     return (
         <div className="dashboard-layout">
 
@@ -424,12 +471,11 @@ function Dashboard() {
 
                 {message && (
                     <div
-                        className={`alert ${
-                            message.type ===
+                        className={`alert ${message.type ===
                             "error"
-                                ? "alert-error"
-                                : "alert-success"
-                        }`}
+                            ? "alert-error"
+                            : "alert-success"
+                            }`}
                     >
                         {message.text}
                     </div>
@@ -569,7 +615,7 @@ function Dashboard() {
                                     }{" "}
                                     minute
                                     {scheduler.interval_minutes !==
-                                    1
+                                        1
                                         ? "s"
                                         : ""}
                                     <span className="muted-inline">
@@ -664,8 +710,8 @@ function Dashboard() {
                             {scheduler.sync_running
                                 ? "Sync Running..."
                                 : syncing
-                                ? "Starting..."
-                                : "Sync Now"}
+                                    ? "Starting..."
+                                    : "Sync Now"}
                         </button>
 
                     </div>
@@ -892,13 +938,7 @@ function Dashboard() {
                     )}
 
                 </section>
-                <hr />
 
-<SongList onSelectSong={setSelectedSong} />
-
-<hr />
-
-<AudioPlayer song={selectedSong} />
 
                 {/* Recent History */}
 
@@ -917,7 +957,7 @@ function Dashboard() {
                     </div>
 
                     {recent_syncs.length ===
-                    0 ? (
+                        0 ? (
                         <div className="empty-state">
                             No synchronization history
                             available.
@@ -1016,13 +1056,30 @@ function Dashboard() {
                         {recent_syncs.length}{" "}
                         sync
                         {recent_syncs.length !==
-                        1
+                            1
                             ? "s"
                             : ""}
                     </div>
 
                 </section>
+                <hr />
 
+                <SongList
+                    onSelectSong={setSelectedSong}
+                />
+
+                <hr />
+
+                <AudioPlayer
+                    song={selectedSong}
+                    onTimeUpdate={setCurrentTime}
+                    onNext={playNext}
+                    onPrevious={playPrevious}
+                />
+                <Lyrics
+                    song={selectedSong}
+                    currentTime={currentTime}
+                />
             </main>
         </div>
     );

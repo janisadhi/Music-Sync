@@ -5,16 +5,14 @@ export const getSongs = async () => {
     return response.data;
 };
 
-export const getSong = async (songId) => {
-    const response = await api.get(`/songs/${songId}`);
+export const getSongLyrics = async (songId) => {
+    const response = await api.get(
+        `/songs/${songId}/lyrics`
+    );
+
     return response.data;
 };
 
-export const getLyrics = async (songId) => {
-    const response = await api.get(`/songs/${songId}/lyrics`);
-    return response.data;
-};
-
-export const getAudioUrl = (songId) => {
+export const getSongAudioUrl = (songId) => {
     return `${api.defaults.baseURL}/songs/${songId}/audio`;
 };
