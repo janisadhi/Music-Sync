@@ -30,7 +30,7 @@ def get_dashboard():
 
         downloaded_songs = session.scalar(
             select(func.count(Song.id)).where(
-                Song.download_status == "completed"
+                Song.download_status == "downloaded"
             )
         ) or 0
 
@@ -45,13 +45,19 @@ def get_dashboard():
                 Song.lyrics_status == "pending"
             )
         ) or 0
-
+        
         completed_lyrics = session.scalar(
             select(func.count(Song.id)).where(
-                Song.lyrics_status == "completed"
+                Song.lyrics_status == "downloaded"
             )
         ) or 0
-
+        
+        unavailable_lyrics = session.scalar(
+            select(func.count(Song.id)).where(
+                Song.lyrics_status == "unavailable"
+            )
+        ) or 0
+        
         failed_lyrics = session.scalar(
             select(func.count(Song.id)).where(
                 Song.lyrics_status == "failed"
@@ -83,6 +89,7 @@ def get_dashboard():
             "failed_downloads": failed_downloads,
             "pending_lyrics": pending_lyrics,
             "completed_lyrics": completed_lyrics,
+            "unavailable_lyrics": unavailable_lyrics,
             "failed_lyrics": failed_lyrics,
         },
         "scheduler": {

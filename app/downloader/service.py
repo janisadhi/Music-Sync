@@ -93,22 +93,26 @@ class SongDownloader:
         with SessionLocal() as session:
             songs = session.scalars(
                 select(Song)
-                .where(Song.download_status == "pending")
+                .where(
+                    Song.download_status.in_(
+                        ["pending", "failed"]
+                    )
+                )
                 .order_by(Song.position)
                 .limit(limit)
             ).all()
-
+    
             print(
-                f"Pending songs selected: {len(songs)}"
+                f"Songs selected for download: {len(songs)}"
             )
-
+    
             for song in songs:
                 print(
                     f"Downloading: "
                     f"{song.position} - {song.title} "
                     f"({song.youtube_video_id})"
                 )
-
+    
                 self.download_song(song)
-
+    
             session.commit()

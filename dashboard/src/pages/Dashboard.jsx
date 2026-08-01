@@ -525,9 +525,7 @@ function Dashboard() {
 
                     <StatCard
                         label="Lyrics Completed"
-                        value={
-                            stats.completed_lyrics
-                        }
+                        value={stats.completed_lyrics}
                         description="With lyrics"
                         icon="▤"
                         variant="green"
@@ -535,19 +533,23 @@ function Dashboard() {
 
                     <StatCard
                         label="Lyrics Pending"
-                        value={
-                            stats.pending_lyrics
-                        }
+                        value={stats.pending_lyrics}
                         description="Waiting for lyrics"
                         icon="◷"
                         variant="orange"
                     />
 
                     <StatCard
+                        label="Lyrics Unavailable"
+                        value={stats.unavailable_lyrics}
+                        description="No synced lyrics found"
+                        icon="—"
+                        variant="orange"
+                    />
+
+                    <StatCard
                         label="Lyrics Failed"
-                        value={
-                            stats.failed_lyrics
-                        }
+                        value={stats.failed_lyrics}
                         description="Lyrics failures"
                         icon="!"
                         variant="red"
