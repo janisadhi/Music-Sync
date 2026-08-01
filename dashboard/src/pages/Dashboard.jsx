@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import { getSongs } from "../services/songs";
 import "../styles/dashboard.css";
-import SongList from "../components/SongList";
-import AudioPlayer from "../components/AudioPlayer";
-import Lyrics from "../components/Lyrics";
+
 
 function StatusBadge({ status, type = "default" }) {
     let className = "badge";
@@ -54,9 +52,7 @@ function StatCard({ label, value, description, icon, variant }) {
 }
 
 function Dashboard() {
-    const [currentTime, setCurrentTime] = useState(0);
     const [songs, setSongs] = useState([]);
-    const [selectedSong, setSelectedSong] = useState(null);
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -307,129 +303,11 @@ function Dashboard() {
         last_sync,
         recent_syncs,
     } = data;
-    const currentIndex = songs.findIndex(
-        (song) => song.id === selectedSong?.id
-    );
 
-    const playNext = () => {
-        if (songs.length === 0) {
-            return;
-        }
-
-        const nextIndex =
-            currentIndex === songs.length - 1
-                ? 0
-                : currentIndex + 1;
-
-        setSelectedSong(songs[nextIndex]);
-    };
-
-    const playPrevious = () => {
-        if (songs.length === 0) {
-            return;
-        }
-
-        const previousIndex =
-            currentIndex <= 0
-                ? songs.length - 1
-                : currentIndex - 1;
-
-        setSelectedSong(songs[previousIndex]);
-    };
     return (
         <div className="dashboard-layout">
 
-            {/* Sidebar */}
 
-            <aside className="sidebar">
-
-                <div className="brand">
-
-                    <div className="brand-icon">
-                        ♪
-                    </div>
-
-                    <div>
-                        <div className="brand-title">
-                            Music Sync
-                        </div>
-
-                        <div className="brand-subtitle">
-                            Dashboard
-                        </div>
-                    </div>
-
-                </div>
-
-                <nav className="sidebar-nav">
-
-                    <div className="nav-item active">
-                        <span className="nav-icon">
-                            ▦
-                        </span>
-
-                        Dashboard
-                    </div>
-
-                    <div className="nav-item">
-                        <span className="nav-icon">
-                            ☷
-                        </span>
-
-                        Playlists
-                    </div>
-
-                    <div className="nav-item">
-                        <span className="nav-icon">
-                            ♫
-                        </span>
-
-                        Songs
-                    </div>
-
-                    <div className="nav-item">
-                        <span className="nav-icon">
-                            ◷
-                        </span>
-
-                        Sync History
-                    </div>
-
-                    <div className="nav-item">
-                        <span className="nav-icon">
-                            ⚙
-                        </span>
-
-                        Settings
-                    </div>
-
-                    <div className="nav-item">
-                        <span className="nav-icon">
-                            ♡
-                        </span>
-
-                        System Health
-                    </div>
-
-                </nav>
-
-                <div className="sidebar-footer">
-
-                    <div className="online-dot" />
-
-                    <div>
-                        <strong>
-                            Music Sync v1.0.0
-                        </strong>
-
-                        <span>
-                            © 2026
-                        </span>
-                    </div>
-
-                </div>
-
-            </aside>
 
             {/* Main */}
 
@@ -1064,24 +942,7 @@ function Dashboard() {
                     </div>
 
                 </section>
-                <hr />
-
-                <SongList
-                    onSelectSong={setSelectedSong}
-                />
-
-                <hr />
-
-                <AudioPlayer
-                    song={selectedSong}
-                    onTimeUpdate={setCurrentTime}
-                    onNext={playNext}
-                    onPrevious={playPrevious}
-                />
-                <Lyrics
-                    song={selectedSong}
-                    currentTime={currentTime}
-                />
+           
             </main>
         </div>
     );

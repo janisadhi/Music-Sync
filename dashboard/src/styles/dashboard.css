@@ -839,7 +839,14 @@ tbody tr:hover {
 
     animation: spin 0.8s linear infinite;
 }
+.nav-item {
+    text-decoration: none;
+    color: inherit;
+}
 
+.nav-item:hover {
+    text-decoration: none;
+}
 @keyframes spin {
     to {
         transform: rotate(360deg);
