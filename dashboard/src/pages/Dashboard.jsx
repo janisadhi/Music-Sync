@@ -1,26 +1,89 @@
-
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import "../styles/dashboard.css";
+import SongList from "../components/SongList";
+import AudioPlayer from "../components/AudioPlayer";
+
+function StatusBadge({ status, type = "default" }) {
+    let className = "badge";
+
+    if (type === "running") {
+        className += status ? " badge-success" : " badge-danger";
+    } else if (status === "success") {
+        className += " badge-success";
+    } else if (status === "failed") {
+        className += " badge-danger";
+    } else if (status === "running") {
+        className += " badge-info";
+    } else {
+        className += " badge-neutral";
+    }
+
+    return (
+        <span className={className}>
+            {type === "running"
+                ? status
+                    ? "Running"
+                    : "Stopped"
+                : status || "N/A"}
+        </span>
+    );
+}
+
+function StatCard({ label, value, description, icon, variant }) {
+    return (
+        <div className="stat-card">
+            <div className={`stat-icon ${variant}`}>
+                {icon}
+            </div>
+
+            <div className="stat-content">
+                <div className="stat-label">{label}</div>
+                <div className="stat-value">{value}</div>
+
+                {description && (
+                    <div className="stat-description">
+                        {description}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function Dashboard() {
-    const [status, setStatus] = useState(null);
+    const [selectedSong, setSelectedSong] = useState(null);
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const [actionLoading, setActionLoading] =
+        useState(false);
+
     const [syncing, setSyncing] = useState(false);
-    const [actionLoading, setActionLoading] = useState(false);
-    const [interval, setIntervalValue] = useState(60);
+
+    const [interval, setIntervalValue] =
+        useState(60);
+
     const [message, setMessage] = useState(null);
 
-    const fetchStatus = async () => {
+    const fetchDashboard = async () => {
         try {
-            const response = await api.get("/sync/status");
+            const response =
+                await api.get("/dashboard");
 
-            setStatus(response.data);
+            setData(response.data);
 
             if (!actionLoading) {
-                setIntervalValue(response.data.interval_seconds);
+                setIntervalValue(
+                    response.data.scheduler
+                        .interval_seconds
+                );
             }
         } catch (error) {
-            console.error("Failed to fetch sync status:", error);
+            console.error(
+                "Failed to fetch dashboard:",
+                error
+            );
 
             setMessage({
                 type: "error",
@@ -32,9 +95,12 @@ function Dashboard() {
     };
 
     useEffect(() => {
-        fetchStatus();
+        fetchDashboard();
 
-        const timer = setInterval(fetchStatus, 5000);
+        const timer = setInterval(
+            fetchDashboard,
+            5000
+        );
 
         return () => clearInterval(timer);
     }, []);
@@ -44,16 +110,15 @@ function Dashboard() {
             setSyncing(true);
             setMessage(null);
 
-            const response = await api.post("/sync");
+            const response =
+                await api.post("/sync");
 
             setMessage({
                 type: "success",
-                text:
-                    response.data?.message ||
-                    "Synchronization started.",
+                text: response.data.message,
             });
 
-            await fetchStatus();
+            await fetchDashboard();
         } catch (error) {
             setMessage({
                 type: "error",
@@ -71,18 +136,17 @@ function Dashboard() {
             setActionLoading(true);
             setMessage(null);
 
-            const response = await api.post(
-                "/sync/scheduler/start"
-            );
+            const response =
+                await api.post(
+                    "/sync/scheduler/start"
+                );
 
             setMessage({
                 type: "success",
-                text:
-                    response.data?.message ||
-                    "Scheduler started.",
+                text: response.data.message,
             });
 
-            await fetchStatus();
+            await fetchDashboard();
         } catch (error) {
             setMessage({
                 type: "error",
@@ -100,18 +164,17 @@ function Dashboard() {
             setActionLoading(true);
             setMessage(null);
 
-            const response = await api.post(
-                "/sync/scheduler/stop"
-            );
+            const response =
+                await api.post(
+                    "/sync/scheduler/stop"
+                );
 
             setMessage({
                 type: "success",
-                text:
-                    response.data?.message ||
-                    "Scheduler stopped.",
+                text: response.data.message,
             });
 
-            await fetchStatus();
+            await fetchDashboard();
         } catch (error) {
             setMessage({
                 type: "error",
@@ -127,7 +190,7 @@ function Dashboard() {
     const updateInterval = async () => {
         const seconds = Number(interval);
 
-        if (!Number.isFinite(seconds) || seconds < 10) {
+        if (!seconds || seconds < 10) {
             setMessage({
                 type: "error",
                 text: "Interval must be at least 10 seconds.",
@@ -140,19 +203,20 @@ function Dashboard() {
             setActionLoading(true);
             setMessage(null);
 
-            const response = await api.patch(
-                "/sync/scheduler",
-                {
-                    seconds,
-                }
-            );
+            const response =
+                await api.patch(
+                    "/sync/scheduler",
+                    {
+                        seconds,
+                    }
+                );
 
             setMessage({
                 type: "success",
                 text: `Interval updated to ${response.data.interval_minutes} minutes.`,
             });
 
-            await fetchStatus();
+            await fetchDashboard();
         } catch (error) {
             setMessage({
                 type: "error",
@@ -165,354 +229,803 @@ function Dashboard() {
         }
     };
 
-    const formatDate = (value) => {
-        if (!value) {
+    const formatDate = (date) => {
+        if (!date) {
             return "N/A";
         }
 
-        return new Date(value).toLocaleString();
+        return new Date(date).toLocaleString();
+    };
+
+    const calculateDuration = (
+        started,
+        completed
+    ) => {
+        if (!started || !completed) {
+            return "-";
+        }
+
+        const start =
+            new Date(started).getTime();
+
+        const end =
+            new Date(completed).getTime();
+
+        const duration =
+            (end - start) / 1000;
+
+        return `${duration.toFixed(2)}s`;
     };
 
     if (loading) {
         return (
-            <main style={styles.page}>
-                <h1>Music Sync Dashboard</h1>
-                <p>Loading dashboard...</p>
-            </main>
+            <div className="loading-screen">
+                <div className="loading-spinner" />
+                <p>Loading Music Sync...</p>
+            </div>
         );
     }
 
-    return (
-        <main style={styles.page}>
-            <header style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>
-                        Music Sync Dashboard
-                    </h1>
+    if (!data) {
+        return (
+            <div className="error-screen">
+                <h2>Unable to load dashboard</h2>
 
-                    <p style={styles.subtitle}>
-                        Monitor and control your music
-                        synchronization service.
-                    </p>
-                </div>
-            </header>
-
-            {message && (
-                <div
-                    style={{
-                        ...styles.message,
-                        ...(message.type === "error"
-                            ? styles.error
-                            : styles.success),
-                    }}
+                <button
+                    className="btn btn-primary"
+                    onClick={fetchDashboard}
                 >
-                    {message.text}
+                    Try Again
+                </button>
+            </div>
+        );
+    }
+
+    const {
+        scheduler,
+        stats,
+        playlist,
+        last_sync,
+        recent_syncs,
+    } = data;
+
+    return (
+        <div className="dashboard-layout">
+
+            {/* Sidebar */}
+
+            <aside className="sidebar">
+
+                <div className="brand">
+
+                    <div className="brand-icon">
+                        ♪
+                    </div>
+
+                    <div>
+                        <div className="brand-title">
+                            Music Sync
+                        </div>
+
+                        <div className="brand-subtitle">
+                            Dashboard
+                        </div>
+                    </div>
+
                 </div>
-            )}
 
-            <div style={styles.grid}>
-                {/* Scheduler */}
-                <section style={styles.card}>
-                    <h2 style={styles.cardTitle}>
-                        Scheduler
-                    </h2>
+                <nav className="sidebar-nav">
 
-                    <div style={styles.statusRow}>
-                        <span>Status</span>
+                    <div className="nav-item active">
+                        <span className="nav-icon">
+                            ▦
+                        </span>
 
-                        <strong>
-                            {status?.scheduler_running
-                                ? "Running"
-                                : "Stopped"}
-                        </strong>
+                        Dashboard
                     </div>
 
-                    <div style={styles.statusRow}>
-                        <span>Sync</span>
+                    <div className="nav-item">
+                        <span className="nav-icon">
+                            ☷
+                        </span>
 
-                        <strong>
-                            {status?.sync_running
-                                ? "Running"
-                                : "Idle"}
-                        </strong>
+                        Playlists
                     </div>
 
-                    <div style={styles.statusRow}>
-                        <span>Interval</span>
+                    <div className="nav-item">
+                        <span className="nav-icon">
+                            ♫
+                        </span>
 
-                        <strong>
-                            {status?.interval_minutes} minutes
-                        </strong>
+                        Songs
                     </div>
 
-                    <div style={styles.actions}>
-                        <button
-                            onClick={startScheduler}
-                            disabled={
-                                actionLoading ||
-                                status?.scheduler_running
+                    <div className="nav-item">
+                        <span className="nav-icon">
+                            ◷
+                        </span>
+
+                        Sync History
+                    </div>
+
+                    <div className="nav-item">
+                        <span className="nav-icon">
+                            ⚙
+                        </span>
+
+                        Settings
+                    </div>
+
+                    <div className="nav-item">
+                        <span className="nav-icon">
+                            ♡
+                        </span>
+
+                        System Health
+                    </div>
+
+                </nav>
+
+                <div className="sidebar-footer">
+
+                    <div className="online-dot" />
+
+                    <div>
+                        <strong>
+                            Music Sync v1.0.0
+                        </strong>
+
+                        <span>
+                            © 2026
+                        </span>
+                    </div>
+
+                </div>
+
+            </aside>
+
+            {/* Main */}
+
+            <main className="main-content">
+
+                {/* Header */}
+
+                <header className="page-header">
+
+                    <div>
+                        <h1>
+                            Music Sync Dashboard
+                        </h1>
+
+                        <p>
+                            Manage synchronization and
+                            monitor your music library.
+                        </p>
+                    </div>
+
+                    <div className="header-status">
+
+                        <StatusBadge
+                            status={
+                                scheduler.running
                             }
-                            style={styles.primaryButton}
-                        >
-                            {actionLoading
-                                ? "Working..."
-                                : "Start Scheduler"}
-                        </button>
-
-                        <button
-                            onClick={stopScheduler}
-                            disabled={
-                                actionLoading ||
-                                !status?.scheduler_running
-                            }
-                            style={styles.secondaryButton}
-                        >
-                            Stop Scheduler
-                        </button>
-                    </div>
-                </section>
-
-                {/* Manual Sync */}
-                <section style={styles.card}>
-                    <h2 style={styles.cardTitle}>
-                        Synchronization
-                    </h2>
-
-                    <div style={styles.syncStatus}>
-                        <span>Current Status</span>
-
-                        <strong>
-                            {status?.sync_running
-                                ? "Running"
-                                : "Idle"}
-                        </strong>
-                    </div>
-
-                    <button
-                        onClick={syncNow}
-                        disabled={
-                            syncing ||
-                            status?.sync_running
-                        }
-                        style={styles.primaryButton}
-                    >
-                        {status?.sync_running
-                            ? "Sync Running..."
-                            : syncing
-                            ? "Starting..."
-                            : "Sync Now"}
-                    </button>
-                </section>
-
-                {/* Interval */}
-                <section style={styles.card}>
-                    <h2 style={styles.cardTitle}>
-                        Sync Interval
-                    </h2>
-
-                    <p style={styles.description}>
-                        Configure how often the scheduler
-                        performs synchronization.
-                    </p>
-
-                    <div style={styles.inputGroup}>
-                        <input
-                            type="number"
-                            min="10"
-                            value={interval}
-                            onChange={(event) =>
-                                setIntervalValue(
-                                    event.target.value
-                                )
-                            }
-                            style={styles.input}
-                            disabled={actionLoading}
+                            type="running"
                         />
 
-                        <span>seconds</span>
+                        <span className="refresh-status">
+                            ↻ Auto-refresh: 5s
+                        </span>
+
                     </div>
 
-                    <button
-                        onClick={updateInterval}
-                        disabled={actionLoading}
-                        style={styles.primaryButton}
+                </header>
+
+                {/* Message */}
+
+                {message && (
+                    <div
+                        className={`alert ${
+                            message.type ===
+                            "error"
+                                ? "alert-error"
+                                : "alert-success"
+                        }`}
                     >
-                        {actionLoading
-                            ? "Updating..."
-                            : "Update Interval"}
-                    </button>
+                        {message.text}
+                    </div>
+                )}
+
+                {/* Stats */}
+
+                <section className="stats-grid">
+
+                    <StatCard
+                        label="Total Songs"
+                        value={stats.total_songs}
+                        description="In your library"
+                        icon="♫"
+                        variant="blue"
+                    />
+
+                    <StatCard
+                        label="Downloaded"
+                        value={
+                            stats.downloaded_songs
+                        }
+                        description="Completed downloads"
+                        icon="↓"
+                        variant="green"
+                    />
+
+                    <StatCard
+                        label="Pending Downloads"
+                        value={
+                            stats.pending_downloads
+                        }
+                        description="Waiting to download"
+                        icon="◷"
+                        variant="orange"
+                    />
+
+                    <StatCard
+                        label="Failed Downloads"
+                        value={
+                            stats.failed_downloads
+                        }
+                        description="Download failures"
+                        icon="!"
+                        variant="red"
+                    />
+
+                    <StatCard
+                        label="Lyrics Completed"
+                        value={
+                            stats.completed_lyrics
+                        }
+                        description="With lyrics"
+                        icon="▤"
+                        variant="green"
+                    />
+
+                    <StatCard
+                        label="Lyrics Pending"
+                        value={
+                            stats.pending_lyrics
+                        }
+                        description="Waiting for lyrics"
+                        icon="◷"
+                        variant="orange"
+                    />
+
+                    <StatCard
+                        label="Lyrics Failed"
+                        value={
+                            stats.failed_lyrics
+                        }
+                        description="Lyrics failures"
+                        icon="!"
+                        variant="red"
+                    />
+
+                </section>
+
+                {/* Scheduler + Sync */}
+
+                <section className="two-column">
+
+                    <div className="card">
+
+                        <div className="card-header">
+                            <div className="card-icon blue">
+                                ◫
+                            </div>
+
+                            <h2>
+                                Scheduler Status
+                            </h2>
+                        </div>
+
+                        <div className="status-list">
+
+                            <div className="status-row">
+                                <span>
+                                    Status
+                                </span>
+
+                                <StatusBadge
+                                    status={
+                                        scheduler.running
+                                    }
+                                    type="running"
+                                />
+                            </div>
+
+                            <div className="status-row">
+                                <span>
+                                    Sync
+                                </span>
+
+                                <span
+                                    className={
+                                        scheduler.sync_running
+                                            ? "text-blue"
+                                            : "text-muted"
+                                    }
+                                >
+                                    {scheduler.sync_running
+                                        ? "Running"
+                                        : "Idle"}
+                                </span>
+                            </div>
+
+                            <div className="status-row">
+                                <span>
+                                    Interval
+                                </span>
+
+                                <strong>
+                                    {
+                                        scheduler.interval_minutes
+                                    }{" "}
+                                    minute
+                                    {scheduler.interval_minutes !==
+                                    1
+                                        ? "s"
+                                        : ""}
+                                    <span className="muted-inline">
+                                        {" "}
+                                        (
+                                        {
+                                            scheduler.interval_seconds
+                                        }{" "}
+                                        seconds)
+                                    </span>
+                                </strong>
+                            </div>
+
+                        </div>
+
+                        <div className="button-row">
+
+                            <button
+                                className="btn btn-success-outline"
+                                onClick={
+                                    startScheduler
+                                }
+                                disabled={
+                                    actionLoading ||
+                                    scheduler.running
+                                }
+                            >
+                                ▶ Start Scheduler
+                            </button>
+
+                            <button
+                                className="btn btn-danger-outline"
+                                onClick={
+                                    stopScheduler
+                                }
+                                disabled={
+                                    actionLoading ||
+                                    !scheduler.running
+                                }
+                            >
+                                ■ Stop Scheduler
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div className="card">
+
+                        <div className="card-header">
+                            <div className="card-icon blue">
+                                ↻
+                            </div>
+
+                            <h2>
+                                Synchronization
+                            </h2>
+                        </div>
+
+                        <div className="sync-summary">
+
+                            <div>
+                                <span>
+                                    Last status
+                                </span>
+
+                                <strong className="text-success">
+                                    {
+                                        last_sync.status ||
+                                        "N/A"
+                                    }
+                                </strong>
+                            </div>
+
+                            <p>
+                                {formatDate(
+                                    last_sync.completed_at
+                                )}
+                            </p>
+
+                        </div>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={syncNow}
+                            disabled={
+                                syncing ||
+                                scheduler.sync_running
+                            }
+                        >
+                            ↻{" "}
+                            {scheduler.sync_running
+                                ? "Sync Running..."
+                                : syncing
+                                ? "Starting..."
+                                : "Sync Now"}
+                        </button>
+
+                    </div>
+
+                </section>
+
+                {/* Interval + Playlist */}
+
+                <section className="two-column">
+
+                    <div className="card">
+
+                        <div className="card-header">
+                            <div className="card-icon blue">
+                                ◷
+                            </div>
+
+                            <h2>
+                                Sync Interval
+                            </h2>
+                        </div>
+
+                        <label className="input-label">
+                            Interval (seconds)
+                        </label>
+
+                        <div className="interval-input-row">
+
+                            <input
+                                type="number"
+                                min="10"
+                                value={interval}
+                                onChange={(event) =>
+                                    setIntervalValue(
+                                        event.target
+                                            .value
+                                    )
+                                }
+                            />
+
+                            <span>
+                                seconds
+                            </span>
+
+                        </div>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={
+                                updateInterval
+                            }
+                            disabled={
+                                actionLoading
+                            }
+                        >
+                            ▣ Update Interval
+                        </button>
+
+                    </div>
+
+                    <div className="card">
+
+                        <div className="card-header">
+                            <div className="card-icon blue">
+                                ☷
+                            </div>
+
+                            <h2>
+                                Playlist
+                            </h2>
+                        </div>
+
+                        {playlist.length === 0 ? (
+                            <p className="text-muted">
+                                No playlists configured.
+                            </p>
+                        ) : (
+                            playlist.map(
+                                (item) => (
+                                    <div
+                                        className="playlist-content"
+                                        key={
+                                            item.id
+                                        }
+                                    >
+
+                                        <h3>
+                                            {
+                                                item.name
+                                            }
+                                        </h3>
+
+                                        <div className="playlist-row">
+
+                                            <span>
+                                                Songs
+                                            </span>
+
+                                            <span className="number-badge">
+                                                {
+                                                    item.song_count
+                                                }
+                                            </span>
+
+                                        </div>
+
+                                        <div className="playlist-row">
+
+                                            <span>
+                                                Status
+                                            </span>
+
+                                            <span className="badge badge-success">
+                                                {item.enabled
+                                                    ? "Enabled"
+                                                    : "Disabled"}
+                                            </span>
+
+                                        </div>
+
+                                        <div className="playlist-actions">
+
+                                            <span className="playlist-id">
+                                                {
+                                                    item.youtube_playlist_id
+                                                }
+                                            </span>
+
+                                            <a
+                                                href={
+                                                    item.url
+                                                }
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="btn btn-secondary"
+                                            >
+                                                ↗ Open on YouTube
+                                            </a>
+
+                                        </div>
+
+                                    </div>
+                                )
+                            )
+                        )}
+
+                    </div>
+
                 </section>
 
                 {/* Last Sync */}
-                <section style={styles.card}>
-                    <h2 style={styles.cardTitle}>
-                        Last Sync
-                    </h2>
 
-                    <div style={styles.statusRow}>
-                        <span>Status</span>
+                <section className="card last-sync-card">
 
-                        <strong>
-                            {status?.last_sync_status ||
-                                "N/A"}
-                        </strong>
+                    <div className="card-header">
+
+                        <div className="card-icon blue">
+                            ◷
+                        </div>
+
+                        <h2>
+                            Last Sync
+                        </h2>
+
                     </div>
 
-                    <div style={styles.statusRow}>
-                        <span>Started</span>
+                    <div className="last-sync-grid">
 
-                        <span>
-                            {formatDate(
-                                status?.last_sync_started_at
-                            )}
-                        </span>
+                        <div>
+                            <span>
+                                Status
+                            </span>
+
+                            <StatusBadge
+                                status={
+                                    last_sync.status
+                                }
+                            />
+                        </div>
+
+                        <div>
+                            <span>
+                                Started At
+                            </span>
+
+                            <strong>
+                                {formatDate(
+                                    last_sync.started_at
+                                )}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>
+                                Completed At
+                            </span>
+
+                            <strong>
+                                {formatDate(
+                                    last_sync.completed_at
+                                )}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>
+                                Duration
+                            </span>
+
+                            <strong>
+                                {calculateDuration(
+                                    last_sync.started_at,
+                                    last_sync.completed_at
+                                )}
+                            </strong>
+                        </div>
+
                     </div>
 
-                    <div style={styles.statusRow}>
-                        <span>Completed</span>
-
-                        <span>
-                            {formatDate(
-                                status?.last_sync_completed_at
-                            )}
-                        </span>
-                    </div>
-
-                    {status?.last_sync_error && (
-                        <div style={styles.errorBox}>
-                            <strong>Error</strong>
-                            <p>
-                                {status.last_sync_error}
-                            </p>
+                    {last_sync.error && (
+                        <div className="sync-error">
+                            {last_sync.error}
                         </div>
                     )}
+
                 </section>
-            </div>
-        </main>
+                <hr />
+
+<SongList onSelectSong={setSelectedSong} />
+
+<hr />
+
+<AudioPlayer song={selectedSong} />
+
+                {/* Recent History */}
+
+                <section className="card history-card">
+
+                    <div className="card-header">
+
+                        <div className="card-icon blue">
+                            ◷
+                        </div>
+
+                        <h2>
+                            Recent Sync History
+                        </h2>
+
+                    </div>
+
+                    {recent_syncs.length ===
+                    0 ? (
+                        <div className="empty-state">
+                            No synchronization history
+                            available.
+                        </div>
+                    ) : (
+                        <div className="table-wrapper">
+
+                            <table>
+
+                                <thead>
+
+                                    <tr>
+                                        <th>#</th>
+                                        <th>
+                                            Status
+                                        </th>
+                                        <th>
+                                            Started At
+                                        </th>
+                                        <th>
+                                            Completed At
+                                        </th>
+                                        <th>
+                                            Duration
+                                        </th>
+                                        <th>
+                                            Error
+                                        </th>
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    {recent_syncs.map(
+                                        (
+                                            sync,
+                                            index
+                                        ) => (
+                                            <tr
+                                                key={
+                                                    index
+                                                }
+                                            >
+
+                                                <td>
+                                                    {index +
+                                                        1}
+                                                </td>
+
+                                                <td>
+                                                    <StatusBadge
+                                                        status={
+                                                            sync.status
+                                                        }
+                                                    />
+                                                </td>
+
+                                                <td>
+                                                    {formatDate(
+                                                        sync.started_at
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {formatDate(
+                                                        sync.completed_at
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    {calculateDuration(
+                                                        sync.started_at,
+                                                        sync.completed_at
+                                                    )}
+                                                </td>
+
+                                                <td className="error-cell">
+                                                    {sync.error ||
+                                                        "-"}
+                                                </td>
+
+                                            </tr>
+                                        )
+                                    )}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+                    )}
+
+                    <div className="table-footer">
+                        Showing{" "}
+                        {recent_syncs.length}{" "}
+                        sync
+                        {recent_syncs.length !==
+                        1
+                            ? "s"
+                            : ""}
+                    </div>
+
+                </section>
+
+            </main>
+        </div>
     );
 }
-
-const styles = {
-    page: {
-        minHeight: "100vh",
-        padding: "40px",
-        background: "#f5f5f5",
-        fontFamily:
-            "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    },
-
-    header: {
-        marginBottom: "30px",
-    },
-
-    title: {
-        margin: 0,
-        fontSize: "32px",
-    },
-
-    subtitle: {
-        marginTop: "8px",
-        color: "#666",
-    },
-
-    grid: {
-        display: "grid",
-        gridTemplateColumns:
-            "repeat(auto-fit, minmax(320px, 1fr))",
-        gap: "20px",
-    },
-
-    card: {
-        background: "#ffffff",
-        border: "1px solid #ddd",
-        borderRadius: "12px",
-        padding: "24px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
-    },
-
-    cardTitle: {
-        marginTop: 0,
-        marginBottom: "20px",
-    },
-
-    statusRow: {
-        display: "flex",
-        justifyContent: "space-between",
-        gap: "20px",
-        marginBottom: "14px",
-    },
-
-    syncStatus: {
-        display: "flex",
-        justifyContent: "space-between",
-        marginBottom: "24px",
-    },
-
-    description: {
-        color: "#666",
-        lineHeight: "1.5",
-    },
-
-    actions: {
-        display: "flex",
-        gap: "10px",
-        marginTop: "20px",
-    },
-
-    primaryButton: {
-        padding: "10px 16px",
-        border: "none",
-        borderRadius: "6px",
-        cursor: "pointer",
-        background: "#111",
-        color: "#fff",
-    },
-
-    secondaryButton: {
-        padding: "10px 16px",
-        border: "1px solid #ccc",
-        borderRadius: "6px",
-        cursor: "pointer",
-        background: "#fff",
-        color: "#111",
-    },
-
-    inputGroup: {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        marginBottom: "16px",
-    },
-
-    input: {
-        width: "120px",
-        padding: "10px",
-        border: "1px solid #ccc",
-        borderRadius: "6px",
-    },
-
-    message: {
-        padding: "12px 16px",
-        marginBottom: "20px",
-        borderRadius: "6px",
-    },
-
-    success: {
-        background: "#e8f5e9",
-        border: "1px solid #a5d6a7",
-    },
-
-    error: {
-        background: "#ffebee",
-        border: "1px solid #ef9a9a",
-    },
-
-    errorBox: {
-        marginTop: "20px",
-        padding: "12px",
-        borderRadius: "6px",
-        background: "#ffebee",
-    },
-};
 
 export default Dashboard;
