@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.core.runtime import scheduler
 from app.database.session import engine
 from app.api.dashboard import router as dashboard_router
-
+from app.api.settings import router as settings_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("=" * 60)
@@ -49,7 +49,7 @@ app.include_router(songs_router)
 app.include_router(playlists_router)
 app.include_router(sync_router)
 app.include_router(dashboard_router)
-
+app.include_router(settings_router)
 @app.get("/health")
 def health_check():
     database_status = "ok"

@@ -49,9 +49,17 @@ class SongDownloader:
                     "key": "EmbedThumbnail",
                 },
             ],
-
+            
             # Write metadata into the audio file.
             "addmetadata": True,
+            
+            # Explicitly pass metadata to FFmpeg.
+            "postprocessor_args": [
+                "-metadata", f"title={song.title}",
+                "-metadata", f"artist={song.artist or ''}",
+                "-metadata", f"album={song.album or ''}",
+                "-metadata", f"album_artist={song.artist or ''}",
+            ],
         }
 
         try:

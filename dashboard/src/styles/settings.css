@@ -1,0 +1,167 @@
+/* =========================================
+   Settings
+========================================= */
+
+.settings-section {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.settings-section:first-of-type {
+    margin-top: 20px;
+    padding-top: 0;
+    border-top: none;
+}
+
+.settings-section h3 {
+    margin: 0 0 20px;
+    color: #172033;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* =========================================
+   Form
+========================================= */
+
+.settings-section .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 22px;
+}
+
+.settings-section .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.settings-section label {
+    margin-bottom: 8px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* =========================================
+   Inputs
+========================================= */
+
+.settings-section input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    height: 40px;
+    padding: 0 12px;
+
+    background: #ffffff;
+    color: #172033;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+
+    outline: none;
+
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.settings-section input:hover {
+    border-color: #94a3b8;
+}
+
+.settings-section input:focus {
+    border-color: #1769e0;
+    box-shadow: 0 0 0 3px rgba(23,105,224,.1);
+}
+
+.settings-section input::placeholder {
+    color: #94a3b8;
+}
+
+.settings-section input[type="number"] {
+    max-width: 270px;
+}
+
+/* =========================================
+   Help Text
+========================================= */
+
+.settings-section .text-muted {
+    margin-top: 7px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* =========================================
+   Messages
+========================================= */
+
+.settings-success {
+    margin: 20px 0 16px;
+    color: #15803d;
+    font-size: 13px;
+}
+
+.settings-error {
+    margin: 20px 0 16px;
+    color: #dc2626;
+    font-size: 13px;
+}
+
+/* =========================================
+   Button
+========================================= */
+
+/* Matches your current React:
+   className="button primary"
+*/
+
+.button.primary {
+    min-height: 36px;
+    min-width: 140px;
+
+    padding: 8px 14px;
+
+    border: 1px solid #1769e0;
+    border-radius: 6px;
+
+    background: #1769e0;
+    color: #ffffff;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: background .2s, opacity .2s;
+}
+
+.button.primary:hover:not(:disabled) {
+    background: #155cc4;
+}
+
+.button.primary:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   Responsive
+========================================= */
+
+@media (max-width:700px) {
+
+    .settings-section {
+        margin-top: 24px;
+        padding-top: 20px;
+    }
+
+    .settings-section input[type="number"] {
+        max-width: 100%;
+    }
+
+    .button.primary {
+        width: 100%;
+    }
+}

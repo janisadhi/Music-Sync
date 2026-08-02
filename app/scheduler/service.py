@@ -1,11 +1,13 @@
 from datetime import datetime
 from threading import Lock
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.base import JobLookupError
+from apscheduler.schedulers.background import (
+    BackgroundScheduler,
+)
 
-from app.core.config import settings
 from app.sync.service import SyncService
+from app.settings.service import SettingsService
 
 
 class MusicSyncScheduler:
@@ -23,19 +25,23 @@ class MusicSyncScheduler:
 
         self.history: list[dict] = []
 
-    def _create_scheduler(self):
-        """
-        Create a fresh APScheduler instance.
+        self.settings_service = SettingsService()
 
-        A BackgroundScheduler cannot be reused after shutdown(),
-        so a new instance must be created when starting again.
-        """
+    def _create_scheduler(self):
         self.scheduler = BackgroundScheduler()
+
+    def _get_interval(self) -> int:
+        app_settings = self.settings_service.get()
+
+        return app_settings.sync_interval_seconds
 
     def run_sync(self):
         with self.lock:
             if self.sync_running:
-                print("Sync already running. Skipping this cycle.")
+                print(
+                    "Sync already running. "
+                    "Skipping this cycle."
+                )
                 return
 
             self.sync_running = True
@@ -54,6 +60,7 @@ class MusicSyncScheduler:
 
         try:
             sync_service = SyncService()
+
             sync_service.run()
 
             with self.lock:
@@ -67,14 +74,18 @@ class MusicSyncScheduler:
                 self.last_sync_status = "failed"
                 self.last_sync_error = error
 
-            print(f"Sync cycle failed: {exc}")
+            print(
+                f"Sync cycle failed: {exc}"
+            )
 
         finally:
             completed_at = datetime.now()
 
             with self.lock:
                 self.sync_running = False
-                self.last_sync_completed_at = completed_at
+                self.last_sync_completed_at = (
+                    completed_at
+                )
 
                 self.history.append(
                     {
@@ -91,25 +102,24 @@ class MusicSyncScheduler:
             print("Scheduled sync completed")
             print("=" * 60)
 
-    def start(self, run_immediately: bool = True) -> bool:
-        """
-        Start the scheduler.
-
-        Returns:
-            True  -> scheduler was started
-            False -> scheduler was already running
-        """
+    def start(
+        self,
+        run_immediately: bool = True,
+    ) -> bool:
 
         with self.lock:
-            if self.scheduler is not None and self.scheduler.running:
-                print("Scheduler is already running.")
+            if (
+                self.scheduler is not None
+                and self.scheduler.running
+            ):
+                print(
+                    "Scheduler is already running."
+                )
                 return False
 
-            # IMPORTANT:
-            # Always create a fresh scheduler after shutdown.
             self._create_scheduler()
 
-            interval = settings.sync_interval_seconds
+            interval = self._get_interval()
 
             self.scheduler.add_job(
                 self.run_sync,
@@ -126,8 +136,12 @@ class MusicSyncScheduler:
         print("=" * 60)
         print("Music Sync Scheduler")
         print("=" * 60)
-        print(f"Interval: {interval} seconds")
-        print(f"Interval: {interval / 60:.1f} minutes")
+        print(
+            f"Interval: {interval} seconds"
+        )
+        print(
+            f"Interval: {interval / 60:.1f} minutes"
+        )
         print("=" * 60)
         print("Scheduler started.")
 
@@ -137,48 +151,49 @@ class MusicSyncScheduler:
         return True
 
     def stop(self) -> bool:
-        """
-        Stop the scheduler.
-
-        The scheduler instance is discarded after shutdown.
-        A new instance will be created on the next start().
-        """
-
         with self.lock:
-            if self.scheduler is None or not self.scheduler.running:
-                print("Scheduler is already stopped.")
+            if (
+                self.scheduler is None
+                or not self.scheduler.running
+            ):
+                print(
+                    "Scheduler is already stopped."
+                )
                 return False
 
             try:
-                self.scheduler.remove_job("music-sync")
+                self.scheduler.remove_job(
+                    "music-sync"
+                )
             except JobLookupError:
                 pass
 
-            self.scheduler.shutdown(wait=False)
+            self.scheduler.shutdown(
+                wait=False
+            )
 
-            # Do not reuse this instance.
             self.scheduler = None
 
         print("Scheduler stopped.")
 
         return True
 
-    def update_interval(self, seconds: int) -> int:
-        """
-        Update the scheduler interval.
-
-        If the scheduler is running, recreate its job using
-        the new interval.
-        """
+    def update_interval(
+        self,
+        seconds: int,
+    ) -> int:
 
         if seconds < 10:
             raise ValueError(
                 "Interval must be at least 10 seconds."
             )
 
-        with self.lock:
-            settings.sync_interval_seconds = seconds
+        # Persist the new value in PostgreSQL.
+        self.settings_service.update(
+            sync_interval_seconds=seconds
+        )
 
+        with self.lock:
             scheduler_running = (
                 self.scheduler is not None
                 and self.scheduler.running
@@ -186,7 +201,9 @@ class MusicSyncScheduler:
 
             if scheduler_running:
                 try:
-                    self.scheduler.remove_job("music-sync")
+                    self.scheduler.remove_job(
+                        "music-sync"
+                    )
                 except JobLookupError:
                     pass
 
@@ -201,22 +218,23 @@ class MusicSyncScheduler:
                 )
 
         print(
-            f"Scheduler interval updated to {seconds} seconds."
+            "Scheduler interval updated to "
+            f"{seconds} seconds."
         )
 
         return seconds
 
     def get_history(self) -> list[dict]:
-        """
-        Return synchronization history.
-        """
-
         with self.lock:
-            return list(reversed(self.history))
+            return list(
+                reversed(self.history)
+            )
 
     def get_status(self):
         with self.lock:
-            interval = settings.sync_interval_seconds
+            app_settings = (
+                self.settings_service.get()
+            )
 
             scheduler_running = (
                 self.scheduler is not None
@@ -224,10 +242,25 @@ class MusicSyncScheduler:
             )
 
             return {
-                "scheduler_running": scheduler_running,
-                "sync_running": self.sync_running,
-                "interval_seconds": interval,
-                "interval_minutes": interval / 60,
+                "scheduler_running": (
+                    scheduler_running
+                ),
+                "sync_running": (
+                    self.sync_running
+                ),
+                "interval_seconds": (
+                    app_settings.sync_interval_seconds
+                ),
+                "interval_minutes": (
+                    app_settings.sync_interval_seconds
+                    / 60
+                ),
+                "download_limit": (
+                    app_settings.download_limit
+                ),
+                "lyrics_limit": (
+                    app_settings.lyrics_limit
+                ),
                 "last_sync_started_at": (
                     self.last_sync_started_at
                 ),

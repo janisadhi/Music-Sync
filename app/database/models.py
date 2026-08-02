@@ -134,3 +134,41 @@ class Song(Base):
     playlist: Mapped["Playlist"] = relationship(
         back_populates="songs",
     )
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        default=1,
+    )
+
+    sync_interval_seconds: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=60,
+    )
+
+    download_limit: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+    )
+
+    lyrics_limit: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+    )
+
+    youtube_playlist_url: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
