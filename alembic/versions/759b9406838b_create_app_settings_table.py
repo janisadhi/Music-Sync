@@ -1,6 +1,6 @@
 """create app settings table
 
-Revision ID: <KEEP_GENERATED_REVISION_ID>
+Revision ID: 759b9406838b
 Revises: 46e434edb2db
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "<KEEP_GENERATED_REVISION_ID>"
+revision: str = "759b9406838b"
 down_revision: Union[str, Sequence[str], None] = "46e434edb2db"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

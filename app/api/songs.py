@@ -1,3 +1,4 @@
+
 import shutil
 from pathlib import Path
 
@@ -18,10 +19,14 @@ router = APIRouter(
 
 
 MUSIC_ROOT = Path("/app/data/music")
-NO_LYRICS_ROOT = Path("/app/data/no-lyrics")
 
 
 def resolve_file_path(file_path: str) -> Path:
+    """
+    Resolve a database file path into a path inside the
+    application container.
+    """
+
     path = Path(file_path)
 
     if path.is_absolute():
@@ -29,100 +34,77 @@ def resolve_file_path(file_path: str) -> Path:
 
     return Path("/app") / path
 
-@router.post("/{song_id}/retry-lyrics")
-def retry_song_lyrics(
-    song_id: int,
-    db: Session = Depends(get_db),
-):
-    song = db.get(Song, song_id)
 
-    if song is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Song not found",
-        )
+def get_playlist_music_root(song: Song) -> Path:
+    """
+    Return the playlist-specific music directory.
 
-    if song.download_status != "downloaded":
+    Example:
+        /app/data/music/2/music
+    """
+
+    if song.playlist is None:
         raise HTTPException(
             status_code=400,
-            detail="Song must be downloaded before retrying lyrics",
+            detail="Song playlist is missing",
         )
 
-    if song.lyrics_status not in {
-        "unavailable",
-        "failed",
-    }:
+    path = (
+        MUSIC_ROOT
+        / str(song.playlist.id)
+        / "music"
+    )
+
+    path.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    return path
+
+
+def get_playlist_no_lyrics_root(song: Song) -> Path:
+    """
+    Return the playlist-specific no-lyrics directory.
+
+    Example:
+        /app/data/music/2/no-lyrics
+    """
+
+    if song.playlist is None:
         raise HTTPException(
             status_code=400,
-            detail="Lyrics do not need to be retried",
+            detail="Song playlist is missing",
         )
 
-    if not song.file_path:
-        raise HTTPException(
-            status_code=400,
-            detail="Song file path not available",
-        )
+    path = (
+        MUSIC_ROOT
+        / str(song.playlist.id)
+        / "no-lyrics"
+    )
 
-    current_path = Path(song.file_path)
+    path.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-    if not current_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Song audio file not found",
-        )
+    return path
 
-    # ---------------------------------------------------------
-    # Move song back from no-lyrics/ to music/
-    # ---------------------------------------------------------
 
-    if current_path.parent == NO_LYRICS_ROOT:
+# ---------------------------------------------------------
+# Songs
+# ---------------------------------------------------------
 
-        destination = MUSIC_ROOT / current_path.name
-
-        try:
-            # music and no-lyrics may be separate Docker
-            # bind mounts, so use copy + unlink instead
-            # of rename().
-            shutil.copy2(
-                current_path,
-                destination,
-            )
-
-            current_path.unlink()
-
-            song.file_path = str(destination)
-
-        except Exception as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=(
-                    f"Failed to restore audio file: {exc}"
-                ),
-            )
-
-    # ---------------------------------------------------------
-    # Reset lyrics state
-    # ---------------------------------------------------------
-
-    song.lyrics_status = "pending"
-    song.lyrics_path = None
-    song.error_message = None
-
-    db.commit()
-    db.refresh(song)
-
-    return {
-        "message": "Lyrics retry scheduled",
-        "song_id": song.id,
-        "lyrics_status": song.lyrics_status,
-    }
 
 @router.get("", response_model=list[SongResponse])
 def get_songs(
     db: Session = Depends(get_db),
 ):
     songs = db.scalars(
-        select(Song).order_by(Song.position)
+        select(Song).order_by(
+            Song.playlist_id,
+            Song.position,
+        )
     ).all()
 
     return songs
@@ -142,6 +124,11 @@ def get_song(
         )
 
     return song
+
+
+# ---------------------------------------------------------
+# Audio
+# ---------------------------------------------------------
 
 
 @router.get("/{song_id}/audio")
@@ -169,7 +156,9 @@ def get_song_audio(
             detail="Audio file path not available",
         )
 
-    audio_path = resolve_file_path(song.file_path)
+    audio_path = resolve_file_path(
+        song.file_path
+    )
 
     if not audio_path.exists():
         raise HTTPException(
@@ -182,6 +171,11 @@ def get_song_audio(
         media_type="audio/mpeg",
         filename=audio_path.name,
     )
+
+
+# ---------------------------------------------------------
+# Lyrics
+# ---------------------------------------------------------
 
 
 @router.get(
@@ -200,7 +194,6 @@ def get_song_lyrics(
             detail="Song not found",
         )
 
-    # No lyrics file registered
     if not song.lyrics_path:
         return LyricsResponse(
             song_id=song.id,
@@ -213,8 +206,6 @@ def get_song_lyrics(
         song.lyrics_path
     )
 
-    # Database says lyrics exist, but the actual
-    # file is missing.
     if not lyrics_path.exists():
         return LyricsResponse(
             song_id=song.id,
@@ -227,6 +218,7 @@ def get_song_lyrics(
         lyrics = lyrics_path.read_text(
             encoding="utf-8"
         )
+
     except OSError as exc:
         print(
             f"Failed to read lyrics file "
@@ -246,7 +238,17 @@ def get_song_lyrics(
         lyrics_status="completed",
         lyrics=lyrics,
     )
-@router.post("/{song_id}/retry-download", response_model=SongResponse)
+
+
+# ---------------------------------------------------------
+# Retry download
+# ---------------------------------------------------------
+
+
+@router.post(
+    "/{song_id}/retry-download",
+    response_model=SongResponse,
+)
 def retry_download(
     song_id: int,
     db: Session = Depends(get_db),
@@ -258,8 +260,9 @@ def retry_download(
             status_code=404,
             detail="Song not found",
         )
-
     song.download_status = "pending"
+    song.download_retry_count = 0
+    song.next_download_attempt = None
     song.error_message = None
     song.file_path = None
 
@@ -269,7 +272,15 @@ def retry_download(
     return song
 
 
-@router.post("/{song_id}/retry-lyrics", response_model=SongResponse)
+# ---------------------------------------------------------
+# Retry lyrics
+# ---------------------------------------------------------
+
+
+@router.post(
+    "/{song_id}/retry-lyrics",
+    response_model=SongResponse,
+)
 def retry_lyrics(
     song_id: int,
     db: Session = Depends(get_db),
@@ -285,8 +296,85 @@ def retry_lyrics(
     if song.download_status != "downloaded":
         raise HTTPException(
             status_code=400,
-            detail="Song must be downloaded before retrying lyrics",
+            detail=(
+                "Song must be downloaded "
+                "before retrying lyrics"
+            ),
         )
+
+    if song.lyrics_status not in {
+        "unavailable",
+        "failed",
+    }:
+        raise HTTPException(
+            status_code=400,
+            detail="Lyrics do not need to be retried",
+        )
+
+    if not song.file_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Song file path not available",
+        )
+
+    current_path = Path(
+        song.file_path
+    )
+
+    if not current_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Song audio file not found",
+        )
+
+    music_root = get_playlist_music_root(
+        song
+    )
+
+    no_lyrics_root = get_playlist_no_lyrics_root(
+        song
+    )
+
+    # -----------------------------------------------------
+    # If the song is currently in no-lyrics/,
+    # move it back to music/.
+    # -----------------------------------------------------
+
+    if current_path.parent == no_lyrics_root:
+
+        destination = (
+            music_root
+            / current_path.name
+        )
+
+        try:
+            # music and no-lyrics are inside the same
+            # Docker volume, but copy + unlink is safe
+            # even if this changes later.
+
+            shutil.copy2(
+                current_path,
+                destination,
+            )
+
+            current_path.unlink()
+
+            song.file_path = str(
+                destination
+            )
+
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Failed to restore audio file: "
+                    f"{exc}"
+                ),
+            )
+
+    # -----------------------------------------------------
+    # Reset lyrics state
+    # -----------------------------------------------------
 
     song.lyrics_status = "pending"
     song.lyrics_path = None
@@ -296,6 +384,11 @@ def retry_lyrics(
     db.refresh(song)
 
     return song
+
+
+# ---------------------------------------------------------
+# Delete song
+# ---------------------------------------------------------
 
 
 @router.delete("/{song_id}")
@@ -313,14 +406,18 @@ def delete_song(
 
     # Delete audio file if it exists.
     if song.file_path:
-        audio_path = resolve_file_path(song.file_path)
+        audio_path = resolve_file_path(
+            song.file_path
+        )
 
         if audio_path.exists():
             audio_path.unlink()
 
     # Delete lyrics file if it exists.
     if song.lyrics_path:
-        lyrics_path = resolve_file_path(song.lyrics_path)
+        lyrics_path = resolve_file_path(
+            song.lyrics_path
+        )
 
         if lyrics_path.exists():
             lyrics_path.unlink()

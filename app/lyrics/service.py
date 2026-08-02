@@ -6,7 +6,7 @@ import time
 
 import httpx
 from sqlalchemy import select
-
+from sqlalchemy.orm import joinedload
 from app.core.config import settings
 from app.database.models import Song
 from app.database.session import SessionLocal
@@ -23,11 +23,14 @@ class LyricsService:
     SEARCH_URL = "https://lrclib.net/api/search"
 
     def __init__(self):
-        self.music_root = Path(settings.music_root)
-        self.no_lyrics_root = self.music_root.parent / "no-lyrics"
+        self.music_root = Path(
+            settings.music_root
+        )
 
-        self.music_root.mkdir(parents=True, exist_ok=True)
-        self.no_lyrics_root.mkdir(parents=True, exist_ok=True)
+        self.music_root.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
     # ---------------------------------------------------------
     # Title helpers
@@ -261,25 +264,53 @@ class LyricsService:
 
         return Path(song.file_path).with_suffix(".lrc")
 
-    def _move_to_no_lyrics(self, song: Song) -> None:
+    def _move_to_no_lyrics(
+        self,
+        song: Song,
+    ) -> None:
+
         if not song.file_path:
             return
 
-        source = Path(song.file_path)
+        if song.playlist is None:
+            raise ValueError(
+                "Cannot move song: "
+                "playlist is missing"
+            )
+
+        source = Path(
+            song.file_path
+        )
 
         if not source.exists():
             return
 
-        destination = self.no_lyrics_root / source.name
+        no_lyrics_root = (
+            self.music_root
+            / str(song.playlist.id)
+            / "no-lyrics"
+        )
 
-        # music and no-lyrics are separate Docker bind mounts.
-        # Therefore rename() can fail with Errno 18.
-        #
-        # Copy first, then remove the original.
-        shutil.copy2(source, destination)
+        no_lyrics_root.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        destination = (
+            no_lyrics_root
+            / source.name
+        )
+
+        shutil.copy2(
+            source,
+            destination,
+        )
+
         source.unlink()
 
-        song.file_path = str(destination)
+        song.file_path = str(
+            destination
+        )
 
     # ---------------------------------------------------------
     # Process one song
@@ -422,11 +453,17 @@ class LyricsService:
 
             songs = session.scalars(
                 select(Song)
+                .options(
+                    joinedload(Song.playlist)
+                )
                 .where(
                     Song.download_status == "downloaded",
                     Song.lyrics_status == "pending",
                 )
-                .order_by(Song.position)
+                .order_by(
+                    Song.playlist_id,
+                    Song.position,
+                )
                 .limit(limit)
             ).all()
 

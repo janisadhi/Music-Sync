@@ -1,4 +1,3 @@
-
 from app.core.config import settings
 from app.database.models import AppSettings
 from app.database.session import SessionLocal
@@ -21,6 +20,8 @@ class SettingsService:
                     ),
                     download_limit=1,
                     lyrics_limit=1,
+                    max_download_retries=5,
+                    download_retry_delay_seconds=60,
                     youtube_playlist_url=(
                         settings.youtube_playlist_url
                     ),
@@ -38,6 +39,8 @@ class SettingsService:
         sync_interval_seconds: int | None = None,
         download_limit: int | None = None,
         lyrics_limit: int | None = None,
+        max_download_retries: int | None = None,
+        download_retry_delay_seconds: int | None = None,
         youtube_playlist_url: str | None = None,
     ) -> AppSettings:
 
@@ -55,6 +58,8 @@ class SettingsService:
                     ),
                     download_limit=1,
                     lyrics_limit=1,
+                    max_download_retries=5,
+                    download_retry_delay_seconds=60,
                     youtube_playlist_url=(
                         settings.youtube_playlist_url
                     ),
@@ -75,6 +80,16 @@ class SettingsService:
             if lyrics_limit is not None:
                 app_settings.lyrics_limit = (
                     lyrics_limit
+                )
+
+            if max_download_retries is not None:
+                app_settings.max_download_retries = (
+                    max_download_retries
+                )
+
+            if download_retry_delay_seconds is not None:
+                app_settings.download_retry_delay_seconds = (
+                    download_retry_delay_seconds
                 )
 
             if youtube_playlist_url is not None:

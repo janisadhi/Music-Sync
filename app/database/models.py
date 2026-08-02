@@ -99,6 +99,16 @@ class Song(Base):
         default="pending",
         nullable=False,
     )
+    download_retry_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    next_download_attempt: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
 
     lyrics_status: Mapped[str] = mapped_column(
         String(50),
@@ -159,7 +169,17 @@ class AppSettings(Base):
         nullable=False,
         default=1,
     )
+    max_download_retries: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=5,
+    )
 
+    download_retry_delay_seconds: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=60,
+    )
     youtube_playlist_url: Mapped[str | None] = mapped_column(
         String,
         nullable=True,

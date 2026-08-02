@@ -17,6 +17,26 @@ class YouTubePlaylistWatcher:
     def __init__(self, playlist_url: str):
         self.playlist_url = playlist_url
 
+    def fetch_playlist_metadata(self) -> dict:
+        options = {
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": True,
+            "skip_download": True,
+        }
+
+        with yt_dlp.YoutubeDL(options) as ydl:
+            info = ydl.extract_info(
+                self.playlist_url,
+                download=False,
+            )
+
+        return {
+            "id": info.get("id"),
+            "name": info.get("title")
+            or "YouTube Playlist",
+        }
+
     def fetch(self) -> list[YouTubeSong]:
         options = {
             "quiet": True,
@@ -39,7 +59,9 @@ class YouTubePlaylistWatcher:
             if not entry:
                 continue
 
-            position = entry.get("playlist_index")
+            position = entry.get(
+                "playlist_index"
+            )
 
             if position is None:
                 position = fallback_position
@@ -51,7 +73,8 @@ class YouTubePlaylistWatcher:
 
             # Fetch full metadata for the individual video.
             video_url = (
-                f"https://www.youtube.com/watch?v={video_id}"
+                "https://www.youtube.com/watch?v="
+                f"{video_id}"
             )
 
             video_options = {
@@ -59,7 +82,9 @@ class YouTubePlaylistWatcher:
                 "no_warnings": True,
             }
 
-            with yt_dlp.YoutubeDL(video_options) as video_ydl:
+            with yt_dlp.YoutubeDL(
+                video_options
+            ) as video_ydl:
                 video_info = video_ydl.extract_info(
                     video_url,
                     download=False,
@@ -70,11 +95,20 @@ class YouTubePlaylistWatcher:
                     video_id=video_id,
                     title=video_info.get(
                         "title",
-                        entry.get("title", "Unknown"),
+                        entry.get(
+                            "title",
+                            "Unknown",
+                        ),
                     ),
-                    artist=video_info.get("artist"),
-                    album=video_info.get("album"),
-                    duration=video_info.get("duration"),
+                    artist=video_info.get(
+                        "artist"
+                    ),
+                    album=video_info.get(
+                        "album"
+                    ),
+                    duration=video_info.get(
+                        "duration"
+                    ),
                     position=position,
                 )
             )
