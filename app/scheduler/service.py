@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Lock
+
 
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import (
@@ -45,7 +46,7 @@ class MusicSyncScheduler:
                 return
 
             self.sync_running = True
-            self.last_sync_started_at = datetime.now()
+            self.last_sync_started_at = datetime.now(timezone.utc)
             self.last_sync_status = "running"
             self.last_sync_error = None
 
@@ -79,7 +80,7 @@ class MusicSyncScheduler:
             )
 
         finally:
-            completed_at = datetime.now()
+            completed_at = datetime.now(timezone.utc)
 
             with self.lock:
                 self.sync_running = False
