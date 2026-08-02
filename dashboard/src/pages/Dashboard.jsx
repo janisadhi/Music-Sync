@@ -64,6 +64,7 @@ function StatCard({
 
 function Dashboard() {
     const [data, setData] = useState(null);
+    const [settings, setSettings] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const [actionLoading, setActionLoading] =
@@ -71,24 +72,18 @@ function Dashboard() {
 
     const [syncing, setSyncing] = useState(false);
 
-    const [interval, setIntervalValue] =
-        useState(60);
-
     const [message, setMessage] = useState(null);
 
     const fetchDashboard = async () => {
         try {
-            const response =
-                await api.get("/dashboard");
+            const [dashboardResponse, settingsResponse] =
+                await Promise.all([
+                    api.get("/dashboard"),
+                    api.get("/settings"),
+                ]);
 
-            setData(response.data);
-
-            if (!actionLoading) {
-                setIntervalValue(
-                    response.data.scheduler
-                        .interval_seconds
-                );
-            }
+            setData(dashboardResponse.data);
+            setSettings(settingsResponse.data);
         } catch (error) {
             console.error(
                 "Failed to fetch dashboard:",
@@ -197,74 +192,12 @@ function Dashboard() {
         }
     };
 
-    const updateInterval = async () => {
-        const seconds = Number(interval);
-
-        if (!seconds || seconds < 10) {
-            setMessage({
-                type: "error",
-                text: "Interval must be at least 10 seconds.",
-            });
-
-            return;
-        }
-
-        try {
-            setActionLoading(true);
-            setMessage(null);
-
-            const response =
-                await api.patch(
-                    "/sync/scheduler",
-                    {
-                        seconds,
-                    }
-                );
-
-            setMessage({
-                type: "success",
-                text: `Interval updated to ${response.data.interval_minutes} minutes.`,
-            });
-
-            await fetchDashboard();
-        } catch (error) {
-            setMessage({
-                type: "error",
-                text:
-                    error.response?.data?.detail ||
-                    "Failed to update interval.",
-            });
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
     const formatDate = (date) => {
         if (!date) {
             return "N/A";
         }
 
         return new Date(date).toLocaleString();
-    };
-
-    const calculateDuration = (
-        started,
-        completed
-    ) => {
-        if (!started || !completed) {
-            return "-";
-        }
-
-        const start =
-            new Date(started).getTime();
-
-        const end =
-            new Date(completed).getTime();
-
-        const duration =
-            (end - start) / 1000;
-
-        return `${duration.toFixed(2)}s`;
     };
 
     if (loading) {
@@ -276,7 +209,7 @@ function Dashboard() {
         );
     }
 
-    if (!data) {
+    if (!data || !settings) {
         return (
             <div className="error-screen">
                 <h2>Unable to load dashboard</h2>
@@ -296,12 +229,12 @@ function Dashboard() {
         stats,
         playlist,
         last_sync,
-        recent_syncs,
     } = data;
 
     return (
         <div className="dashboard-layout">
             <main className="main-content">
+
                 {/* Header */}
                 <header className="page-header">
                     <div>
@@ -343,7 +276,7 @@ function Dashboard() {
                     </div>
                 )}
 
-                {/* Stats */}
+                {/* Statistics */}
                 <section className="stats-grid">
                     <StatCard
                         label="Total Songs"
@@ -424,7 +357,7 @@ function Dashboard() {
                     />
                 </section>
 
-                {/* Scheduler + Sync */}
+                {/* Scheduler + Synchronization */}
                 <section className="two-column">
                     <div className="card">
                         <div className="card-header">
@@ -466,7 +399,7 @@ function Dashboard() {
                             </div>
 
                             <div className="status-row">
-                                <span>Interval</span>
+                                <span>Sync Interval</span>
 
                                 <strong>
                                     {
@@ -569,7 +502,7 @@ function Dashboard() {
                     </div>
                 </section>
 
-                {/* Interval + Playlist */}
+                {/* Configuration Overview */}
                 <section className="two-column">
                     <div className="card">
                         <div className="card-header">
@@ -578,43 +511,77 @@ function Dashboard() {
                             </div>
 
                             <h2>
-                                Sync Interval
+                                Sync Configuration
                             </h2>
                         </div>
 
-                        <label className="input-label">
-                            Interval (seconds)
-                        </label>
+                        <div className="configuration-list">
+                            <div className="configuration-row">
+                                <div>
+                                    <span>
+                                        Sync Interval
+                                    </span>
 
-                        <div className="interval-input-row">
-                            <input
-                                type="number"
-                                min="10"
-                                value={interval}
-                                onChange={(event) =>
-                                    setIntervalValue(
-                                        event.target
-                                            .value
-                                    )
-                                }
-                            />
+                                    <small>
+                                        How often the
+                                        playlist is checked
+                                    </small>
+                                </div>
 
-                            <span>seconds</span>
+                                <strong>
+                                    {
+                                        settings.sync_interval_seconds
+                                    }{" "}
+                                    seconds
+                                </strong>
+                            </div>
+
+                            <div className="configuration-row">
+                                <div>
+                                    <span>
+                                        Download Limit
+                                    </span>
+
+                                    <small>
+                                        Maximum downloads
+                                        per sync
+                                    </small>
+                                </div>
+
+                                <strong>
+                                    {
+                                        settings.download_limit
+                                    }
+                                </strong>
+                            </div>
+
+                            <div className="configuration-row">
+                                <div>
+                                    <span>
+                                        Lyrics Limit
+                                    </span>
+
+                                    <small>
+                                        Maximum lyrics
+                                        processing per sync
+                                    </small>
+                                </div>
+
+                                <strong>
+                                    {
+                                        settings.lyrics_limit
+                                    }
+                                </strong>
+                            </div>
                         </div>
 
-                        <button
-                            className="btn btn-primary"
-                            onClick={
-                                updateInterval
-                            }
-                            disabled={
-                                actionLoading
-                            }
-                        >
-                            ▣ Update Interval
-                        </button>
+                        <p className="configuration-note">
+                            Configuration can be changed
+                            from Settings.
+                        </p>
                     </div>
 
+                    {/* Playlist */}
                     <div className="card">
                         <div className="card-header">
                             <div className="card-icon blue">
@@ -733,10 +700,18 @@ function Dashboard() {
                             <span>Duration</span>
 
                             <strong>
-                                {calculateDuration(
-                                    last_sync.started_at,
-                                    last_sync.completed_at
-                                )}
+                                {last_sync.started_at &&
+                                last_sync.completed_at
+                                    ? `${(
+                                          (new Date(
+                                              last_sync.completed_at
+                                          ).getTime() -
+                                              new Date(
+                                                  last_sync.started_at
+                                              ).getTime()) /
+                                          1000
+                                      ).toFixed(2)}s`
+                                    : "-"}
                             </strong>
                         </div>
                     </div>
@@ -746,108 +721,6 @@ function Dashboard() {
                             {last_sync.error}
                         </div>
                     )}
-                </section>
-
-                {/* Recent History */}
-                <section className="card history-card">
-                    <div className="card-header">
-                        <div className="card-icon blue">
-                            ◷
-                        </div>
-
-                        <h2>
-                            Recent Sync History
-                        </h2>
-                    </div>
-
-                    {recent_syncs.length === 0 ? (
-                        <div className="empty-state">
-                            No synchronization
-                            history available.
-                        </div>
-                    ) : (
-                        <div className="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Status</th>
-                                        <th>
-                                            Started At
-                                        </th>
-                                        <th>
-                                            Completed At
-                                        </th>
-                                        <th>
-                                            Duration
-                                        </th>
-                                        <th>Error</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {recent_syncs.map(
-                                        (
-                                            sync,
-                                            index
-                                        ) => (
-                                            <tr
-                                                key={
-                                                    index
-                                                }
-                                            >
-                                                <td>
-                                                    {index +
-                                                        1}
-                                                </td>
-
-                                                <td>
-                                                    <StatusBadge
-                                                        status={
-                                                            sync.status
-                                                        }
-                                                    />
-                                                </td>
-
-                                                <td>
-                                                    {formatDate(
-                                                        sync.started_at
-                                                    )}
-                                                </td>
-
-                                                <td>
-                                                    {formatDate(
-                                                        sync.completed_at
-                                                    )}
-                                                </td>
-
-                                                <td>
-                                                    {calculateDuration(
-                                                        sync.started_at,
-                                                        sync.completed_at
-                                                    )}
-                                                </td>
-
-                                                <td className="error-cell">
-                                                    {sync.error ||
-                                                        "-"}
-                                                </td>
-                                            </tr>
-                                        )
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    <div className="table-footer">
-                        Showing{" "}
-                        {recent_syncs.length}{" "}
-                        sync
-                        {recent_syncs.length !== 1
-                            ? "s"
-                            : ""}
-                    </div>
                 </section>
             </main>
         </div>

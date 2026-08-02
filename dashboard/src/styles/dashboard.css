@@ -952,3 +952,75 @@ tbody tr:hover {
         width: 100%;
     }
 }
+/* =========================
+   Configuration
+========================= */
+
+.configuration-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.configuration-row {
+    min-height: 58px;
+
+    padding: 10px 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.configuration-row:last-child {
+    border-bottom: none;
+}
+
+.configuration-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.configuration-row span {
+    color: #172033;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.configuration-row small {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.configuration-row strong {
+    color: #1769e0;
+    font-size: 14px;
+
+    white-space: nowrap;
+}
+
+.configuration-note {
+    margin: 18px 0 0;
+
+    padding: 10px 12px;
+
+    background: #f8fafc;
+
+    border-radius: 6px;
+
+    color: #64748b;
+
+    font-size: 12px;
+}
+
+.card-subtitle {
+    margin: 4px 0 0;
+
+    color: #94a3b8;
+
+    font-size: 12px;
+}
