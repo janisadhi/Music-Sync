@@ -7,11 +7,16 @@ function Settings() {
         sync_interval_seconds: 60,
         download_limit: 1,
         lyrics_limit: 1,
-        youtube_playlist_url: "",
+        max_download_retries: 3,
+        download_retry_delay_seconds: 5,
+        download_directory: "",
     });
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [openingDirectory, setOpeningDirectory] =
+        useState(false);
+
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
@@ -28,7 +33,10 @@ function Settings() {
 
             setSettings(response.data);
         } catch (err) {
-            console.error("Failed to load settings:", err);
+            console.error(
+                "Failed to load settings:",
+                err
+            );
 
             setError(
                 "Unable to load application settings."
@@ -43,10 +51,7 @@ function Settings() {
 
         setSettings((current) => ({
             ...current,
-            [name]:
-                name === "youtube_playlist_url"
-                    ? value
-                    : Number(value),
+            [name]: Number(value),
         }));
 
         setMessage("");
@@ -73,8 +78,11 @@ function Settings() {
                     lyrics_limit:
                         settings.lyrics_limit,
 
-                    youtube_playlist_url:
-                        settings.youtube_playlist_url,
+                    max_download_retries:
+                        settings.max_download_retries,
+
+                    download_retry_delay_seconds:
+                        settings.download_retry_delay_seconds,
                 }
             );
 
@@ -91,10 +99,38 @@ function Settings() {
 
             setError(
                 err.response?.data?.detail ||
-                "Unable to save settings."
+                    "Unable to save settings."
             );
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleOpenDownloadDirectory() {
+        try {
+            setOpeningDirectory(true);
+            setMessage("");
+            setError("");
+
+            await api.post(
+                "/settings/open-download-directory"
+            );
+
+            setMessage(
+                "Download directory opened."
+            );
+        } catch (err) {
+            console.error(
+                "Failed to open download directory:",
+                err
+            );
+
+            setError(
+                err.response?.data?.detail ||
+                    "Unable to open download directory."
+            );
+        } finally {
+            setOpeningDirectory(false);
         }
     }
 
@@ -127,6 +163,7 @@ function Settings() {
             </div>
 
             <form onSubmit={handleSubmit}>
+                {/* Synchronization */}
                 <div className="settings-section">
                     <h3>Synchronization</h3>
 
@@ -196,31 +233,101 @@ function Settings() {
                             cycle.
                         </p>
                     </div>
-                </div>
-
-                <div className="settings-section">
-                    <h3>YouTube</h3>
 
                     <div className="form-group">
-                        <label htmlFor="youtube_playlist_url">
-                            Playlist URL
+                        <label htmlFor="max_download_retries">
+                            Maximum download retries
                         </label>
 
                         <input
-                            id="youtube_playlist_url"
-                            name="youtube_playlist_url"
-                            type="url"
+                            id="max_download_retries"
+                            name="max_download_retries"
+                            type="number"
+                            min="1"
                             value={
-                                settings.youtube_playlist_url ||
-                                ""
+                                settings.max_download_retries
                             }
                             onChange={handleChange}
-                            placeholder="https://youtube.com/playlist?list=..."
                         />
 
                         <p className="text-muted">
-                            YouTube playlist used by the
-                            synchronization service.
+                            Maximum number of times a failed
+                            download will be retried.
+                        </p>
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="download_retry_delay_seconds">
+                            Download retry delay
+                        </label>
+
+                        <input
+                            id="download_retry_delay_seconds"
+                            name="download_retry_delay_seconds"
+                            type="number"
+                            min="1"
+                            value={
+                                settings.download_retry_delay_seconds
+                            }
+                            onChange={handleChange}
+                        />
+
+                        <p className="text-muted">
+                            Number of seconds to wait before
+                            retrying a failed download.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Download Directory */}
+                <div className="settings-section">
+                    <h3>Downloads</h3>
+
+                    <div className="form-group">
+                        <label>
+                            Download directory
+                        </label>
+
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                            }}
+                        >
+                            <input
+                                type="text"
+                                value={
+                                    settings.download_directory ||
+                                    "~/MusicSync"
+                                }
+                                readOnly
+                                style={{
+                                    flex: 1,
+                                }}
+                            />
+
+                            <button
+                                type="button"
+                                className="button secondary"
+                                onClick={
+                                    handleOpenDownloadDirectory
+                                }
+                                disabled={
+                                    openingDirectory
+                                }
+                            >
+                                {openingDirectory
+                                    ? "Opening..."
+                                    : "Open Directory"}
+                            </button>
+                        </div>
+
+                        <p className="text-muted">
+                            Location where downloaded music
+                            files are stored. This directory
+                            is managed by Docker and cannot be
+                            changed from the dashboard.
                         </p>
                     </div>
                 </div>
