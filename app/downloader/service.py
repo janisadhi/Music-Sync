@@ -4,46 +4,19 @@ import re
 
 import yt_dlp
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 
-from app.core.config import settings
 from app.database.models import Song
 from app.database.session import SessionLocal
 from app.settings.service import SettingsService
 
+
 class SongDownloader:
     def __init__(self):
-        self.music_root = Path(settings.music_root)
-        self.music_root.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
         self.settings_service = SettingsService()
 
-    def _playlist_music_root(
-        self,
-        playlist_id: int,
-    ) -> Path:
-        """
-        Return the music directory for a playlist.
-
-        Example:
-        /app/data/music/1/music
-        """
-
-        path = (
-            self.music_root
-            / str(playlist_id)
-            / "music"
-        )
-
-        path.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        return path
+    # ---------------------------------------------------------
+    # Retry handling
+    # ---------------------------------------------------------
 
     def _calculate_retry_time(
         self,
@@ -53,11 +26,11 @@ class SongDownloader:
         """
         Calculate the next retry time using exponential backoff.
 
-        Retry 1 -> 1 minute
-        Retry 2 -> 2 minutes
-        Retry 3 -> 4 minutes
-        Retry 4 -> 8 minutes
-        Retry 5 -> 16 minutes
+        Retry 1 -> base delay
+        Retry 2 -> 2x base delay
+        Retry 3 -> 4x base delay
+        Retry 4 -> 8x base delay
+        Retry 5 -> 16x base delay
         """
 
         delay = (
@@ -104,39 +77,77 @@ class SongDownloader:
 
         return False
 
-    def download_song(
-        self,
-        song: Song,
-    ) -> bool:
+    # ---------------------------------------------------------
+    # Download path
+    # ---------------------------------------------------------
+
+    def _get_download_root(self) -> Path:
+        """
+        Get the runtime download directory from PostgreSQL settings.
+        """
+
         app_settings = self.settings_service.get()
 
-        max_retries = app_settings.max_download_retries
-        retry_delay = (
-            app_settings.download_retry_delay_seconds
+        if not app_settings.download_directory:
+            raise ValueError(
+                "Download directory is not configured"
+            )
+
+        download_root = Path(
+            app_settings.download_directory
         )
+
+        download_root.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        return download_root
+
+    def _get_playlist_music_root(
+        self,
+        song: Song,
+    ) -> Path:
+        """
+        Build:
+
+        <download_directory>/<playlist_id>/music
+        """
+
         if song.playlist is None:
-            return self._mark_permanent_failure(
-                song,
-                "Cannot download song: playlist is missing",
+            raise ValueError(
+                "Cannot determine playlist directory: "
+                "playlist is missing"
             )
 
         playlist_music_root = (
-            self._playlist_music_root(
-                song.playlist.id
-            )
+            self._get_download_root()
+            / str(song.playlist.id)
+            / "music"
         )
 
+        playlist_music_root.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        return playlist_music_root
+
+    # ---------------------------------------------------------
+    # yt-dlp options
+    # ---------------------------------------------------------
+
+    def _build_ydl_options(
+        self,
+        song: Song,
+        playlist_music_root: Path,
+    ) -> dict:
         output_template = str(
             playlist_music_root
             / "%(title)s.%(ext)s"
         )
 
-        video_url = (
-            "https://www.youtube.com/watch?v="
-            f"{song.youtube_video_id}"
-        )
-
-        ydl_opts = {
+        return {
             "format": "bestaudio/best",
 
             "outtmpl": output_template,
@@ -173,7 +184,51 @@ class SongDownloader:
             ],
         }
 
+    # ---------------------------------------------------------
+    # Download one song
+    # ---------------------------------------------------------
+
+    def download_song(
+        self,
+        song: Song,
+    ) -> bool:
+        app_settings = self.settings_service.get()
+
+        max_retries = app_settings.max_download_retries
+
+        retry_delay = (
+            app_settings.download_retry_delay_seconds
+        )
+
+        if song.playlist is None:
+            return self._mark_permanent_failure(
+                song,
+                "Cannot download song: playlist is missing",
+                max_retries,
+            )
+
+        if not app_settings.download_directory:
+            return self._mark_permanent_failure(
+                song,
+                "Download directory is not configured",
+                max_retries,
+            )
+
         try:
+            playlist_music_root = (
+                self._get_playlist_music_root(song)
+            )
+
+            video_url = (
+                "https://www.youtube.com/watch?v="
+                f"{song.youtube_video_id}"
+            )
+
+            ydl_opts = self._build_ydl_options(
+                song,
+                playlist_music_root,
+            )
+
             song.download_status = "downloading"
             song.error_message = None
 
@@ -194,21 +249,34 @@ class SongDownloader:
                     prepared
                 ).with_suffix(".opus")
 
+            # -------------------------------------------------
+            # Verify downloaded file
+            # -------------------------------------------------
+
             if not opus_path.exists():
                 raise FileNotFoundError(
                     "Downloaded file not found: "
                     f"{opus_path}"
                 )
 
+            # -------------------------------------------------
+            # Save actual container path
+            # -------------------------------------------------
+
             song.file_path = str(
                 opus_path
             )
 
+            # -------------------------------------------------
+            # Mark successful
+            # -------------------------------------------------
+
             song.download_status = "downloaded"
 
-            # Successful download resets retry state.
             song.download_retry_count = 0
+
             song.next_download_attempt = None
+
             song.error_message = None
 
             print(
@@ -238,14 +306,21 @@ class SongDownloader:
 
         except Exception as exc:
 
+            # Remove ANSI terminal escape sequences.
             song.error_message = re.sub(
                 r"\x1B\[[0-?]*[ -/]*[@-~]",
                 "",
                 str(exc),
             )
 
+            # -------------------------------------------------
+            # Non-retryable error
+            # -------------------------------------------------
+
             if not self._is_retryable_error(exc):
+
                 song.download_status = "failed"
+
                 song.next_download_attempt = None
 
                 print(
@@ -259,12 +334,19 @@ class SongDownloader:
 
                 return False
 
+            # -------------------------------------------------
+            # Retryable error
+            # -------------------------------------------------
+
             song.download_retry_count += 1
+
             song.download_status = "failed"
 
             if (
-                song.download_retry_count < max_retries
+                song.download_retry_count
+                < max_retries
             ):
+
                 song.next_download_attempt = (
                     self._calculate_retry_time(
                         song.download_retry_count,
@@ -289,6 +371,7 @@ class SongDownloader:
                 )
 
             else:
+
                 song.next_download_attempt = None
 
                 print(
@@ -306,62 +389,133 @@ class SongDownloader:
             )
 
             return False
+
+    # ---------------------------------------------------------
+    # Download pending songs
+    # ---------------------------------------------------------
+
     def download_pending(
         self,
-        limit: int = 1,
-    ):
-        app_settings = self.settings_service.get()
-        max_retries = app_settings.max_download_retries
+        limit: int,
+    ) -> int:
+        """
+        Download pending/retryable songs.
+
+        The number of songs processed in one sync cycle
+        is controlled by the configured download limit.
+
+        Songs are eligible when:
+
+        1. download_status = pending
+
+        OR
+
+        2. download_status = failed
+           AND next_download_attempt <= current time
+
+        Songs that have permanently failed have
+        next_download_attempt = NULL and therefore
+        are not retried.
+        """
+
+        if limit <= 0:
+            print(
+                "Download limit is 0. "
+                "Skipping downloads."
+            )
+
+            return 0
+
         now = datetime.now(timezone.utc)
 
         with SessionLocal() as session:
 
             songs = session.scalars(
                 select(Song)
-                .options(
-                    joinedload(Song.playlist)
-                )
                 .where(
-                    Song.download_status.in_(
-                        [
-                            "pending",
-                            "failed",
-                        ]
-                    ),
                     (
-                        (Song.download_status == "pending")
-                        | (
-                            (Song.download_status == "failed")
-                            & (
-                                Song.next_download_attempt.is_(None)
-                                | (Song.next_download_attempt <= now)
-                            )
+                        Song.download_status
+                        == "pending"
+                    )
+                    |
+                    (
+                        (
+                            Song.download_status
+                            == "failed"
                         )
-                    ),
-                        Song.download_retry_count
-                        < max_retries
+                        & (
+                            Song.next_download_attempt
+                            <= now
+                        )
+                    )
                 )
                 .order_by(
-                    Song.playlist_id,
-                    Song.position,
+                    Song.id
                 )
                 .limit(limit)
             ).all()
 
+            if not songs:
+                print(
+                    "No pending downloads."
+                )
+
+                return 0
+
             print(
-                "Songs selected for download: "
+                f"Pending downloads found: "
                 f"{len(songs)}"
             )
 
+            downloaded_count = 0
+
             for song in songs:
+
+                print()
+                print("-" * 60)
 
                 print(
                     f"Downloading: "
-                    f"{song.position} - "
-                    f"{song.title} "
-                    f"({song.youtube_video_id})"
+                    f"{song.title}"
                 )
 
-                self.download_song(song)
+                print(
+                    f"Song ID: "
+                    f"{song.id}"
+                )
+
+                try:
+                    success = self.download_song(
+                        song
+                    )
+
+                    if success:
+                        downloaded_count += 1
+
+                except Exception as exc:
+
+                    song.download_status = "failed"
+
+                    song.error_message = str(
+                        exc
+                    )
+
+                    print(
+                        f"Unexpected downloader error: "
+                        f"{song.title}"
+                    )
+
+                    print(
+                        f"Error: {exc}"
+                    )
 
             session.commit()
+
+            print()
+            print(
+                f"Downloads completed: "
+                f"{downloaded_count}/"
+                f"{len(songs)}"
+            )
+
+            return downloaded_count

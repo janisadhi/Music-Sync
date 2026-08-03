@@ -1,3 +1,4 @@
+
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -5,11 +6,12 @@ import shutil
 import time
 
 import httpx
+
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
-from app.core.config import settings
+
 from app.database.models import Song
 from app.database.session import SessionLocal
+from app.settings.service import SettingsService
 
 
 @dataclass
@@ -23,14 +25,30 @@ class LyricsService:
     SEARCH_URL = "https://lrclib.net/api/search"
 
     def __init__(self):
-        self.music_root = Path(
-            settings.music_root
+        self.settings_service = SettingsService()
+
+    # ---------------------------------------------------------
+    # Download root
+    # ---------------------------------------------------------
+
+    def _get_download_root(self) -> Path:
+        app_settings = self.settings_service.get()
+
+        if not app_settings.download_directory:
+            raise ValueError(
+                "Download directory is not configured"
+            )
+
+        root = Path(
+            app_settings.download_directory
         )
 
-        self.music_root.mkdir(
+        root.mkdir(
             parents=True,
             exist_ok=True,
         )
+
+        return root
 
     # ---------------------------------------------------------
     # Title helpers
@@ -55,7 +73,10 @@ class LyricsService:
         return cleaned.strip()
 
     @staticmethod
-    def _title_matches(requested: str, result: str) -> bool:
+    def _title_matches(
+        requested: str,
+        result: str,
+    ) -> bool:
         requested = requested.lower().strip()
         result = result.lower().strip()
 
@@ -69,10 +90,16 @@ class LyricsService:
     # LRCLIB search
     # ---------------------------------------------------------
 
-    def _search(self, query: str) -> list[dict]:
+    def _search(
+        self,
+        query: str,
+    ) -> list[dict]:
         max_attempts = 3
 
-        for attempt in range(1, max_attempts + 1):
+        for attempt in range(
+            1,
+            max_attempts + 1,
+        ):
             try:
                 response = httpx.get(
                     self.SEARCH_URL,
@@ -103,7 +130,7 @@ class LyricsService:
                         delay = attempt * 2
 
                         print(
-                            f"LRCLIB temporarily unavailable "
+                            "LRCLIB temporarily unavailable "
                             f"(attempt {attempt}/{max_attempts}). "
                             f"Retrying in {delay}s..."
                         )
@@ -118,7 +145,7 @@ class LyricsService:
                     delay = attempt * 2
 
                     print(
-                        f"LRCLIB request failed "
+                        "LRCLIB request failed "
                         f"(attempt {attempt}/{max_attempts}). "
                         f"Retrying in {delay}s..."
                     )
@@ -145,12 +172,19 @@ class LyricsService:
 
         cleaned_title = self._clean_title(title)
 
-        if cleaned_title.lower() != title.lower():
-            search_titles.append(cleaned_title)
+        if (
+            cleaned_title.lower()
+            != title.lower()
+        ):
+            search_titles.append(
+                cleaned_title
+            )
 
         try:
             for search_title in search_titles:
-                results = self._search(search_title)
+                results = self._search(
+                    search_title
+                )
 
                 if not results:
                     continue
@@ -160,28 +194,44 @@ class LyricsService:
                 # -------------------------------------------------
 
                 for result in results:
-                    synced_lyrics = result.get("syncedLyrics")
+                    synced_lyrics = result.get(
+                        "syncedLyrics"
+                    )
 
                     if not synced_lyrics:
                         continue
 
-                    result_title = result.get("trackName") or ""
-                    result_artist = result.get("artistName") or ""
+                    result_title = (
+                        result.get("trackName")
+                        or ""
+                    )
 
-                    title_match = self._title_matches(
-                        search_title,
-                        result_title,
+                    result_artist = (
+                        result.get("artistName")
+                        or ""
+                    )
+
+                    title_match = (
+                        self._title_matches(
+                            search_title,
+                            result_title,
+                        )
                     )
 
                     artist_match = True
 
                     if artist:
                         artist_match = (
-                            artist.lower() in result_artist.lower()
-                            or result_artist.lower() in artist.lower()
+                            artist.lower()
+                            in result_artist.lower()
+                            or result_artist.lower()
+                            in artist.lower()
                         )
 
-                    if title_match and artist_match:
+                    if (
+                        title_match
+                        and artist_match
+                    ):
                         return LyricsResult(
                             status="available",
                             lyrics=synced_lyrics,
@@ -192,12 +242,17 @@ class LyricsService:
                 # -------------------------------------------------
 
                 for result in results:
-                    synced_lyrics = result.get("syncedLyrics")
+                    synced_lyrics = result.get(
+                        "syncedLyrics"
+                    )
 
                     if not synced_lyrics:
                         continue
 
-                    result_title = result.get("trackName") or ""
+                    result_title = (
+                        result.get("trackName")
+                        or ""
+                    )
 
                     if self._title_matches(
                         search_title,
@@ -213,7 +268,9 @@ class LyricsService:
                 # -------------------------------------------------
 
                 for result in results:
-                    synced_lyrics = result.get("syncedLyrics")
+                    synced_lyrics = result.get(
+                        "syncedLyrics"
+                    )
 
                     if synced_lyrics:
                         return LyricsResult(
@@ -225,10 +282,6 @@ class LyricsService:
                 status="unavailable",
                 error="No synchronized lyrics found",
             )
-
-        # ---------------------------------------------------------
-        # Temporary network/API failures
-        # ---------------------------------------------------------
 
         except httpx.HTTPStatusError as exc:
             return LyricsResult(
@@ -242,10 +295,6 @@ class LyricsService:
                 error=str(exc),
             )
 
-        # ---------------------------------------------------------
-        # Unexpected failure
-        # ---------------------------------------------------------
-
         except Exception as exc:
             return LyricsResult(
                 status="failed",
@@ -256,19 +305,24 @@ class LyricsService:
     # File helpers
     # ---------------------------------------------------------
 
-    def _lyrics_path(self, song: Song) -> Path:
+    def _lyrics_path(
+        self,
+        song: Song,
+    ) -> Path:
         if not song.file_path:
             raise ValueError(
-                f"Song {song.id} does not have a downloaded file"
+                f"Song {song.id} does not have "
+                "a downloaded file"
             )
 
-        return Path(song.file_path).with_suffix(".lrc")
+        return Path(
+            song.file_path
+        ).with_suffix(".lrc")
 
     def _move_to_no_lyrics(
         self,
         song: Song,
     ) -> None:
-
         if not song.file_path:
             return
 
@@ -283,10 +337,17 @@ class LyricsService:
         )
 
         if not source.exists():
-            return
+            raise FileNotFoundError(
+                f"Song file does not exist: "
+                f"{source}"
+            )
+
+        download_root = (
+            self._get_download_root()
+        )
 
         no_lyrics_root = (
-            self.music_root
+            download_root
             / str(song.playlist.id)
             / "no-lyrics"
         )
@@ -316,12 +377,16 @@ class LyricsService:
     # Process one song
     # ---------------------------------------------------------
 
-    def process_song(self, song: Song) -> bool:
+    def process_song(
+        self,
+        song: Song,
+    ) -> bool:
 
         if not song.file_path:
             song.lyrics_status = "failed"
             song.error_message = (
-                "Cannot fetch lyrics: song has no file"
+                "Cannot fetch lyrics: "
+                "song has no file"
             )
 
             return False
@@ -343,19 +408,30 @@ class LyricsService:
 
         if result.status == "available":
 
-            lyrics_path = self._lyrics_path(song)
+            lyrics_path = self._lyrics_path(
+                song
+            )
+
+            lyrics_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
 
             lyrics_path.write_text(
-                result.lyrics,
+                result.lyrics or "",
                 encoding="utf-8",
             )
 
-            song.lyrics_path = str(lyrics_path)
+            song.lyrics_path = str(
+                lyrics_path
+            )
+
             song.lyrics_status = "downloaded"
             song.error_message = None
 
             print(
-                f"Lyrics downloaded: {song.title}"
+                f"Lyrics downloaded: "
+                f"{song.title}"
             )
 
             print(
@@ -371,29 +447,35 @@ class LyricsService:
         if result.status == "unavailable":
 
             try:
-                self._move_to_no_lyrics(song)
+                self._move_to_no_lyrics(
+                    song
+                )
 
                 song.lyrics_path = None
                 song.lyrics_status = "unavailable"
                 song.error_message = result.error
 
                 print(
-                    f"No synced lyrics: {song.title}"
+                    f"No synced lyrics: "
+                    f"{song.title}"
                 )
 
                 return False
 
             except Exception as exc:
-                # Do NOT mark unavailable if moving the file failed.
-                # Keep it pending so the next sync cycle can retry.
+                # Do NOT mark unavailable if moving
+                # the file failed. Keep it pending so
+                # the next sync cycle can retry.
+
                 song.lyrics_status = "pending"
                 song.error_message = (
-                    f"Failed to move song to no-lyrics: {exc}"
+                    "Failed to move song to "
+                    f"no-lyrics: {exc}"
                 )
 
                 print(
-                    f"Failed to move song to no-lyrics: "
-                    f"{song.title}"
+                    "Failed to move song to "
+                    f"no-lyrics: {song.title}"
                 )
 
                 print(
@@ -412,29 +494,26 @@ class LyricsService:
             song.error_message = result.error
 
             print(
-                f"Lyrics lookup temporarily failed: "
-                f"{song.title}"
+                "Lyrics lookup temporarily "
+                f"failed: {song.title}"
             )
 
             print(
                 f"Error: {result.error}"
             )
 
-            print(
-                "Will retry on the next sync cycle."
-            )
-
             return False
 
         # ---------------------------------------------------------
-        # Unexpected failure
+        # Permanent failure
         # ---------------------------------------------------------
 
         song.lyrics_status = "failed"
         song.error_message = result.error
 
         print(
-            f"Lyrics lookup failed: {song.title}"
+            f"Lyrics processing failed: "
+            f"{song.title}"
         )
 
         print(
@@ -447,46 +526,79 @@ class LyricsService:
     # Process pending songs
     # ---------------------------------------------------------
 
-    def process_pending(self, limit: int = 1):
+    def process_pending(
+        self,
+        limit: int,
+    ) -> int:
+        """
+        Process downloaded songs that still need lyrics.
+
+        Only songs with:
+        - download_status = downloaded
+        - lyrics_status = pending
+
+        are processed.
+
+        Returns the number of songs successfully processed.
+        """
+
+        if limit <= 0:
+            print(
+                "Lyrics limit is 0. Skipping lyrics processing."
+            )
+            return 0
+
+        processed = 0
 
         with SessionLocal() as session:
-
-            songs = session.scalars(
+            pending_songs = session.scalars(
                 select(Song)
-                .options(
-                    joinedload(Song.playlist)
-                )
                 .where(
                     Song.download_status == "downloaded",
                     Song.lyrics_status == "pending",
                 )
-                .order_by(
-                    Song.playlist_id,
-                    Song.position,
-                )
+                .order_by(Song.id)
                 .limit(limit)
             ).all()
 
             print(
-                f"Songs waiting for lyrics: "
-                f"{len(songs)}"
+                f"Pending lyrics found: "
+                f"{len(pending_songs)}"
             )
 
-            for song in songs:
+            if not pending_songs:
+                return 0
 
+            for song in pending_songs:
+                print()
+                print("-" * 60)
                 print(
-                    f"Fetching lyrics: "
-                    f"{song.position} - {song.title}"
+                    f"Processing lyrics: {song.title}"
+                )
+                print(
+                    f"Song ID: {song.id}"
                 )
 
                 try:
-                    self.process_song(song)
+                    success = self.process_song(
+                        song
+                    )
+
+                    session.commit()
+
+                    if success:
+                        processed += 1
 
                 except Exception as exc:
-                    # Never allow one song to abort the entire
-                    # synchronization cycle.
+                    session.rollback()
+
                     song.lyrics_status = "pending"
                     song.error_message = str(exc)
+
+                    try:
+                        session.commit()
+                    except Exception:
+                        session.rollback()
 
                     print(
                         f"Lyrics processing failed: "
@@ -497,4 +609,11 @@ class LyricsService:
                         f"Error: {exc}"
                     )
 
-            session.commit()
+        print()
+        print(
+            f"Lyrics processing completed: "
+            f"{processed}/{len(pending_songs)}"
+        )
+
+        return processed
+

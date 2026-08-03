@@ -191,3 +191,7 @@ class AppSettings(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+    download_directory: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )

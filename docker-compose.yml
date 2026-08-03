@@ -57,3 +57,4 @@ services:
     volumes:
       - ./data/music:/app/data/music
       - ./data/no-lyrics:/app/data/no-lyrics
+      - /home/janis/Music:/app/data/downloads

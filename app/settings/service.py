@@ -25,6 +25,7 @@ class SettingsService:
                     youtube_playlist_url=(
                         settings.youtube_playlist_url
                     ),
+                    download_directory=None,
                 )
 
                 session.add(app_settings)
@@ -42,6 +43,7 @@ class SettingsService:
         max_download_retries: int | None = None,
         download_retry_delay_seconds: int | None = None,
         youtube_playlist_url: str | None = None,
+        download_directory: str | None = None,
     ) -> AppSettings:
 
         with SessionLocal() as session:
@@ -63,6 +65,7 @@ class SettingsService:
                     youtube_playlist_url=(
                         settings.youtube_playlist_url
                     ),
+                    download_directory=None,
                 )
 
                 session.add(app_settings)
@@ -95,6 +98,11 @@ class SettingsService:
             if youtube_playlist_url is not None:
                 app_settings.youtube_playlist_url = (
                     youtube_playlist_url
+                )
+
+            if download_directory is not None:
+                app_settings.download_directory = (
+                    download_directory
                 )
 
             session.commit()

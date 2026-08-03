@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     database_url: str
 
-    music_root: str = "./data/music"
+    music_root: str = "/music"
 
     sync_interval_seconds: int = 300
 

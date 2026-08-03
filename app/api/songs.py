@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.api.schemas import LyricsResponse, SongResponse
 from app.database.models import Song
+from app.settings.service import SettingsService
 from app.database.session import get_db
-
+from app.core.config import settings
 
 router = APIRouter(
     prefix="/songs",
@@ -18,13 +19,13 @@ router = APIRouter(
 )
 
 
-MUSIC_ROOT = Path("/app/data/music")
+MUSIC_ROOT = Path(settings.music_root)
 
 
 def resolve_file_path(file_path: str) -> Path:
     """
-    Resolve a database file path into a path inside the
-    application container.
+    Resolve a database storage path into an actual
+    filesystem path inside the application container.
     """
 
     path = Path(file_path)
@@ -32,7 +33,32 @@ def resolve_file_path(file_path: str) -> Path:
     if path.is_absolute():
         return path
 
-    return Path("/app") / path
+    return MUSIC_ROOT / path
+
+
+def get_download_root() -> Path:
+    """
+    Get the configured download directory.
+    """
+
+    app_settings = SettingsService().get()
+
+    if not app_settings.download_directory:
+        raise HTTPException(
+            status_code=500,
+            detail="Download directory is not configured",
+        )
+
+    path = Path(
+        app_settings.download_directory
+    )
+
+    path.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    return path
 
 
 def get_playlist_music_root(song: Song) -> Path:
@@ -40,7 +66,7 @@ def get_playlist_music_root(song: Song) -> Path:
     Return the playlist-specific music directory.
 
     Example:
-        /app/data/music/2/music
+        /app/data/downloads/2/music
     """
 
     if song.playlist is None:
@@ -50,7 +76,7 @@ def get_playlist_music_root(song: Song) -> Path:
         )
 
     path = (
-        MUSIC_ROOT
+        get_download_root()
         / str(song.playlist.id)
         / "music"
     )
@@ -68,7 +94,7 @@ def get_playlist_no_lyrics_root(song: Song) -> Path:
     Return the playlist-specific no-lyrics directory.
 
     Example:
-        /app/data/music/2/no-lyrics
+        /app/data/downloads/2/no-lyrics
     """
 
     if song.playlist is None:
@@ -78,7 +104,7 @@ def get_playlist_no_lyrics_root(song: Song) -> Path:
         )
 
     path = (
-        MUSIC_ROOT
+        get_download_root()
         / str(song.playlist.id)
         / "no-lyrics"
     )
@@ -89,7 +115,6 @@ def get_playlist_no_lyrics_root(song: Song) -> Path:
     )
 
     return path
-
 
 # ---------------------------------------------------------
 # Songs
@@ -317,7 +342,7 @@ def retry_lyrics(
             detail="Song file path not available",
         )
 
-    current_path = Path(
+    current_path = resolve_file_path(
         song.file_path
     )
 
@@ -359,8 +384,10 @@ def retry_lyrics(
 
             current_path.unlink()
 
-            song.file_path = str(
+            song.file_path = (
                 destination
+                .relative_to(MUSIC_ROOT)
+                .as_posix()
             )
 
         except Exception as exc:
