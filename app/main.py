@@ -12,13 +12,16 @@ from app.core.runtime import scheduler
 from app.database.session import engine
 from app.api.dashboard import router as dashboard_router
 from app.api.settings import router as settings_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("=" * 60)
     print("Starting Music Sync application")
     print("=" * 60)
 
-    scheduler.start()
+    print(
+        "Scheduler is stopped by default."
+    )
 
     yield
 
@@ -27,6 +30,8 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
 
     scheduler.stop()
+
+
 
 
 app = FastAPI(

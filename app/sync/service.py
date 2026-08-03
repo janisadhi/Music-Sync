@@ -1,3 +1,4 @@
+
 from sqlalchemy import select
 
 from app.database.models import Playlist, Song
@@ -21,17 +22,12 @@ class SyncService:
         print("=" * 60)
 
         # ---------------------------------------------------------
-        # Load application settings from database
+        # Load application settings
         # ---------------------------------------------------------
         app_settings = self.settings_service.get()
-        playlist_url = app_settings.youtube_playlist_url
+
         download_limit = app_settings.download_limit
         lyrics_limit = app_settings.lyrics_limit
-
-        if not playlist_url:
-            raise ValueError(
-                "YouTube playlist URL is not configured"
-            )
 
         print(
             f"Download limit: {download_limit}"
@@ -42,7 +38,97 @@ class SyncService:
         )
 
         # ---------------------------------------------------------
-        # 1. Fetch YouTube playlist
+        # Load enabled playlists
+        # ---------------------------------------------------------
+        with SessionLocal() as session:
+            playlists = session.scalars(
+                select(Playlist)
+                .where(
+                    Playlist.enabled.is_(True)
+                )
+                .order_by(Playlist.id)
+            ).all()
+
+        print(
+            f"Enabled playlists: {len(playlists)}"
+        )
+
+        if not playlists:
+            print(
+                "No enabled playlists configured."
+            )
+
+            print("=" * 60)
+            print("Sync cycle completed")
+            print("=" * 60)
+
+            return
+
+        # ---------------------------------------------------------
+        # Process each playlist
+        # ---------------------------------------------------------
+        for playlist in playlists:
+
+            print()
+            print("-" * 60)
+            print(
+                f"Playlist: {playlist.name}"
+            )
+            print(
+                f"URL: {playlist.url}"
+            )
+            print("-" * 60)
+
+            try:
+                self._sync_playlist(
+                    playlist_id=playlist.id,
+                    playlist_url=playlist.url,
+                    youtube_playlist_id=(
+                        playlist.youtube_playlist_id
+                    ),
+                    playlist_name=playlist.name,
+                )
+
+            except Exception as exc:
+                print(
+                    f"Playlist sync failed: "
+                    f"{playlist.name}"
+                )
+
+                print(
+                    f"Error: {exc}"
+                )
+
+                # Continue with the next playlist.
+                continue
+
+        # ---------------------------------------------------------
+        # Download pending songs
+        # ---------------------------------------------------------
+        self.downloader.download_pending(
+            limit=download_limit
+        )
+
+        # ---------------------------------------------------------
+        # Fetch lyrics
+        # ---------------------------------------------------------
+        self.lyrics.process_pending(
+            limit=lyrics_limit
+        )
+
+        print("=" * 60)
+        print("Sync cycle completed")
+        print("=" * 60)
+
+    def _sync_playlist(
+        self,
+        playlist_id: int,
+        playlist_url: str,
+        youtube_playlist_id: str,
+        playlist_name: str,
+    ):
+        # ---------------------------------------------------------
+        # Fetch YouTube playlist
         # ---------------------------------------------------------
         watcher = YouTubePlaylistWatcher(
             playlist_url
@@ -56,34 +142,27 @@ class SyncService:
         )
 
         if not youtube_songs:
-            print("No songs found in playlist.")
+            print(
+                "No songs found in playlist."
+            )
+
             return
 
         # ---------------------------------------------------------
-        # 2. Reconcile playlist with database
+        # Reconcile playlist with database
         # ---------------------------------------------------------
         with SessionLocal() as session:
-            playlist = session.scalar(
-                select(Playlist).where(
-                    Playlist.url == playlist_url
-                )
+
+            playlist = session.get(
+                Playlist,
+                playlist_id,
             )
 
-            if playlist:
-                playlist_id = (
-                    playlist.youtube_playlist_id
+            if playlist is None:
+                raise ValueError(
+                    f"Playlist {playlist_id} "
+                    "no longer exists"
                 )
-
-                playlist_name = playlist.name
-
-            else:
-                playlist_id = (
-                    self._extract_playlist_id(
-                        playlist_url
-                    )
-                )
-
-                playlist_name = "YouTube Playlist"
 
             reconciler = PlaylistReconciler(
                 session
@@ -91,7 +170,9 @@ class SyncService:
 
             new_songs = reconciler.reconcile(
                 playlist_url=playlist_url,
-                youtube_playlist_id=playlist_id,
+                youtube_playlist_id=(
+                    youtube_playlist_id
+                ),
                 playlist_name=playlist_name,
                 songs=youtube_songs,
             )
@@ -100,52 +181,3 @@ class SyncService:
                 f"New songs added: "
                 f"{len(new_songs)}"
             )
-
-        # ---------------------------------------------------------
-        # 3. Download pending songs
-        # ---------------------------------------------------------
-        self.downloader.download_pending(
-            limit=download_limit
-        )
-
-        # ---------------------------------------------------------
-        # 4. Fetch lyrics
-        # ---------------------------------------------------------
-        self.lyrics.process_pending(
-            limit=lyrics_limit
-        )
-
-        print("=" * 60)
-        print("Sync cycle completed")
-        print("=" * 60)
-
-    @staticmethod
-    def _extract_playlist_id(url: str) -> str:
-        """
-        Extract the YouTube playlist ID.
-
-        Example:
-        https://www.youtube.com/playlist?list=PL123
-        -> PL123
-        """
-
-        from urllib.parse import (
-            parse_qs,
-            urlparse,
-        )
-
-        parsed = urlparse(url)
-
-        playlist_id = parse_qs(
-            parsed.query
-        ).get(
-            "list",
-            [None],
-        )[0]
-
-        if not playlist_id:
-            raise ValueError(
-                f"Could not extract playlist ID from URL: {url}"
-            )
-
-        return playlist_id

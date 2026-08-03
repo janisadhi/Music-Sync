@@ -3,8 +3,44 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+# ---------------------------------------------------------
+# Playlist
+# ---------------------------------------------------------
+
+class PlaylistCreate(BaseModel):
+    url: str
+    name: str | None = None
+    enabled: bool = True
+
+
+class PlaylistUpdate(BaseModel):
+    name: str | None = None
+    url: str | None = None
+    enabled: bool | None = None
+
+
+class PlaylistResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    id: int
+    youtube_playlist_id: str
+    name: str
+    url: str
+    enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------
+# Song
+# ---------------------------------------------------------
+
 class SongResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
     id: int
     playlist_id: int
@@ -23,17 +59,9 @@ class SongResponse(BaseModel):
     updated_at: datetime
 
 
-class PlaylistResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    youtube_playlist_id: str
-    name: str
-    url: str
-    enabled: bool
-    created_at: datetime
-    updated_at: datetime
-
+# ---------------------------------------------------------
+# Lyrics
+# ---------------------------------------------------------
 
 class LyricsResponse(BaseModel):
     song_id: int

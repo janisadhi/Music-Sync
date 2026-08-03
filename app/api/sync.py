@@ -49,10 +49,16 @@ def get_sync_history():
 
 @router.get("/scheduler")
 def get_scheduler_status():
+    if scheduler.scheduler is None:
+        return {
+            "running": False,
+            "interval_seconds": None,
+        }
+
     job = scheduler.scheduler.get_job("music-sync")
 
     return {
-        "running": scheduler.running,
+        "running": scheduler.scheduler.running,
         "interval_seconds": (
             job.trigger.interval.total_seconds()
             if job
@@ -64,7 +70,7 @@ def get_scheduler_status():
 @router.post("/scheduler/start")
 def start_scheduler():
     started = scheduler.start(
-        run_immediately=True
+        run_immediately=False
     )
 
     if not started:

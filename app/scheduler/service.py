@@ -105,7 +105,7 @@ class MusicSyncScheduler:
 
     def start(
         self,
-        run_immediately: bool = True,
+        run_immediately: bool = False,
     ) -> bool:
 
         with self.lock:
