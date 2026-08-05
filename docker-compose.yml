@@ -25,7 +25,6 @@ services:
       retries: 5
       start_period: 10s
 
-
   app:
     build:
       context: .
@@ -45,8 +44,6 @@ services:
 
       SYNC_INTERVAL_SECONDS: "60"
 
-      YOUTUBE_PLAYLIST_URL: "${YOUTUBE_PLAYLIST_URL}"
-
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,6 +52,4 @@ services:
       - "127.0.0.1:8000:8000"
 
     volumes:
-      - ./data/music:/app/data/music
-      - ./data/no-lyrics:/app/data/no-lyrics
-      - ${HOME}/MusicSync:/app/data/downloads
+      - ./data/downloads:/app/downloads

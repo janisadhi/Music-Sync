@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
+DOWNLOADS_DIR = Path("/app/downloads") if Path("/app/downloads").exists() else BASE_DIR / "data" / "downloads"
+
 
 class Settings(BaseSettings):
     app_name: str = "music-sync"

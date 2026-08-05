@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.database.models import Song
 from app.database.session import SessionLocal
 from app.settings.service import SettingsService
+from app.core.paths import get_playlist_music_root
 
 
 class SongDownloader:
@@ -76,62 +77,6 @@ class SongDownloader:
         )
 
         return False
-
-    # ---------------------------------------------------------
-    # Download path
-    # ---------------------------------------------------------
-
-    def _get_download_root(self) -> Path:
-        """
-        Get the runtime download directory from PostgreSQL settings.
-        """
-
-        app_settings = self.settings_service.get()
-
-        if not app_settings.download_directory:
-            raise ValueError(
-                "Download directory is not configured"
-            )
-
-        download_root = Path(
-            app_settings.download_directory
-        )
-
-        download_root.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        return download_root
-
-    def _get_playlist_music_root(
-        self,
-        song: Song,
-    ) -> Path:
-        """
-        Build:
-
-        <download_directory>/<playlist_id>/music
-        """
-
-        if song.playlist is None:
-            raise ValueError(
-                "Cannot determine playlist directory: "
-                "playlist is missing"
-            )
-
-        playlist_music_root = (
-            self._get_download_root()
-            / str(song.playlist.id)
-            / "music"
-        )
-
-        playlist_music_root.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        return playlist_music_root
 
     # ---------------------------------------------------------
     # yt-dlp options
@@ -207,16 +152,13 @@ class SongDownloader:
                 max_retries,
             )
 
-        if not app_settings.download_directory:
-            return self._mark_permanent_failure(
-                song,
-                "Download directory is not configured",
-                max_retries,
-            )
+
 
         try:
             playlist_music_root = (
-                self._get_playlist_music_root(song)
+                get_playlist_music_root(
+                    song.playlist.id
+                )
             )
 
             video_url = (

@@ -9,13 +9,10 @@ function Settings() {
         lyrics_limit: 1,
         max_download_retries: 3,
         download_retry_delay_seconds: 5,
-        download_directory: "",
     });
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [openingDirectory, setOpeningDirectory] =
-        useState(false);
 
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
@@ -103,34 +100,6 @@ function Settings() {
             );
         } finally {
             setSaving(false);
-        }
-    }
-
-    async function handleOpenDownloadDirectory() {
-        try {
-            setOpeningDirectory(true);
-            setMessage("");
-            setError("");
-
-            await api.post(
-                "/settings/open-download-directory"
-            );
-
-            setMessage(
-                "Download directory opened."
-            );
-        } catch (err) {
-            console.error(
-                "Failed to open download directory:",
-                err
-            );
-
-            setError(
-                err.response?.data?.detail ||
-                    "Unable to open download directory."
-            );
-        } finally {
-            setOpeningDirectory(false);
         }
     }
 
@@ -275,59 +244,6 @@ function Settings() {
                         <p className="text-muted">
                             Number of seconds to wait before
                             retrying a failed download.
-                        </p>
-                    </div>
-                </div>
-
-                {/* Download Directory */}
-                <div className="settings-section">
-                    <h3>Downloads</h3>
-
-                    <div className="form-group">
-                        <label>
-                            Download directory
-                        </label>
-
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "12px",
-                            }}
-                        >
-                            <input
-                                type="text"
-                                value={
-                                    settings.download_directory ||
-                                    "~/MusicSync"
-                                }
-                                readOnly
-                                style={{
-                                    flex: 1,
-                                }}
-                            />
-
-                            <button
-                                type="button"
-                                className="button secondary"
-                                onClick={
-                                    handleOpenDownloadDirectory
-                                }
-                                disabled={
-                                    openingDirectory
-                                }
-                            >
-                                {openingDirectory
-                                    ? "Opening..."
-                                    : "Open Directory"}
-                            </button>
-                        </div>
-
-                        <p className="text-muted">
-                            Location where downloaded music
-                            files are stored. This directory
-                            is managed by Docker and cannot be
-                            changed from the dashboard.
                         </p>
                     </div>
                 </div>

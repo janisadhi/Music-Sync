@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.database.models import Song
 from app.database.session import SessionLocal
 from app.settings.service import SettingsService
+from app.core.paths import get_download_root
 
 
 @dataclass
@@ -32,23 +33,7 @@ class LyricsService:
     # ---------------------------------------------------------
 
     def _get_download_root(self) -> Path:
-        app_settings = self.settings_service.get()
-
-        if not app_settings.download_directory:
-            raise ValueError(
-                "Download directory is not configured"
-            )
-
-        root = Path(
-            app_settings.download_directory
-        )
-
-        root.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        return root
+        return get_download_root()
 
     # ---------------------------------------------------------
     # Title helpers

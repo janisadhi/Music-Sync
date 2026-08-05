@@ -20,7 +20,6 @@ class SettingsResponse(BaseModel):
     youtube_playlist_url: str | None
     max_download_retries: int
     download_retry_delay_seconds: int
-    download_directory: str | None
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -50,7 +49,6 @@ class SettingsUpdateRequest(BaseModel):
     )
 
     youtube_playlist_url: str | None = None
-    download_directory: str | None = None
 
 
 @router.get(
@@ -110,12 +108,6 @@ def update_settings(
             download_retry_delay_seconds=(
                 request.download_retry_delay_seconds
                 if request.download_retry_delay_seconds
-                is not None
-                else None
-            ),
-            download_directory=(
-                request.download_directory
-                if request.download_directory
                 is not None
                 else None
             ),

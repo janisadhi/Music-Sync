@@ -1,42 +1,22 @@
 from pathlib import Path
 
-from app.database.models import AppSettings
-from app.database.session import SessionLocal
+from app.core.config import DOWNLOADS_DIR
 
 
 def get_download_root() -> Path:
     """
-    Return the configured download directory.
+    Return the fixed download root directory.
 
-    The directory is read from app_settings.download_directory.
+    Local:  <project>/data/downloads
+    Docker: /app/downloads
     """
 
-    with SessionLocal() as session:
-        app_settings = session.get(
-            AppSettings,
-            1,
-        )
-
-        if app_settings is None:
-            raise RuntimeError(
-                "Application settings are not configured"
-            )
-
-        if not app_settings.download_directory:
-            raise RuntimeError(
-                "Download directory is not configured"
-            )
-
-        path = Path(
-            app_settings.download_directory
-        ).expanduser()
-
-    path.mkdir(
+    DOWNLOADS_DIR.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    return path
+    return DOWNLOADS_DIR
 
 
 def get_playlist_music_root(
@@ -46,7 +26,7 @@ def get_playlist_music_root(
     Return the playlist-specific music directory.
 
     Example:
-        /app/data/downloads/2/music
+        /app/downloads/1/music
     """
 
     path = (
@@ -70,7 +50,7 @@ def get_playlist_no_lyrics_root(
     Return the playlist-specific no-lyrics directory.
 
     Example:
-        /app/data/downloads/2/no-lyrics
+        /app/downloads/1/no-lyrics
     """
 
     path = (
@@ -94,7 +74,7 @@ def resolve_file_path(
     Resolve a database file path.
 
     Absolute paths are returned unchanged.
-    Relative paths are resolved from the configured
+    Relative paths are resolved from the
     download directory.
     """
 
