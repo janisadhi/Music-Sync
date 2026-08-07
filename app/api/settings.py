@@ -20,6 +20,7 @@ class SettingsResponse(BaseModel):
     youtube_playlist_url: str | None
     max_download_retries: int
     download_retry_delay_seconds: int
+    auto_start_scheduler: bool = False
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -49,6 +50,8 @@ class SettingsUpdateRequest(BaseModel):
     )
 
     youtube_playlist_url: str | None = None
+
+    auto_start_scheduler: bool | None = None
 
 
 @router.get(
@@ -108,6 +111,12 @@ def update_settings(
             download_retry_delay_seconds=(
                 request.download_retry_delay_seconds
                 if request.download_retry_delay_seconds
+                is not None
+                else None
+            ),
+            auto_start_scheduler=(
+                request.auto_start_scheduler
+                if request.auto_start_scheduler
                 is not None
                 else None
             ),

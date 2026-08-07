@@ -12,6 +12,8 @@ from app.core.runtime import scheduler
 from app.database.session import engine
 from app.api.dashboard import router as dashboard_router
 from app.api.settings import router as settings_router
+from app.settings.service import SettingsService
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,9 +21,15 @@ async def lifespan(app: FastAPI):
     print("Starting Music Sync application")
     print("=" * 60)
 
-    print(
-        "Scheduler is stopped by default."
-    )
+    try:
+        app_settings = SettingsService().get()
+        if app_settings.auto_start_scheduler:
+            print("Auto-starting Music Sync Scheduler on startup...")
+            scheduler.start(run_immediately=False)
+        else:
+            print("Scheduler is stopped by default (auto-start disabled).")
+    except Exception as exc:
+        print(f"Could not load auto-start setting on startup: {exc}")
 
     yield
 
@@ -30,8 +38,6 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
 
     scheduler.stop()
-
-
 
 
 app = FastAPI(
@@ -55,6 +61,8 @@ app.include_router(playlists_router)
 app.include_router(sync_router)
 app.include_router(dashboard_router)
 app.include_router(settings_router)
+
+
 @app.get("/health")
 def health_check():
     database_status = "ok"

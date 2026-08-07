@@ -20,6 +20,7 @@ class SettingsService:
                     max_download_retries=5,
                     download_retry_delay_seconds=60,
                     youtube_playlist_url=None,
+                    auto_start_scheduler=False,
                 )
 
                 session.add(app_settings)
@@ -37,6 +38,7 @@ class SettingsService:
         max_download_retries: int | None = None,
         download_retry_delay_seconds: int | None = None,
         youtube_playlist_url: str | None = None,
+        auto_start_scheduler: bool | None = None,
     ) -> AppSettings:
 
         with SessionLocal() as session:
@@ -54,6 +56,7 @@ class SettingsService:
                     max_download_retries=5,
                     download_retry_delay_seconds=60,
                     youtube_playlist_url=None,
+                    auto_start_scheduler=False,
                 )
 
                 session.add(app_settings)
@@ -86,6 +89,11 @@ class SettingsService:
             if youtube_playlist_url is not None:
                 app_settings.youtube_playlist_url = (
                     youtube_playlist_url
+                )
+
+            if auto_start_scheduler is not None:
+                app_settings.auto_start_scheduler = (
+                    auto_start_scheduler
                 )
 
             session.commit()

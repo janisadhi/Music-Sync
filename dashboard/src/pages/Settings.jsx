@@ -9,6 +9,7 @@ function Settings() {
         lyrics_limit: 1,
         max_download_retries: 3,
         download_retry_delay_seconds: 5,
+        auto_start_scheduler: false,
     });
 
     const [loading, setLoading] = useState(true);
@@ -55,6 +56,18 @@ function Settings() {
         setError("");
     }
 
+    function handleCheckboxChange(event) {
+        const { name, checked } = event.target;
+
+        setSettings((current) => ({
+            ...current,
+            [name]: checked,
+        }));
+
+        setMessage("");
+        setError("");
+    }
+
     async function handleSubmit(event) {
         event.preventDefault();
 
@@ -80,6 +93,9 @@ function Settings() {
 
                     download_retry_delay_seconds:
                         settings.download_retry_delay_seconds,
+
+                    auto_start_scheduler:
+                        settings.auto_start_scheduler,
                 }
             );
 
@@ -135,6 +151,39 @@ function Settings() {
                 {/* Synchronization */}
                 <div className="settings-section">
                     <h3>Synchronization</h3>
+
+                    <div className="form-group">
+                        <label
+                            htmlFor="auto_start_scheduler"
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                cursor: "pointer",
+                                fontWeight: "600",
+                            }}
+                        >
+                            <input
+                                id="auto_start_scheduler"
+                                name="auto_start_scheduler"
+                                type="checkbox"
+                                checked={Boolean(
+                                    settings.auto_start_scheduler
+                                )}
+                                onChange={handleCheckboxChange}
+                                style={{
+                                    width: "18px",
+                                    height: "18px",
+                                    cursor: "pointer",
+                                }}
+                            />
+                            Auto-start Scheduler on Startup
+                        </label>
+
+                        <p className="text-muted">
+                            Automatically start the synchronization scheduler when the application launches (e.g. docker compose up). If unchecked, the scheduler remains stopped until manually started using the Start Scheduler button.
+                        </p>
+                    </div>
 
                     <div className="form-group">
                         <label htmlFor="sync_interval_seconds">
