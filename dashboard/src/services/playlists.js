@@ -49,3 +49,11 @@ export const deletePlaylist = async (playlistId) => {
 
     return response.data;
 };
+
+export const syncPlaylist = async (playlistId) => {
+    const response = await api.post(
+        `/playlists/${playlistId}/sync`
+    );
+
+    return response.data;
+};

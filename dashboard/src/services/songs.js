@@ -1,9 +1,14 @@
 import api from "./api";
 
-export const getSongs = async () => {
-    const response = await api.get("/songs");
+export const getSongs = async (params = {}) => {
+    const response = await api.get("/songs", { params });
     return response.data;
 };
+
+export const getArtists = async () => {
+    const response = await api.get("/songs/artists");
+    return response.data;
+};;
 
 export const getSongLyrics = async (songId) => {
     const response = await api.get(

@@ -96,7 +96,7 @@
 .playlist-row {
     width: 100%;
 
-    min-height: 78px;
+
 
     display: grid;
 
@@ -374,6 +374,24 @@
 .playlists-page .btn-success:hover:not(:disabled) {
     background: #dcf5e5;
 }
+
+/* Ghost button style for secondary actions */
+.playlists-page .btn-ghost {
+    background: transparent;
+    border: 2px solid #61dafb;
+    color: #61dafb;
+    padding: 9px 15px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+.playlists-page .btn-ghost:hover:not(:disabled) {
+    background: #61dafb;
+    color: #111;
+}
+
 
 /* =========================================
    Empty

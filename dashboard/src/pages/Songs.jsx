@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
     getSongs,
     getSongAudioUrl,
+    retryDownload,
+    getArtists,
 } from "../services/songs";
+import { getPlaylists } from "../services/playlists";
 import Lyrics from "../components/Lyrics";
 
 function Songs({ onSelectSong, selectedSong }) {
@@ -13,6 +16,10 @@ function Songs({ onSelectSong, selectedSong }) {
     const [search, setSearch] = useState("");
     const [songFilter, setSongFilter] = useState("all");
     const [lyricsFilter, setLyricsFilter] = useState("all");
+    const [artistFilter, setArtistFilter] = useState("all");
+    const [playlistFilter, setPlaylistFilter] = useState("all");
+    const [artists, setArtists] = useState([]);
+    const [playlists, setPlaylists] = useState([]);
 
     const [expandedSongId, setExpandedSongId] = useState(null);
     const [currentSong, setCurrentSong] = useState(null);
@@ -21,14 +28,42 @@ function Songs({ onSelectSong, selectedSong }) {
 
     const audioRef = useRef(null);
 
+    const fetchArtists = async () => {
+        try {
+            const data = await getArtists();
+            setArtists(data);
+        } catch (err) {
+            console.error("Failed to fetch artists", err);
+        }
+    };
+
+    const fetchPlaylists = async () => {
+        try {
+            const data = await getPlaylists();
+            setPlaylists(data);
+        } catch (err) {
+            console.error("Failed to fetch playlists", err);
+        }
+    };
+
     const fetchSongs = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const data = await getSongs();
+            const params = {};
+            if (artistFilter !== "all") {
+                params.artist = artistFilter;
+            }
+            if (playlistFilter !== "all") {
+                params.playlist_id = playlistFilter;
+            }
 
+            const data = await getSongs(params);
             setSongs(data);
+            // Load auxiliary data
+            await fetchArtists();
+            await fetchPlaylists();
         } catch (err) {
             console.error(
                 "Failed to fetch songs:",
@@ -43,7 +78,7 @@ function Songs({ onSelectSong, selectedSong }) {
 
     useEffect(() => {
         fetchSongs();
-    }, []);
+    }, [artistFilter, playlistFilter]);
 
     /*
      * Keep the audio element synchronized
@@ -232,6 +267,24 @@ function Songs({ onSelectSong, selectedSong }) {
                 }
             }
 
+            /*
+             * Artist filter
+             */
+            if (artistFilter !== "all" && song.artist) {
+                if (song.artist.toLowerCase() !== artistFilter.toLowerCase()) {
+                    return false;
+                }
+            }
+
+            /*
+             * Playlist filter
+             */
+            if (playlistFilter !== "all") {
+                if (Number(song.playlist_id) !== Number(playlistFilter)) {
+                    return false;
+                }
+            }
+
             return true;
         });
     }, [
@@ -239,6 +292,8 @@ function Songs({ onSelectSong, selectedSong }) {
         search,
         songFilter,
         lyricsFilter,
+        artistFilter,
+        playlistFilter,
     ]);
 
     /*
@@ -415,6 +470,12 @@ function Songs({ onSelectSong, selectedSong }) {
         );
     };
 
+    const selectStyle = {
+        padding: "10px 12px",
+        border: "1px solid #ddd",
+        borderRadius: "6px",
+    };
+
     if (loading) {
         return (
             <div>
@@ -489,15 +550,13 @@ function Songs({ onSelectSong, selectedSong }) {
                 </button>
             </div>
 
-            {/* Search + filters */}
+            {/* Filters UI */}
             <div
                 style={{
                     display: "flex",
                     gap: "10px",
-                    marginBottom:
-                        "20px",
-                    flexWrap:
-                        "wrap",
+                    marginBottom: "20px",
+                    flexWrap: "wrap",
                 }}
             >
                 <input
@@ -505,101 +564,78 @@ function Songs({ onSelectSong, selectedSong }) {
                     placeholder="Search songs, artists or albums..."
                     value={search}
                     onChange={(event) =>
-                        setSearch(
-                            event.target
-                                .value
-                        )
+                        setSearch(event.target.value)
                     }
                     style={{
                         flex: "1 1 300px",
-                        minWidth:
-                            "250px",
-                        padding:
-                            "10px 12px",
-                        border:
-                            "1px solid #ddd",
-                        borderRadius:
-                            "6px",
+                        minWidth: "250px",
+                        padding: "10px 12px",
+                        border: "1px solid #ddd",
+                        borderRadius: "6px",
                     }}
                 />
-
+                {/* Status filter */}
                 <select
                     value={songFilter}
-                    onChange={(
-                        event
-                    ) =>
-                        setSongFilter(
-                            event.target
-                                .value
-                        )
-                    }
-                    style={{
-                        padding:
-                            "10px 12px",
-                        border:
-                            "1px solid #ddd",
-                        borderRadius:
-                            "6px",
-                    }}
+                    onChange={(event) => setSongFilter(event.target.value)}
+                    style={selectStyle}
                 >
-                    <option value="all">
-                        All Songs
-                    </option>
-
-                    <option value="downloaded">
-                        Downloaded
-                    </option>
-
-                    <option value="pending">
-                        Pending
-                    </option>
-
-                    <option value="failed">
-                        Failed
-                    </option>
+                    <option value="all">All Songs</option>
+                    <option value="downloaded">Downloaded</option>
+                    <option value="pending">Pending</option>
+                    <option value="failed">Failed</option>
                 </select>
-
+                {/* Lyrics filter */}
                 <select
-                    value={
-                        lyricsFilter
-                    }
-                    onChange={(
-                        event
-                    ) =>
-                        setLyricsFilter(
-                            event.target
-                                .value
-                        )
-                    }
-                    style={{
-                        padding:
-                            "10px 12px",
-                        border:
-                            "1px solid #ddd",
-                        borderRadius:
-                            "6px",
-                    }}
+                    value={lyricsFilter}
+                    onChange={(event) => setLyricsFilter(event.target.value)}
+                    style={selectStyle}
                 >
-                    <option value="all">
-                        All Lyrics
-                    </option>
-
-                    <option value="available">
-                        Lyrics Available
-                    </option>
-
-                    <option value="pending">
-                        Lyrics Pending
-                    </option>
-
-                    <option value="failed">
-                        Lyrics Failed
-                    </option>
-
-                    <option value="unavailable">
-                        Lyrics Unavailable
-                    </option>
+                    <option value="all">All Lyrics</option>
+                    <option value="available">Lyrics Available</option>
+                    <option value="pending">Lyrics Pending</option>
+                    <option value="failed">Lyrics Failed</option>
+                    <option value="unavailable">Lyrics Unavailable</option>
                 </select>
+                {/* Artist filter */}
+                <select
+                    value={artistFilter}
+                    onChange={(e) => setArtistFilter(e.target.value)}
+                    style={selectStyle}
+                >
+                    <option value="all">All Artists</option>
+                    {artists.map((a) => (
+                        <option key={a} value={a}>
+                            {a}
+                        </option>
+                    ))}
+                </select>
+                {/* Playlist filter */}
+                <select
+                    value={playlistFilter}
+                    onChange={(e) => setPlaylistFilter(e.target.value)}
+                    style={selectStyle}
+                >
+                    <option value="all">All Playlists</option>
+                    {playlists.map((pl) => (
+                        <option key={pl.id} value={pl.id}>
+                            {pl.name}
+                        </option>
+                    ))}
+                </select>
+                <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                        setSearch("");
+                        setSongFilter("all");
+                        setLyricsFilter("all");
+                        setArtistFilter("all");
+                        setPlaylistFilter("all");
+                    }}
+                    style={{ padding: "10px 12px" }}
+                >
+                    Clear Filters
+                </button>
             </div>
 
             {/* Song list */}
@@ -630,8 +666,6 @@ function Songs({ onSelectSong, selectedSong }) {
 
                         const isCurrent =
                             currentSong?.id === song.id;
-
-
 
                         return (
                             <div
