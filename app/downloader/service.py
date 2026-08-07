@@ -47,6 +47,22 @@ class SongDownloader:
         self,
         exc: Exception,
     ) -> bool:
+        if isinstance(exc, yt_dlp.utils.DownloadError):
+            err_msg = str(exc).lower()
+            unretryable_keywords = [
+                "video unavailable",
+                "this video is unavailable",
+                "private video",
+                "this video is private",
+                "video has been removed",
+                "this video has been removed",
+                "deleted video",
+                "members-only",
+                "sign in to confirm your age",
+            ]
+            if any(kw in err_msg for kw in unretryable_keywords):
+                return False
+
         return isinstance(
             exc,
             (
@@ -333,131 +349,166 @@ class SongDownloader:
             return False
 
     # ---------------------------------------------------------
-    # Download pending songs
+    # Stale download recovery
+    # ---------------------------------------------------------
+
+    def recover_stale_downloads(self) -> int:
+        """
+        Recover songs stuck in 'downloading' state from crashes/restarts.
+
+        If a non-empty audio file exists on disk for the song,
+        mark download_status = 'downloaded'.
+        Otherwise, reset download_status = 'pending'.
+        """
+        recovered_count = 0
+        with SessionLocal() as session:
+            stuck_songs = session.scalars(
+                select(Song).where(
+                    Song.download_status == "downloading"
+                )
+            ).all()
+
+            if not stuck_songs:
+                return 0
+
+            print(
+                f"Found {len(stuck_songs)} stuck downloads from previous runs. Recovering..."
+            )
+            for song in stuck_songs:
+                if song.file_path:
+                    fp = Path(song.file_path)
+                    if fp.exists() and fp.stat().st_size > 0:
+                        song.download_status = "downloaded"
+                        song.next_download_attempt = None
+                        song.error_message = None
+                        recovered_count += 1
+                        print(
+                            f"Recovered as downloaded: {song.title}"
+                        )
+                        continue
+
+                song.download_status = "pending"
+                song.next_download_attempt = None
+                recovered_count += 1
+                print(
+                    f"Reset stuck download to pending: {song.title}"
+                )
+
+            session.commit()
+        return recovered_count
+
+    # ---------------------------------------------------------
+    # Thread task helper
+    # ---------------------------------------------------------
+
+    def _download_song_by_id(
+        self,
+        song_id: int,
+    ) -> bool:
+        with SessionLocal() as session:
+            song = session.get(Song, song_id)
+            if not song:
+                return False
+
+            try:
+                success = self.download_song(song)
+                session.commit()
+                return success
+            except Exception as exc:
+                session.rollback()
+                song.download_status = "failed"
+                song.error_message = str(exc)
+                try:
+                    session.commit()
+                except Exception:
+                    session.rollback()
+                print(
+                    f"Unexpected downloader error: {song.title}"
+                )
+                print(f"Error: {exc}")
+                return False
+
+    # ---------------------------------------------------------
+    # Download pending songs (Queue-Draining)
     # ---------------------------------------------------------
 
     def download_pending(
         self,
-        limit: int,
+        limit: int = 1,
+        batch_size: int = 50,
     ) -> int:
         """
-        Download pending/retryable songs.
+        Drain the entire pending download queue.
 
-        The number of songs processed in one sync cycle
-        is controlled by the configured download limit.
-
-        Songs are eligible when:
-
-        1. download_status = pending
-
-        OR
-
-        2. download_status = failed
-           AND next_download_attempt <= current time
-
-        Songs that have permanently failed have
-        next_download_attempt = NULL and therefore
-        are not retried.
+        Parameter 'limit' is interpreted as 'concurrency' (max parallel workers).
+        Songs are fetched in batches (batch_size) and processed until no eligible
+        pending songs remain.
         """
+        from concurrent.futures import ThreadPoolExecutor
 
-        if limit <= 0:
-            print(
-                "Download limit is 0. "
-                "Skipping downloads."
-            )
+        concurrency = max(1, limit)
 
-            return 0
+        # Recover any stuck downloads from previous unexpected shutdowns first
+        self.recover_stale_downloads()
 
-        now = datetime.now(timezone.utc)
+        total_downloaded = 0
+        total_processed = 0
 
-        with SessionLocal() as session:
+        while True:
+            now = datetime.now(timezone.utc)
 
-            songs = session.scalars(
-                select(Song)
-                .where(
-                    (
-                        Song.download_status
-                        == "pending"
-                    )
-                    |
-                    (
-                        (
-                            Song.download_status
-                            == "failed"
-                        )
-                        & (
-                            Song.next_download_attempt
-                            <= now
+            with SessionLocal() as session:
+                pending_song_ids = session.scalars(
+                    select(Song.id)
+                    .where(
+                        (Song.download_status == "pending")
+                        | (
+                            (Song.download_status == "failed")
+                            & (Song.next_download_attempt <= now)
                         )
                     )
-                )
-                .order_by(
-                    Song.id
-                )
-                .limit(limit)
-            ).all()
+                    .order_by(Song.id)
+                    .limit(batch_size)
+                ).all()
 
-            if not songs:
-                print(
-                    "No pending downloads."
-                )
-
-                return 0
-
-            print(
-                f"Pending downloads found: "
-                f"{len(songs)}"
-            )
-
-            downloaded_count = 0
-
-            for song in songs:
-
-                print()
-                print("-" * 60)
-
-                print(
-                    f"Downloading: "
-                    f"{song.title}"
-                )
-
-                print(
-                    f"Song ID: "
-                    f"{song.id}"
-                )
-
-                try:
-                    success = self.download_song(
-                        song
-                    )
-
-                    if success:
-                        downloaded_count += 1
-
-                except Exception as exc:
-
-                    song.download_status = "failed"
-
-                    song.error_message = str(
-                        exc
-                    )
-
-                    print(
-                        f"Unexpected downloader error: "
-                        f"{song.title}"
-                    )
-
-                    print(
-                        f"Error: {exc}"
-                    )
-
-            session.commit()
+            if not pending_song_ids:
+                break
 
             print()
             print(
-                f"Downloads completed: "
-                f"{downloaded_count}/"
-                f"{len(songs)}"
+                f"Processing download queue batch: {len(pending_song_ids)} songs "
+                f"(concurrency: {concurrency})"
             )
 
-            return downloaded_count
+            batch_downloaded = 0
+
+            if concurrency > 1:
+                with ThreadPoolExecutor(
+                    max_workers=concurrency
+                ) as executor:
+                    results = list(
+                        executor.map(
+                            self._download_song_by_id,
+                            pending_song_ids,
+                        )
+                    )
+                batch_downloaded = sum(
+                    1 for r in results if r
+                )
+            else:
+                for song_id in pending_song_ids:
+                    if self._download_song_by_id(song_id):
+                        batch_downloaded += 1
+
+            total_downloaded += batch_downloaded
+            total_processed += len(pending_song_ids)
+
+        if total_processed > 0:
+            print()
+            print(
+                f"Download queue drained: {total_downloaded}/{total_processed} succeeded."
+            )
+        else:
+            print("No pending downloads in queue.")
+
+        return total_downloaded

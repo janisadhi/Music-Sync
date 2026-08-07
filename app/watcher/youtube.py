@@ -23,6 +23,7 @@ class YouTubePlaylistWatcher:
             "no_warnings": True,
             "extract_flat": True,
             "skip_download": True,
+            "ignoreerrors": True,
         }
 
         with yt_dlp.YoutubeDL(options) as ydl:
@@ -30,6 +31,12 @@ class YouTubePlaylistWatcher:
                 self.playlist_url,
                 download=False,
             )
+
+        if not info:
+            return {
+                "id": None,
+                "name": "YouTube Playlist",
+            }
 
         return {
             "id": info.get("id"),
@@ -43,6 +50,7 @@ class YouTubePlaylistWatcher:
             "no_warnings": True,
             "extract_flat": True,
             "skip_download": True,
+            "ignoreerrors": True,
         }
 
         with yt_dlp.YoutubeDL(options) as ydl:
@@ -50,6 +58,9 @@ class YouTubePlaylistWatcher:
                 self.playlist_url,
                 download=False,
             )
+
+        if not info:
+            return []
 
         songs = []
 
@@ -71,6 +82,21 @@ class YouTubePlaylistWatcher:
             if not video_id:
                 continue
 
+            entry_title = entry.get("title") or ""
+            if entry_title in (
+                "[Private video]",
+                "[Deleted video]",
+                "[Unavailable video]",
+            ):
+                print(
+                    f"Skipping unavailable video: {video_id}"
+                )
+                print(
+                    f"Reason: Video is marked as {entry_title}"
+                )
+                print("Playlist scan continuing...")
+                continue
+
             # Fetch full metadata for the individual video.
             video_url = (
                 "https://www.youtube.com/watch?v="
@@ -80,26 +106,61 @@ class YouTubePlaylistWatcher:
             video_options = {
                 "quiet": True,
                 "no_warnings": True,
+                "ignoreerrors": True,
             }
 
-            with yt_dlp.YoutubeDL(
-                video_options
-            ) as video_ydl:
-                video_info = video_ydl.extract_info(
-                    video_url,
-                    download=False,
+            try:
+                with yt_dlp.YoutubeDL(
+                    video_options
+                ) as video_ydl:
+                    video_info = video_ydl.extract_info(
+                        video_url,
+                        download=False,
+                    )
+            except (
+                yt_dlp.utils.YoutubeDLError,
+                yt_dlp.utils.DownloadError,
+                yt_dlp.utils.ExtractorError,
+            ) as exc:
+                reason = str(exc).strip()
+                if "ERROR: [youtube]" in reason:
+                    reason = reason.split(":", 2)[-1].strip()
+                print(
+                    f"Skipping unavailable video: {video_id}"
                 )
+                print(
+                    f"Reason: {reason or 'Video unavailable'}"
+                )
+                print("Playlist scan continuing...")
+                continue
+
+            if not video_info or not isinstance(video_info, dict):
+                print(
+                    f"Skipping unavailable video: {video_id}"
+                )
+                print("Reason: Video unavailable")
+                print("Playlist scan continuing...")
+                continue
+
+            title = video_info.get("title")
+            if not title or title in (
+                "[Private video]",
+                "[Deleted video]",
+                "[Unavailable video]",
+            ):
+                print(
+                    f"Skipping unavailable video: {video_id}"
+                )
+                print(
+                    f"Reason: Video unavailable ({title or 'missing title'})"
+                )
+                print("Playlist scan continuing...")
+                continue
 
             songs.append(
                 YouTubeSong(
                     video_id=video_id,
-                    title=video_info.get(
-                        "title",
-                        entry.get(
-                            "title",
-                            "Unknown",
-                        ),
-                    ),
+                    title=title,
                     artist=video_info.get(
                         "artist"
                     ),

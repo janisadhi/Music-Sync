@@ -17,6 +17,9 @@ class SyncService:
         self.settings_service = SettingsService()
 
     def run(self):
+        import time
+        start_time = time.time()
+
         print("=" * 60)
         print("Music Sync")
         print("=" * 60)
@@ -30,11 +33,11 @@ class SyncService:
         lyrics_limit = app_settings.lyrics_limit
 
         print(
-            f"Download limit: {download_limit}"
+            f"Download concurrency: {download_limit}"
         )
 
         print(
-            f"Lyrics limit: {lyrics_limit}"
+            f"Lyrics concurrency: {lyrics_limit}"
         )
 
         # ---------------------------------------------------------
@@ -64,8 +67,11 @@ class SyncService:
 
             return
 
+        total_discovered = 0
+        total_new = 0
+
         # ---------------------------------------------------------
-        # Process each playlist
+        # Process each playlist (Scan Phase - Once per sync)
         # ---------------------------------------------------------
         for playlist in playlists:
 
@@ -80,7 +86,7 @@ class SyncService:
             print("-" * 60)
 
             try:
-                self._sync_playlist(
+                discovered, new_count = self._sync_playlist(
                     playlist_id=playlist.id,
                     playlist_url=playlist.url,
                     youtube_playlist_id=(
@@ -88,6 +94,8 @@ class SyncService:
                     ),
                     playlist_name=playlist.name,
                 )
+                total_discovered += discovered
+                total_new += new_count
 
             except Exception as exc:
                 print(
@@ -103,19 +111,30 @@ class SyncService:
                 continue
 
         # ---------------------------------------------------------
-        # Download pending songs
+        # Drain pending download queue
         # ---------------------------------------------------------
-        self.downloader.download_pending(
+        downloads_completed = self.downloader.download_pending(
             limit=download_limit
         )
 
         # ---------------------------------------------------------
-        # Fetch lyrics
+        # Drain pending lyrics queue
         # ---------------------------------------------------------
-        self.lyrics.process_pending(
+        lyrics_completed = self.lyrics.process_pending(
             limit=lyrics_limit
         )
 
+        elapsed = time.time() - start_time
+
+        print("=" * 60)
+        print("Sync Statistics")
+        print("=" * 60)
+        print(f"Playlists scanned:          {len(playlists)}")
+        print(f"Playlist entries discovered: {total_discovered}")
+        print(f"New songs added:            {total_new}")
+        print(f"Downloads completed:        {downloads_completed}")
+        print(f"Lyrics completed:           {lyrics_completed}")
+        print(f"Duration:                   {elapsed:.2f} seconds")
         print("=" * 60)
         print("Sync cycle completed")
         print("=" * 60)
@@ -126,7 +145,7 @@ class SyncService:
         playlist_url: str,
         youtube_playlist_id: str,
         playlist_name: str,
-    ):
+    ) -> tuple[int, int]:
         # ---------------------------------------------------------
         # Fetch YouTube playlist
         # ---------------------------------------------------------
@@ -140,13 +159,14 @@ class SyncService:
             f"Playlist songs discovered: "
             f"{len(youtube_songs)}"
         )
+        print("Playlist scan completed")
 
         if not youtube_songs:
             print(
                 "No songs found in playlist."
             )
 
-            return
+            return 0, 0
 
         # ---------------------------------------------------------
         # Reconcile playlist with database
@@ -181,3 +201,5 @@ class SyncService:
                 f"New songs added: "
                 f"{len(new_songs)}"
             )
+
+            return len(youtube_songs), len(new_songs)

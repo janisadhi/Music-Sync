@@ -527,78 +527,110 @@ class LyricsService:
         Returns the number of songs successfully processed.
         """
 
-        if limit <= 0:
-            print(
-                "Lyrics limit is 0. Skipping lyrics processing."
-            )
-            return 0
+    # ---------------------------------------------------------
+    # Thread task helper
+    # ---------------------------------------------------------
 
-        processed = 0
-
+    def _process_lyrics_by_id(
+        self,
+        song_id: int,
+    ) -> bool:
         with SessionLocal() as session:
-            pending_songs = session.scalars(
-                select(Song)
-                .where(
-                    Song.download_status == "downloaded",
-                    Song.lyrics_status == "pending",
-                )
-                .order_by(Song.id)
-                .limit(limit)
-            ).all()
+            song = session.get(Song, song_id)
+            if not song:
+                return False
 
+            try:
+                success = self.process_song(song)
+                session.commit()
+                return success
+            except Exception as exc:
+                session.rollback()
+                song.lyrics_status = "pending"
+                song.error_message = str(exc)
+                try:
+                    session.commit()
+                except Exception:
+                    session.rollback()
+                print(
+                    f"Lyrics processing failed: {song.title}"
+                )
+                print(f"Error: {exc}")
+                return False
+
+    # ---------------------------------------------------------
+    # Process pending songs (Queue-Draining)
+    # ---------------------------------------------------------
+
+    def process_pending(
+        self,
+        limit: int = 1,
+        batch_size: int = 50,
+    ) -> int:
+        """
+        Drain the entire pending lyrics queue.
+
+        Parameter 'limit' is interpreted as 'concurrency' (max parallel workers).
+        Lyrics are fetched in batches (batch_size) and processed until no eligible
+        pending lyrics songs remain.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        concurrency = max(1, limit)
+        total_processed = 0
+        total_succeeded = 0
+
+        while True:
+            with SessionLocal() as session:
+                pending_song_ids = session.scalars(
+                    select(Song.id)
+                    .where(
+                        Song.download_status == "downloaded",
+                        Song.lyrics_status == "pending",
+                    )
+                    .order_by(Song.id)
+                    .limit(batch_size)
+                ).all()
+
+            if not pending_song_ids:
+                break
+
+            print()
             print(
-                f"Pending lyrics found: "
-                f"{len(pending_songs)}"
+                f"Processing lyrics queue batch: {len(pending_song_ids)} songs "
+                f"(concurrency: {concurrency})"
             )
 
-            if not pending_songs:
-                return 0
+            batch_succeeded = 0
 
-            for song in pending_songs:
-                print()
-                print("-" * 60)
-                print(
-                    f"Processing lyrics: {song.title}"
+            if concurrency > 1:
+                with ThreadPoolExecutor(
+                    max_workers=concurrency
+                ) as executor:
+                    results = list(
+                        executor.map(
+                            self._process_lyrics_by_id,
+                            pending_song_ids,
+                        )
+                    )
+                batch_succeeded = sum(
+                    1 for r in results if r
                 )
-                print(
-                    f"Song ID: {song.id}"
-                )
+            else:
+                for song_id in pending_song_ids:
+                    if self._process_lyrics_by_id(song_id):
+                        batch_succeeded += 1
 
-                try:
-                    success = self.process_song(
-                        song
-                    )
+            total_succeeded += batch_succeeded
+            total_processed += len(pending_song_ids)
 
-                    session.commit()
+        if total_processed > 0:
+            print()
+            print(
+                f"Lyrics queue drained: {total_succeeded}/{total_processed} succeeded."
+            )
+        else:
+            print("No pending lyrics in queue.")
 
-                    if success:
-                        processed += 1
-
-                except Exception as exc:
-                    session.rollback()
-
-                    song.lyrics_status = "pending"
-                    song.error_message = str(exc)
-
-                    try:
-                        session.commit()
-                    except Exception:
-                        session.rollback()
-
-                    print(
-                        f"Lyrics processing failed: "
-                        f"{song.title}"
-                    )
-
-                    print(
-                        f"Error: {exc}"
-                    )
-
-        print()
-        print(
-            f"Lyrics processing completed: "
-            f"{processed}/{len(pending_songs)}"
-        )
-
-        return processed
+        return total_succeeded
 
