@@ -5,10 +5,8 @@ services:
     container_name: music-sync-postgres
     restart: unless-stopped
 
-    environment:
-      POSTGRES_DB: "music_sync"
-      POSTGRES_USER: "music_sync"
-      POSTGRES_PASSWORD: "music_sync"
+    env_file:
+      - .env
 
     ports:
       - "127.0.0.1:5432:5432"
@@ -19,7 +17,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U music_sync -d music_sync
+        - pg_isready -U $${POSTGRES_USER:-music_sync} -d $${POSTGRES_DB:-music_sync}
       interval: 5s
       timeout: 5s
       retries: 5
@@ -33,16 +31,8 @@ services:
     container_name: music-sync-app
     restart: unless-stopped
 
-    environment:
-      DATABASE_URL: "postgresql+psycopg://music_sync:music_sync@postgres:5432/music_sync"
-
-      APP_NAME: "music-sync"
-      APP_ENV: "production"
-      APP_DEBUG: "false"
-
-      MUSIC_ROOT: "/app/data/music"
-
-      SYNC_INTERVAL_SECONDS: "60"
+    env_file:
+      - .env
 
     depends_on:
       postgres:
@@ -59,9 +49,13 @@ services:
       context: ./dashboard
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: "http://localhost:8000"
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+
     container_name: music-sync-dashboard
     restart: unless-stopped
+
+    env_file:
+      - .env
 
     ports:
       - "127.0.0.1:3000:80"

@@ -1,4 +1,3 @@
-from app.core.config import settings
 from app.database.models import AppSettings
 from app.database.session import SessionLocal
 
@@ -15,16 +14,12 @@ class SettingsService:
             if app_settings is None:
                 app_settings = AppSettings(
                     id=1,
-                    sync_interval_seconds=(
-                        settings.sync_interval_seconds
-                    ),
+                    sync_interval_seconds=60,
                     download_limit=1,
                     lyrics_limit=1,
                     max_download_retries=5,
                     download_retry_delay_seconds=60,
-                    youtube_playlist_url=(
-                        settings.youtube_playlist_url
-                    ),
+                    youtube_playlist_url=None,
                 )
 
                 session.add(app_settings)
@@ -53,16 +48,12 @@ class SettingsService:
             if app_settings is None:
                 app_settings = AppSettings(
                     id=1,
-                    sync_interval_seconds=(
-                        settings.sync_interval_seconds
-                    ),
+                    sync_interval_seconds=60,
                     download_limit=1,
                     lyrics_limit=1,
                     max_download_retries=5,
                     download_retry_delay_seconds=60,
-                    youtube_playlist_url=(
-                        settings.youtube_playlist_url
-                    ),
+                    youtube_playlist_url=None,
                 )
 
                 session.add(app_settings)

@@ -17,10 +17,6 @@ class Settings(BaseSettings):
 
     music_root: str = "/music"
 
-    sync_interval_seconds: int = 300
-
-    youtube_playlist_url: str | None = None
-
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
