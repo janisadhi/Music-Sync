@@ -1,4 +1,12 @@
 import { NavLink } from "react-router-dom";
+import {
+    Activity,
+    History,
+    LayoutDashboard,
+    ListMusic,
+    Music,
+    Settings,
+} from "lucide-react";
 
 function Sidebar() {
     const getNavClass = ({ isActive }) =>
@@ -6,112 +14,55 @@ function Sidebar() {
 
     return (
         <aside className="sidebar">
-
             <div className="brand">
-
                 <div className="brand-icon">
-                    ♪
+                    <Music size={22} color="#ffffff" />
                 </div>
-
                 <div>
-                    <div className="brand-title">
-                        Music Sync
-                    </div>
-
-                    <div className="brand-subtitle">
-                        Dashboard
-                    </div>
+                    <div className="brand-title">Music Sync</div>
+                    <div className="brand-subtitle">Dashboard Engine</div>
                 </div>
-
             </div>
 
             <nav className="sidebar-nav">
-
-                <NavLink
-                    to="/"
-                    end
-                    className={getNavClass}
-                >
-                    <span className="nav-icon">
-                        ▦
-                    </span>
-
-                    Dashboard
+                <NavLink to="/" end className={getNavClass}>
+                    <LayoutDashboard className="nav-icon" size={18} />
+                    <span>Dashboard</span>
                 </NavLink>
 
-                <NavLink
-                    to="/playlists"
-                    className={getNavClass}
-                >
-                    <span className="nav-icon">
-                        ☷
-                    </span>
-
-                    Playlists
+                <NavLink to="/playlists" className={getNavClass}>
+                    <ListMusic className="nav-icon" size={18} />
+                    <span>Playlists</span>
                 </NavLink>
 
-                <NavLink
-                    to="/songs"
-                    className={getNavClass}
-                >
-                    <span className="nav-icon">
-                        ♫
-                    </span>
-
-                    Songs
+                <NavLink to="/songs" className={getNavClass}>
+                    <Music className="nav-icon" size={18} />
+                    <span>Songs Catalog</span>
                 </NavLink>
 
-                <NavLink
-                    to="/history"
-                    className={getNavClass}
-                >
-                    <span className="nav-icon">
-                        ◷
-                    </span>
-
-                    Sync History
+                <NavLink to="/history" className={getNavClass}>
+                    <History className="nav-icon" size={18} />
+                    <span>Sync History</span>
                 </NavLink>
 
-                <NavLink
-                    to="/settings"
-                    className={getNavClass}
-                >
-                    <span className="nav-icon">
-                        ⚙
-                    </span>
-
-                    Settings
+                <NavLink to="/settings" className={getNavClass}>
+                    <Settings className="nav-icon" size={18} />
+                    <span>Settings</span>
                 </NavLink>
 
-                <NavLink
-                    to="/health"
-                    className={getNavClass}
-                >
-                    <span className="nav-icon">
-                        ♡
-                    </span>
-
-                    System Health
+                <NavLink to="/health" className={getNavClass}>
+                    <Activity className="nav-icon" size={18} />
+                    <span>System Health</span>
                 </NavLink>
-
             </nav>
 
             <div className="sidebar-footer">
-
                 <div className="online-dot" />
-
                 <div>
-                    <strong>
-                        Music Sync v1.0.0
-                    </strong>
-
-                    <span>
-                        © 2026
-                    </span>
+                    <strong>Music Sync v1.0.0</strong>
+                    <span>System Online</span>
                 </div>
-
             </div>
-
         </aside>
     );
 }

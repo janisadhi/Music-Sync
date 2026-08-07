@@ -1,167 +1,275 @@
-/* =========================================
-   Settings
-========================================= */
+/* ==============================================================================
+   System Settings Page - Modern UI Styles
+   ============================================================================== */
 
-.settings-section {
-    margin-top: 28px;
-    padding-top: 24px;
-    border-top: 1px solid #e2e8f0;
-}
-
-.settings-section:first-of-type {
-    margin-top: 20px;
-    padding-top: 0;
-    border-top: none;
-}
-
-.settings-section h3 {
-    margin: 0 0 20px;
-    color: #172033;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-/* =========================================
-   Form
-========================================= */
-
-.settings-section .form-group {
+.settings-container {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    margin-bottom: 22px;
+    gap: 24px;
 }
 
-.settings-section .form-group:last-child {
-    margin-bottom: 0;
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
-.settings-section label {
-    margin-bottom: 8px;
-    color: #475569;
-    font-size: 13px;
-    font-weight: 600;
+.settings-header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
 }
 
-/* =========================================
-   Inputs
-========================================= */
+.settings-header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 6px 0 0;
+}
 
-.settings-section input {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
+/* Alert Banner */
 
+.settings-alert-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.settings-alert-banner.alert-success {
+    background-color: var(--success-soft);
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.settings-alert-banner.alert-error {
+    background-color: var(--danger-soft);
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* Form Layout */
+
+.settings-form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.settings-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.card-section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.section-icon {
+    width: 40px;
     height: 40px;
-    padding: 0 12px;
-
-    background: #ffffff;
-    color: #172033;
-
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-
-    outline: none;
-
-    transition: border-color .2s, box-shadow .2s;
+    padding: 9px;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
 }
 
-.settings-section input:hover {
-    border-color: #94a3b8;
+.section-icon.blue {
+    background-color: var(--primary-blue-soft);
+    color: var(--primary-blue);
 }
 
-.settings-section input:focus {
-    border-color: #1769e0;
-    box-shadow: 0 0 0 3px rgba(23,105,224,.1);
+.section-icon.green {
+    background-color: var(--success-soft);
+    color: var(--success-emerald);
 }
 
-.settings-section input::placeholder {
-    color: #94a3b8;
+.section-icon.purple {
+    background-color: #f3e8ff;
+    color: #a855f7;
 }
 
-.settings-section input[type="number"] {
-    max-width: 270px;
+.section-icon.orange {
+    background-color: var(--warning-soft);
+    color: #d97706;
 }
 
-/* =========================================
-   Help Text
-========================================= */
+.card-section-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
 
-.settings-section .text-muted {
-    margin-top: 7px;
-    color: #64748b;
-    font-size: 12px;
+.card-section-header p {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Setting Row */
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.setting-row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.setting-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.setting-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: block;
+}
+
+.setting-desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
     line-height: 1.5;
 }
 
-/* =========================================
-   Messages
-========================================= */
+/* Input With Unit Tag */
 
-.settings-success {
-    margin: 20px 0 16px;
-    color: #15803d;
-    font-size: 13px;
+.input-with-unit {
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
-.settings-error {
-    margin: 20px 0 16px;
-    color: #dc2626;
-    font-size: 13px;
-}
-
-/* =========================================
-   Button
-========================================= */
-
-/* Matches your current React:
-   className="button primary"
-*/
-
-.button.primary {
-    min-height: 36px;
-    min-width: 140px;
-
-    padding: 8px 14px;
-
-    border: 1px solid #1769e0;
-    border-radius: 6px;
-
-    background: #1769e0;
-    color: #ffffff;
-
-    font-size: 13px;
+.input-with-unit input {
+    height: 40px;
+    width: 140px;
+    padding: 0 44px 0 14px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px;
     font-weight: 600;
+    color: var(--text-primary);
+    background-color: #ffffff;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
 
+.input-with-unit input:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.unit-tag {
+    position: absolute;
+    right: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    pointer-events: none;
+    text-transform: lowercase;
+}
+
+/* Toggle Switch */
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
     cursor: pointer;
-
-    transition: background .2s, opacity .2s;
+    inset: 0;
+    background-color: #cbd5e1;
+    transition: 0.25s ease;
 }
 
-.button.primary:hover:not(:disabled) {
-    background: #155cc4;
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: 0.25s ease;
 }
 
-.button.primary:disabled {
-    opacity: .45;
-    cursor: not-allowed;
+.slider.round {
+    border-radius: 34px;
 }
 
-/* =========================================
-   Responsive
-========================================= */
+.slider.round:before {
+    border-radius: 50%;
+}
 
-@media (max-width:700px) {
+input:checked + .slider {
+    background-color: var(--success-emerald);
+}
 
-    .settings-section {
-        margin-top: 24px;
-        padding-top: 20px;
-    }
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
 
-    .settings-section input[type="number"] {
-        max-width: 100%;
-    }
+/* Footer Save Bar */
 
-    .button.primary {
-        width: 100%;
-    }
+.settings-save-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 10px;
+}
+
+.btn-lg {
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: var(--radius-md);
+}
+
+.settings-loading-screen {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 48px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
 }

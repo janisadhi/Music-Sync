@@ -1,14 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+    AlertCircle,
+    CheckCircle2,
+    ChevronDown,
+    Clock,
+    Download,
+    FileText,
+    Filter,
+    Music,
+    Pause,
+    Play,
+    RefreshCw,
+    RotateCcw,
+    Search,
+    Trash2,
+    Volume2,
+    VolumeX,
+    X,
+} from "lucide-react";
+import {
     getSongs,
     getSongAudioUrl,
     retryDownload,
+    retryLyrics,
+    deleteSong,
     getArtists,
 } from "../services/songs";
 import { getPlaylists } from "../services/playlists";
 import Lyrics from "../components/Lyrics";
+import "../styles/songs.css";
 
-function Songs({ onSelectSong, selectedSong }) {
+function Songs() {
     const [songs, setSongs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -25,6 +47,8 @@ function Songs({ onSelectSong, selectedSong }) {
     const [currentSong, setCurrentSong] = useState(null);
     const [currentTime, setCurrentTime] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [volume, setVolume] = useState(1);
+    const [isMuted, setIsPlayingMuted] = useState(false);
 
     const audioRef = useRef(null);
 
@@ -61,15 +85,10 @@ function Songs({ onSelectSong, selectedSong }) {
 
             const data = await getSongs(params);
             setSongs(data);
-            // Load auxiliary data
             await fetchArtists();
             await fetchPlaylists();
         } catch (err) {
-            console.error(
-                "Failed to fetch songs:",
-                err
-            );
-
+            console.error("Failed to fetch songs:", err);
             setError("Failed to load songs.");
         } finally {
             setLoading(false);
@@ -80,69 +99,35 @@ function Songs({ onSelectSong, selectedSong }) {
         fetchSongs();
     }, [artistFilter, playlistFilter]);
 
-    /*
-     * Keep the audio element synchronized
-     * with the selected song.
-     */
     useEffect(() => {
         const audio = audioRef.current;
+        if (!audio || !currentSong) return;
 
-        if (!audio || !currentSong) {
-            return;
-        }
-
-        const url = getSongAudioUrl(
-            currentSong.id
-        );
-
+        const url = getSongAudioUrl(currentSong.id);
         if (audio.src !== url) {
             audio.src = url;
             audio.load();
-
             setCurrentTime(0);
             setIsPlaying(false);
         }
     }, [currentSong]);
 
     const formatDuration = (seconds) => {
-        if (!seconds) {
-            return "--:--";
-        }
-
-        const minutes = Math.floor(
-            seconds / 60
-        );
-
-        const remainingSeconds = Math.floor(
-            seconds % 60
-        );
-
-        return `${minutes}:${String(
-            remainingSeconds
-        ).padStart(2, "0")}`;
+        if (!seconds || isNaN(seconds)) return "00:00";
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
     };
 
-    /*
-     * Convert backend status into
-     * UI status.
-     *
-     * Green  = success
-     * Red    = failed
-     * Yellow = pending
-     * Grey   = unavailable
-     */
     const getSongStatus = (status) => {
         switch (status) {
             case "downloaded":
             case "completed":
                 return "success";
-
             case "failed":
                 return "failed";
-
             case "pending":
                 return "pending";
-
             default:
                 return "unavailable";
         }
@@ -153,821 +138,456 @@ function Songs({ onSelectSong, selectedSong }) {
             case "downloaded":
             case "completed":
                 return "success";
-
             case "failed":
                 return "failed";
-
             case "pending":
                 return "pending";
-
             case "unavailable":
             default:
                 return "unavailable";
         }
     };
 
-    /*
-     * Search + filters
-     */
     const filteredSongs = useMemo(() => {
-        const query = search
-            .trim()
-            .toLowerCase();
+        const query = search.trim().toLowerCase();
 
         return songs.filter((song) => {
-            /*
-             * Search
-             */
             if (query) {
-                const searchableText = [
-                    song.title,
-                    song.artist,
-                    song.album,
-                ]
+                const searchableText = [song.title, song.artist, song.album]
                     .filter(Boolean)
                     .join(" ")
                     .toLowerCase();
 
-                if (
-                    !searchableText.includes(
-                        query
-                    )
-                ) {
-                    return false;
-                }
+                if (!searchableText.includes(query)) return false;
             }
 
-            /*
-             * Song filter
-             */
             if (songFilter !== "all") {
-                const status =
-                    getSongStatus(
-                        song.download_status
-                    );
-
-                if (
-                    songFilter ===
-                    "downloaded" &&
-                    status !== "success"
-                ) {
-                    return false;
-                }
-
-                if (
-                    songFilter === "pending" &&
-                    status !== "pending"
-                ) {
-                    return false;
-                }
-
-                if (
-                    songFilter === "failed" &&
-                    status !== "failed"
-                ) {
-                    return false;
-                }
+                const status = getSongStatus(song.download_status);
+                if (songFilter === "downloaded" && status !== "success") return false;
+                if (songFilter === "pending" && status !== "pending") return false;
+                if (songFilter === "failed" && status !== "failed") return false;
             }
 
-            /*
-             * Lyrics filter
-             */
             if (lyricsFilter !== "all") {
-                const status =
-                    getLyricsStatus(song);
-
-                if (
-                    lyricsFilter ===
-                    "available" &&
-                    status !== "success"
-                ) {
-                    return false;
-                }
-
-                if (
-                    lyricsFilter === "pending" &&
-                    status !== "pending"
-                ) {
-                    return false;
-                }
-
-                if (
-                    lyricsFilter === "failed" &&
-                    status !== "failed"
-                ) {
-                    return false;
-                }
-
-                if (
-                    lyricsFilter ===
-                    "unavailable" &&
-                    status !== "unavailable"
-                ) {
-                    return false;
-                }
+                const status = getLyricsStatus(song);
+                if (lyricsFilter === "available" && status !== "success") return false;
+                if (lyricsFilter === "pending" && status !== "pending") return false;
+                if (lyricsFilter === "failed" && status !== "failed") return false;
+                if (lyricsFilter === "unavailable" && status !== "unavailable") return false;
             }
 
-            /*
-             * Artist filter
-             */
             if (artistFilter !== "all" && song.artist) {
-                if (song.artist.toLowerCase() !== artistFilter.toLowerCase()) {
-                    return false;
-                }
+                if (song.artist.toLowerCase() !== artistFilter.toLowerCase()) return false;
             }
 
-            /*
-             * Playlist filter
-             */
             if (playlistFilter !== "all") {
-                if (Number(song.playlist_id) !== Number(playlistFilter)) {
-                    return false;
-                }
+                if (Number(song.playlist_id) !== Number(playlistFilter)) return false;
             }
 
             return true;
         });
-    }, [
-        songs,
-        search,
-        songFilter,
-        lyricsFilter,
-        artistFilter,
-        playlistFilter,
-    ]);
+    }, [songs, search, songFilter, lyricsFilter, artistFilter, playlistFilter]);
 
-    /*
-     * Select a song.
-     */
     const selectSong = async (song) => {
-        if (
-            song.download_status !==
-            "downloaded"
-        ) {
-            return;
-        }
+        if (song.download_status !== "downloaded") return;
 
-        /*
-         * If clicking the currently selected
-         * song, just toggle playback.
-         */
-        if (
-            currentSong?.id === song.id
-        ) {
+        if (currentSong?.id === song.id) {
             const audio = audioRef.current;
-
-            if (!audio) {
-                return;
-            }
+            if (!audio) return;
 
             if (audio.paused) {
                 try {
                     await audio.play();
                     setIsPlaying(true);
                 } catch (err) {
-                    console.error(
-                        "Failed to play audio:",
-                        err
-                    );
+                    console.error("Failed to play audio:", err);
                 }
             } else {
                 audio.pause();
                 setIsPlaying(false);
             }
-
             setExpandedSongId(song.id);
-
             return;
         }
 
-        /*
-         * Select new song.
-         */
         setCurrentSong(song);
         setExpandedSongId(song.id);
         setCurrentTime(0);
-
-        /*
-         * The audio element updates after
-         * currentSong changes, so playback
-         * is started by the effect below.
-         */
     };
 
-    /*
-     * Automatically play a newly selected song.
-     */
     useEffect(() => {
         const audio = audioRef.current;
-
-        if (!audio || !currentSong) {
-            return;
-        }
+        if (!audio || !currentSong) return;
 
         const handleCanPlay = async () => {
             try {
                 await audio.play();
                 setIsPlaying(true);
             } catch (err) {
-                /*
-                 * Browser autoplay restrictions
-                 * may prevent automatic playback.
-                 *
-                 * The Play button still works.
-                 */
-                console.debug(
-                    "Autoplay prevented:",
-                    err
-                );
-
+                console.debug("Autoplay prevented:", err);
                 setIsPlaying(false);
             }
         };
 
-        audio.addEventListener(
-            "canplay",
-            handleCanPlay,
-            { once: true }
-        );
-
+        audio.addEventListener("canplay", handleCanPlay, { once: true });
         return () => {
-            audio.removeEventListener(
-                "canplay",
-                handleCanPlay
-            );
+            audio.removeEventListener("canplay", handleCanPlay);
         };
     }, [currentSong]);
 
-    /*
-     * Audio time update.
-     *
-     * This is what drives Lyrics.jsx.
-     */
     const handleTimeUpdate = () => {
         const audio = audioRef.current;
+        if (!audio) return;
+        setCurrentTime(audio.currentTime);
+    };
 
-        if (!audio) {
-            return;
+    const handleSeek = (newTime) => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.currentTime = newTime;
+        setCurrentTime(newTime);
+    };
+
+    const handleVolumeChange = (newVolume) => {
+        const audio = audioRef.current;
+        setVolume(newVolume);
+        if (audio) {
+            audio.volume = newVolume;
+            audio.muted = newVolume === 0;
+            setIsPlayingMuted(newVolume === 0);
         }
-
-        setCurrentTime(
-            audio.currentTime
-        );
     };
 
-    const handlePlay = () => {
-        setIsPlaying(true);
-    };
-
-    const handlePause = () => {
-        setIsPlaying(false);
-    };
-
-    const handleEnded = () => {
-        setIsPlaying(false);
-        setCurrentTime(0);
-    };
-
-    /*
-     * Status dot.
-     */
-    const renderStatusDot = (
-        status,
-        label
-    ) => {
-        let backgroundColor =
-            "#9ca3af";
-
-        if (status === "success") {
-            backgroundColor =
-                "#22c55e";
+    const toggleMute = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        if (isMuted) {
+            audio.muted = false;
+            setIsPlayingMuted(false);
+        } else {
+            audio.muted = true;
+            setIsPlayingMuted(true);
         }
-
-        if (status === "failed") {
-            backgroundColor =
-                "#ef4444";
-        }
-
-        if (status === "pending") {
-            backgroundColor =
-                "#eab308";
-        }
-
-        return (
-            <span
-                title={label}
-                aria-label={label}
-                style={{
-                    display: "inline-block",
-                    width: "11px",
-                    height: "11px",
-                    borderRadius:
-                        "50%",
-                    backgroundColor,
-                    flexShrink: 0,
-                }}
-            />
-        );
     };
 
-    const selectStyle = {
-        padding: "10px 12px",
-        border: "1px solid #ddd",
-        borderRadius: "6px",
+    const handleRetryDownloadSong = async (songId) => {
+        try {
+            await retryDownload(songId);
+            await fetchSongs();
+        } catch (err) {
+            console.error("Retry download failed:", err);
+        }
+    };
+
+    const handleRetryLyricsSong = async (songId) => {
+        try {
+            await retryLyrics(songId);
+            await fetchSongs();
+        } catch (err) {
+            console.error("Retry lyrics failed:", err);
+        }
+    };
+
+    const handleDeleteSongItem = async (songId) => {
+        if (!window.confirm("Are you sure you want to delete this song?")) return;
+        try {
+            await deleteSong(songId);
+            if (currentSong?.id === songId) {
+                setCurrentSong(null);
+                setIsPlaying(false);
+            }
+            await fetchSongs();
+        } catch (err) {
+            console.error("Delete song failed:", err);
+        }
     };
 
     if (loading) {
         return (
-            <div>
-                <h2>Music Library</h2>
-
-                <p>
-                    Loading songs...
-                </p>
+            <div className="songs-loading-screen">
+                <RefreshCw className="spin-icon" size={32} />
+                <p>Loading Music Catalog...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div>
-                <h2>Music Library</h2>
-
-                <p>{error}</p>
-
-                <button
-                    className="btn btn-primary"
-                    onClick={fetchSongs}
-                >
-                    ↻ Retry
-                </button>
+            <div className="songs-page">
+                <div className="songs-error-card">
+                    <AlertCircle size={40} className="error-icon" />
+                    <h2>Unable to load music catalog</h2>
+                    <p>{error}</p>
+                    <button className="btn btn-primary" onClick={fetchSongs}>
+                        <RefreshCw size={16} /> Try Again
+                    </button>
+                </div>
             </div>
         );
     }
 
     return (
-        <div>
+        <div className="songs-container">
             {/* Header */}
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent:
-                        "space-between",
-                    alignItems: "center",
-                    marginBottom:
-                        "20px",
-                    gap: "15px",
-                    flexWrap:
-                        "wrap",
-                }}
-            >
+            <header className="songs-header">
                 <div>
-                    <h2>
-                        Music Library
-                    </h2>
-
-                    <p
-                        style={{
-                            margin: 0,
-                            color: "#666",
-                        }}
-                    >
-                        {
-                            filteredSongs.length
-                        }{" "}
-                        of{" "}
-                        {songs.length}{" "}
-                        songs
+                    <h1>Songs Catalog</h1>
+                    <p className="subtitle">
+                        Browse, play, and synchronize tracks in your music library ({filteredSongs.length} of {songs.length} songs)
                     </p>
                 </div>
+                <div className="songs-header-actions">
+                    <button className="btn btn-secondary" onClick={fetchSongs}>
+                        <RefreshCw size={15} /> Refresh
+                    </button>
+                </div>
+            </header>
 
-                <button
-                    className="btn btn-primary"
-                    onClick={fetchSongs}
-                    disabled={loading}
-                >
-                    ↻ Refresh
-                </button>
-            </div>
+            {/* Search & Filters Toolbar */}
+            <section className="songs-toolbar-card">
+                <div className="search-input-wrapper">
+                    <Search size={18} className="search-input-icon" />
+                    <input
+                        type="text"
+                        placeholder="Search by song title, artist, or album..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    {search && (
+                        <button className="clear-search-btn" onClick={() => setSearch("")}>
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
 
-            {/* Filters UI */}
-            <div
-                style={{
-                    display: "flex",
-                    gap: "10px",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
-                }}
-            >
-                <input
-                    type="text"
-                    placeholder="Search songs, artists or albums..."
-                    value={search}
-                    onChange={(event) =>
-                        setSearch(event.target.value)
-                    }
-                    style={{
-                        flex: "1 1 300px",
-                        minWidth: "250px",
-                        padding: "10px 12px",
-                        border: "1px solid #ddd",
-                        borderRadius: "6px",
-                    }}
-                />
-                {/* Status filter */}
-                <select
-                    value={songFilter}
-                    onChange={(event) => setSongFilter(event.target.value)}
-                    style={selectStyle}
-                >
-                    <option value="all">All Songs</option>
-                    <option value="downloaded">Downloaded</option>
-                    <option value="pending">Pending</option>
-                    <option value="failed">Failed</option>
-                </select>
-                {/* Lyrics filter */}
-                <select
-                    value={lyricsFilter}
-                    onChange={(event) => setLyricsFilter(event.target.value)}
-                    style={selectStyle}
-                >
-                    <option value="all">All Lyrics</option>
-                    <option value="available">Lyrics Available</option>
-                    <option value="pending">Lyrics Pending</option>
-                    <option value="failed">Lyrics Failed</option>
-                    <option value="unavailable">Lyrics Unavailable</option>
-                </select>
-                {/* Artist filter */}
-                <select
-                    value={artistFilter}
-                    onChange={(e) => setArtistFilter(e.target.value)}
-                    style={selectStyle}
-                >
-                    <option value="all">All Artists</option>
-                    {artists.map((a) => (
-                        <option key={a} value={a}>
-                            {a}
-                        </option>
-                    ))}
-                </select>
-                {/* Playlist filter */}
-                <select
-                    value={playlistFilter}
-                    onChange={(e) => setPlaylistFilter(e.target.value)}
-                    style={selectStyle}
-                >
-                    <option value="all">All Playlists</option>
-                    {playlists.map((pl) => (
-                        <option key={pl.id} value={pl.id}>
-                            {pl.name}
-                        </option>
-                    ))}
-                </select>
-                <button
-                    className="btn btn-secondary"
-                    onClick={() => {
-                        setSearch("");
-                        setSongFilter("all");
-                        setLyricsFilter("all");
-                        setArtistFilter("all");
-                        setPlaylistFilter("all");
-                    }}
-                    style={{ padding: "10px 12px" }}
-                >
-                    Clear Filters
-                </button>
-            </div>
+                <div className="filter-selects-group">
+                    <select value={songFilter} onChange={(e) => setSongFilter(e.target.value)}>
+                        <option value="all">All Download Statuses</option>
+                        <option value="downloaded">Downloaded</option>
+                        <option value="pending">Pending Download</option>
+                        <option value="failed">Failed Download</option>
+                    </select>
 
-            {/* Song list */}
-            {filteredSongs.length ===
-                0 ? (
-                <div
-                    style={{
-                        padding:
-                            "40px",
-                        textAlign:
-                            "center",
-                        color: "#777",
-                    }}
-                >
-                    No songs found.
+                    <select value={lyricsFilter} onChange={(e) => setLyricsFilter(e.target.value)}>
+                        <option value="all">All Lyrics Statuses</option>
+                        <option value="available">Lyrics Available</option>
+                        <option value="pending">Lyrics Pending</option>
+                        <option value="failed">Lyrics Failed</option>
+                        <option value="unavailable">Lyrics Unavailable</option>
+                    </select>
+
+                    <select value={artistFilter} onChange={(e) => setArtistFilter(e.target.value)}>
+                        <option value="all">All Artists</option>
+                        {artists.map((a) => (
+                            <option key={a} value={a}>{a}</option>
+                        ))}
+                    </select>
+
+                    <select value={playlistFilter} onChange={(e) => setPlaylistFilter(e.target.value)}>
+                        <option value="all">All Playlists</option>
+                        {playlists.map((pl) => (
+                            <option key={pl.id} value={pl.id}>{pl.name}</option>
+                        ))}
+                    </select>
+
+                    {(search || songFilter !== "all" || lyricsFilter !== "all" || artistFilter !== "all" || playlistFilter !== "all") && (
+                        <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => {
+                                setSearch("");
+                                setSongFilter("all");
+                                setLyricsFilter("all");
+                                setArtistFilter("all");
+                                setPlaylistFilter("all");
+                            }}
+                        >
+                            Clear Filters
+                        </button>
+                    )}
+                </div>
+            </section>
+
+            {/* Songs List */}
+            {filteredSongs.length === 0 ? (
+                <div className="songs-empty-card">
+                    <Music size={36} className="text-muted" />
+                    <h3>No matching songs found</h3>
+                    <p>Try adjusting your search query or filters.</p>
                 </div>
             ) : (
-                <div>
-                    {filteredSongs.map((song) => {
-                        const isExpanded =
-                            expandedSongId === song.id;
-
-                        const songStatus =
-                            getSongStatus(song.download_status);
-
-                        const lyricsStatus =
-                            getLyricsStatus(song);
-
-                        const isCurrent =
-                            currentSong?.id === song.id;
+                <div className="songs-list-container">
+                    {filteredSongs.map((song, index) => {
+                        const isExpanded = expandedSongId === song.id;
+                        const isCurrent = currentSong?.id === song.id;
+                        const songStatus = getSongStatus(song.download_status);
+                        const lyricsStatus = getLyricsStatus(song);
 
                         return (
                             <div
-                                key={
-                                    song.id
-                                }
-                                style={{
-                                    marginBottom:
-                                        "8px",
-
-                                    border:
-                                        isExpanded
-                                            ? "1px solid #61dafb"
-                                            : "1px solid #e5e5e5",
-
-                                    borderRadius:
-                                        "8px",
-
-                                    overflow:
-                                        "hidden",
-
-                                    background:
-                                        "#fff",
-                                }}
+                                key={song.id}
+                                className={`song-item-card ${isExpanded ? "expanded" : ""} ${isCurrent ? "playing" : ""}`}
                             >
-                                {/* Row */}
+                                {/* Main Row */}
                                 <div
-                                    onClick={() =>
-                                        setExpandedSongId(
-                                            isExpanded
-                                                ? null
-                                                : song.id
-                                        )
-                                    }
-                                    style={{
-                                        display:
-                                            "flex",
-                                        alignItems:
-                                            "center",
-                                        gap:
-                                            "15px",
-                                        padding:
-                                            "14px 16px",
-                                        cursor:
-                                            "pointer",
-                                    }}
+                                    className="song-row-header"
+                                    onClick={() => setExpandedSongId(isExpanded ? null : song.id)}
                                 >
-                                    {/* Status dots */}
-                                    <div
-                                        style={{
-                                            display:
-                                                "flex",
-                                            gap:
-                                                "6px",
-                                            alignItems:
-                                                "center",
-                                        }}
-                                    >
-                                        {renderStatusDot(
-                                            songStatus,
-                                            `Song: ${song.download_status}`
-                                        )}
+                                    <span className="track-number">{index + 1}</span>
 
-                                        {renderStatusDot(
-                                            lyricsStatus,
-                                            `Lyrics: ${song.lyrics_status}`
-                                        )}
+                                    <div className="song-title-meta">
+                                        <h4 className="song-title">{song.title}</h4>
+                                        <p className="song-artist-album">
+                                            {song.artist || "Unknown Artist"} {song.album ? `• ${song.album}` : ""}
+                                        </p>
                                     </div>
 
-                                    {/* Song */}
-                                    <div
-                                        style={{
-                                            flex: 1,
-                                            minWidth:
-                                                0,
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                fontWeight:
-                                                    600,
-                                                overflow:
-                                                    "hidden",
-                                                textOverflow:
-                                                    "ellipsis",
-                                                whiteSpace:
-                                                    "nowrap",
+                                    <div className="song-status-pills">
+                                        <span className={`status-pill ${songStatus}`}>
+                                            <Download size={12} /> {song.download_status}
+                                        </span>
+                                        <span className={`status-pill ${lyricsStatus}`}>
+                                            <FileText size={12} /> {song.lyrics_status}
+                                        </span>
+                                    </div>
+
+                                    <div className="song-duration">
+                                        <Clock size={14} />
+                                        <span>{formatDuration(song.duration)}</span>
+                                    </div>
+
+                                    {song.download_status === "downloaded" && (
+                                        <button
+                                            className={`play-inline-btn ${isCurrent && isPlaying ? "playing" : ""}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                selectSong(song);
                                             }}
+                                            title={isCurrent && isPlaying ? "Pause" : "Play track"}
                                         >
-                                            {
-                                                song.title
-                                            }
-                                        </div>
+                                            {isCurrent && isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                                        </button>
+                                    )}
 
-                                        <div
-                                            style={{
-                                                color:
-                                                    "#777",
-                                                fontSize:
-                                                    "14px",
-                                                marginTop:
-                                                    "3px",
-                                            }}
-                                        >
-                                            {song.artist ||
-                                                "Unknown artist"}
-                                        </div>
-                                    </div>
-
-                                    {/* Duration */}
-                                    <div
-                                        style={{
-                                            color:
-                                                "#777",
-                                            fontSize:
-                                                "14px",
-                                        }}
-                                        title="Duration"
-                                    >
-                                        {formatDuration(
-                                            song.duration
-                                        )}
-                                    </div>
-
-                                    {/* Playing */}
-                                    {isCurrent &&
-                                        isPlaying && (
-                                            <span
-                                                title="Playing"
-                                                style={{
-                                                    color:
-                                                        "#61dafb",
-                                                }}
-                                            >
-                                                ▶
-                                            </span>
-                                        )}
-
-                                    {/* Expand */}
-                                    <div
-                                        style={{
-                                            fontSize:
-                                                "18px",
-                                            transform:
-                                                isExpanded
-                                                    ? "rotate(180deg)"
-                                                    : "rotate(0deg)",
-                                            transition:
-                                                "transform 0.2s",
-                                        }}
-                                    >
-                                        ▼
-                                    </div>
+                                    <ChevronDown className={`expand-chevron ${isExpanded ? "open" : ""}`} size={18} />
                                 </div>
 
-                                {/* Expanded section */}
+                                {/* Expanded Section */}
                                 {isExpanded && (
-                                    <div
-                                        style={{
-                                            borderTop:
-                                                "1px solid #eee",
-                                        }}
-                                    >
-                                        {/* Player */}
-                                        {song.download_status ===
-                                            "downloaded" ? (
-                                            <div
-                                                style={{
-                                                    padding:
-                                                        "15px 20px",
-                                                }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        display:
-                                                            "flex",
-                                                        alignItems:
-                                                            "center",
-                                                        gap:
-                                                            "10px",
-                                                        marginBottom:
-                                                            "10px",
-                                                    }}
-                                                >
+                                    <div className="song-expanded-details">
+                                        {/* Player Panel with Seek Bar */}
+                                        {song.download_status === "downloaded" ? (
+                                            <div className="player-panel-card">
+                                                <div className="player-top-controls">
                                                     <button
-                                                        className={`btn ${isCurrent && isPlaying
-                                                            ? "btn-selected"
-                                                            : "btn-primary"
-                                                            }`}
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            selectSong(song);
-                                                        }}
-                                                        disabled={
-                                                            song.download_status !== "downloaded"
-                                                        }
+                                                        className="btn btn-primary"
+                                                        onClick={() => selectSong(song)}
                                                     >
+                                                        {isCurrent && isPlaying ? <Pause size={16} /> : <Play size={16} />}
                                                         {isCurrent && isPlaying ? "Pause" : "Play"}
                                                     </button>
 
-                                                    <span
-                                                        style={{
-                                                            color:
-                                                                "#777",
-                                                            fontSize:
-                                                                "14px",
-                                                        }}
-                                                    >
-                                                        {isCurrent
-                                                            ? "Now playing"
-                                                            : "Click Play to listen"}
-                                                    </span>
+                                                    <div className="player-track-info">
+                                                        <strong>{song.title}</strong>
+                                                        <span>{song.artist || "Unknown Artist"}</span>
+                                                    </div>
+
+                                                    <div className="player-time-display">
+                                                        <span>{formatDuration(isCurrent ? currentTime : 0)}</span>
+                                                        <span className="divider">/</span>
+                                                        <span>{formatDuration(song.duration)}</span>
+                                                    </div>
+
+                                                    <div className="player-volume-control">
+                                                        <button onClick={toggleMute} className="icon-btn">
+                                                            {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                                        </button>
+                                                        <input
+                                                            type="range"
+                                                            min={0}
+                                                            max={1}
+                                                            step={0.01}
+                                                            value={isMuted ? 0 : volume}
+                                                            onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                                                            className="volume-slider"
+                                                        />
+                                                    </div>
                                                 </div>
 
-                                                <div
-                                                    style={{
-                                                        flex: 1,
-                                                        height: "8px",
-                                                        background: "#e5e7eb",
-                                                        borderRadius: "999px",
-                                                        overflow: "hidden",
-                                                    }}
-                                                >
-                                                    <div
-                                                        style={{
-                                                            width:
-                                                                isCurrent && currentSong?.duration
-                                                                    ? `${Math.min(
-                                                                        100,
-                                                                        (currentTime /
-                                                                            currentSong.duration) *
-                                                                        100
-                                                                    )}%`
-                                                                    : "0%",
-                                                            height: "100%",
-                                                            background: "#61dafb",
-                                                            transition: "width 0.1s linear",
-                                                        }}
+                                                {/* Interactive Seek Bar */}
+                                                <div className="player-seek-container">
+                                                    <input
+                                                        type="range"
+                                                        min={0}
+                                                        max={song.duration || 100}
+                                                        step={0.1}
+                                                        value={isCurrent ? currentTime : 0}
+                                                        onChange={(e) => handleSeek(Number(e.target.value))}
+                                                        className="seek-slider"
                                                     />
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div
-                                                style={{
-                                                    padding:
-                                                        "15px 20px",
-                                                    color:
-                                                        "#777",
-                                                }}
-                                            >
-                                                Audio is not
-                                                available.
+                                            <div className="audio-unavailable-banner">
+                                                <AlertCircle size={16} />
+                                                <span>Audio file not downloaded yet. Status: <strong>{song.download_status}</strong></span>
+                                                <button
+                                                    className="btn btn-secondary btn-sm"
+                                                    onClick={() => handleRetryDownloadSong(song.id)}
+                                                >
+                                                    <RotateCcw size={14} /> Retry Download
+                                                </button>
                                             </div>
                                         )}
 
-                                        {/* Lyrics */}
-                                        <div
-                                            style={{
-                                                borderTop:
-                                                    "1px solid #eee",
-                                                padding:
-                                                    "10px 20px 20px",
-                                            }}
-                                        >
+                                        {/* Action Bar */}
+                                        <div className="song-action-bar">
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => handleRetryDownloadSong(song.id)}
+                                            >
+                                                <RotateCcw size={14} /> Retry Download
+                                            </button>
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => handleRetryLyricsSong(song.id)}
+                                            >
+                                                <RotateCcw size={14} /> Retry Lyrics
+                                            </button>
+                                            <button
+                                                className="btn btn-danger-soft btn-sm"
+                                                onClick={() => handleDeleteSongItem(song.id)}
+                                            >
+                                                <Trash2 size={14} /> Delete Song
+                                            </button>
+                                        </div>
+
+                                        {/* Synced Lyrics Component */}
+                                        <div className="lyrics-wrapper-card">
                                             <Lyrics
-                                                song={
-                                                    song
-                                                }
-                                                currentTime={
-                                                    isCurrent
-                                                        ? currentTime
-                                                        : 0
-                                                }
+                                                song={song}
+                                                currentTime={isCurrent ? currentTime : 0}
                                             />
                                         </div>
                                     </div>
                                 )}
                             </div>
                         );
-                    }
-                    )}
+                    })}
                 </div>
             )}
 
-            {/* Persistent audio element.
-             *
-             * This element is deliberately kept
-             * outside the song list so its ref never
-             * changes when rows expand/collapse.
-             */}
+            {/* Persistent Audio Element */}
             <audio
                 ref={audioRef}
                 preload="metadata"
-                onTimeUpdate={
-                    handleTimeUpdate
-                }
-                onPlay={handlePlay}
-                onPause={handlePause}
-                onEnded={handleEnded}
-                style={{
-                    display: "none",
+                onTimeUpdate={handleTimeUpdate}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => {
+                    setIsPlaying(false);
+                    setCurrentTime(0);
                 }}
+                style={{ display: "none" }}
             />
         </div>
     );
