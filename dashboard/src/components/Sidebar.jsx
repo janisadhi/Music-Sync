@@ -1,16 +1,27 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
     Activity,
     History,
     LayoutDashboard,
     ListMusic,
+    LogOut,
     Music,
     Settings,
+    User,
 } from "lucide-react";
+import { getUser, logout } from "../services/auth";
 
 function Sidebar() {
+    const navigate = useNavigate();
+    const user = getUser();
+
     const getNavClass = ({ isActive }) =>
         `nav-item ${isActive ? "active" : ""}`;
+
+    const handleLogout = () => {
+        logout();
+        navigate("/login");
+    };
 
     return (
         <aside className="sidebar">
@@ -56,11 +67,52 @@ function Sidebar() {
                 </NavLink>
             </nav>
 
-            <div className="sidebar-footer">
-                <div className="online-dot" />
-                <div>
-                    <strong>Music Sync v1.0.0</strong>
-                    <span>System Online</span>
+            <div className="sidebar-footer" style={{ flexDirection: "column", gap: "12px", alignItems: "stretch" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(255,255,255,0.15)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#ffffff"
+                        }}>
+                            <User size={15} />
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                            <strong style={{ fontSize: "13px", color: "#ffffff", lineHeight: "1.2" }}>{user?.username || "admin"}</strong>
+                            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Administrator</span>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleLogout}
+                        title="Sign Out"
+                        style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#94a3b8",
+                            cursor: "pointer",
+                            padding: "6px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}
+                    >
+                        <LogOut size={16} />
+                    </button>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    <div className="online-dot" />
+                    <div>
+                        <strong style={{ fontSize: "12px", display: "block", color: "#e2e8f0" }}>Music Sync v1.0.0</strong>
+                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>System Online</span>
+                    </div>
                 </div>
             </div>
         </aside>

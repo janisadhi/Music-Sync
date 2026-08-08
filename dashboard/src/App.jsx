@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import DashboardLayout from "./layouts/DashboardLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Dashboard from "./pages/Dashboard";
 import Songs from "./pages/Songs";
@@ -9,57 +10,32 @@ import PlaylistDetailPage from "./pages/PlaylistDetailPage";
 import SyncHistory from "./pages/SyncHistory";
 import Settings from "./pages/Settings";
 import SystemHealth from "./pages/SystemHealth";
+import Login from "./pages/Login";
+import ChangePassword from "./pages/ChangePassword";
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route element={<DashboardLayout />}>
-                    <Route
-                        path="/"
-                        element={<Dashboard />}
-                    />
+                {/* Public Auth Routes */}
+                <Route path="/login" element={<Login />} />
 
-                    <Route
-                        path="/songs"
-                        element={<Songs />}
-                    />
+                {/* Protected Routes (requires token + forced password change check) */}
+                <Route element={<ProtectedRoute />}>
+                    <Route path="/change-password" element={<ChangePassword />} />
 
-                    <Route
-                        path="/playlists"
-                        element={<Playlists />}
-                    />
-
-                    <Route
-                        path="/playlists/:playlistId/detail"
-                        element={<PlaylistDetailPage />}
-                    />
-
-                    <Route
-                        path="/history"
-                        element={<SyncHistory />}
-                    />
-
-                    <Route
-                        path="/settings"
-                        element={<Settings />}
-                    />
-
-                    <Route
-                        path="/health"
-                        element={<SystemHealth />}
-                    />
+                    <Route element={<DashboardLayout />}>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/songs" element={<Songs />} />
+                        <Route path="/playlists" element={<Playlists />} />
+                        <Route path="/playlists/:playlistId/detail" element={<PlaylistDetailPage />} />
+                        <Route path="/history" element={<SyncHistory />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/health" element={<SystemHealth />} />
+                    </Route>
                 </Route>
 
-                <Route
-                    path="*"
-                    element={
-                        <Navigate
-                            to="/"
-                            replace
-                        />
-                    }
-                />
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </BrowserRouter>
     );
