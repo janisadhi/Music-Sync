@@ -11,6 +11,7 @@
 
 ## Key Features
 
+* **User Authentication & Authorization**: Custom JWT-based bearer authentication backend (PBKDF2-HMAC-SHA256 password hashing) with protected frontend routes and interactive password update views.
 * **Multi-Playlist Support**: Register and monitor multiple YouTube playlists with individual enable/disable toggles.
 * **Automatic Playlist Reconciliation**: Tracks additions, updates, and removals across YouTube playlists with persistent PostgreSQL records.
 * **High-Quality Audio Downloading**: Automatic audio extraction and conversion using `yt-dlp` and FFmpeg.
@@ -25,39 +26,7 @@
 
 ## Architecture
 
-```text
-                  +--------------------------+
-                  |  YouTube Music Playlists |
-                  +------------+-------------+
-                               |
-                               v
-                     [ YouTube Watcher ]
-                               |
-                               v
-                  [ Playlist Reconciler ]
-                               |
-                               v
-                  +------------+-------------+
-                  |    PostgreSQL Database   |
-                  +------+-------------+-----+
-                         |             |
-           +-------------+             +-------------+
-           | Pending Downloads                       | Pending Lyrics
-           v                                         v
-   [ Song Downloader ]                       [ Lyrics Service ]
-      (`yt-dlp`)                                 (LRCLIB API)
-           |                                         |
-           v                                         v
-   `data/music/*.opus`                       `data/music/*.lrc`
-           \                                         /
-            +--------------------+------------------+
-                                 |
-                                 v
-                     [ FastAPI REST Backend ]
-                                 |
-                                 v
-                 [ Nginx + React Web Dashboard ]
-```
+![System Architecture](architecture.svg)
 
 ---
 
