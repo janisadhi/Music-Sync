@@ -1,0 +1,192 @@
+/* ==============================================================================
+   Auth Pages (Login & Change Password) - Modern UI Styles
+   ============================================================================== */
+
+.auth-page-container {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0f172a; /* Slate navy background */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    background-color: #ffffff;
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-sizing: border-box;
+    animation: auth-card-appear 0.25s ease-out;
+}
+
+@keyframes auth-card-appear {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.auth-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.auth-brand-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg, 14px);
+    background-color: var(--primary-blue-soft, #eff6ff);
+    color: var(--primary-blue, #2563eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.auth-brand-avatar.warning {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.auth-header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+}
+
+.auth-header .subtitle {
+    margin: 0;
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.auth-default-hint {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md, 10px);
+    padding: 12px 16px;
+    text-align: center;
+}
+
+.auth-default-hint p {
+    margin: 0;
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+.auth-default-hint code {
+    font-family: monospace;
+    background-color: #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.auth-alert-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md, 10px);
+    font-size: 13px;
+    font-weight: 500;
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.auth-alert-banner.alert-success {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.auth-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-form label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-left-icon {
+    position: absolute;
+    left: 14px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.input-icon-wrapper input {
+    width: 100%;
+    height: 44px;
+    padding: 0 40px 0 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-md, 10px);
+    font-size: 14px;
+    color: #0f172a;
+    background-color: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-icon-wrapper input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.toggle-password-btn:hover {
+    color: #0f172a;
+}
+
+.btn-auth-submit {
+    height: 44px;
+    font-size: 15px;
+    font-weight: 700;
+    margin-top: 6px;
+    width: 100%;
+    border-radius: var(--radius-md, 10px);
+}

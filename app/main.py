@@ -4,14 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app.api.auth import router as auth_router, ensure_admin_exists
 from app.api.playlists import router as playlists_router
 from app.api.songs import router as songs_router
 from app.api.sync import router as sync_router
-from app.core.config import settings
-from app.core.runtime import scheduler
-from app.database.session import engine
 from app.api.dashboard import router as dashboard_router
 from app.api.settings import router as settings_router
+from app.core.config import settings
+from app.core.runtime import scheduler
+from app.database.session import Base, engine, SessionLocal
 from app.settings.service import SettingsService
 
 
@@ -20,6 +21,12 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
     print("Starting Music Sync application")
     print("=" * 60)
+
+    try:
+        with SessionLocal() as db:
+            ensure_admin_exists(db)
+    except Exception as exc:
+        print(f"Could not seed admin user on startup: {exc}")
 
     try:
         app_settings = SettingsService().get()
@@ -56,6 +63,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(songs_router)
 app.include_router(playlists_router)
 app.include_router(sync_router)
