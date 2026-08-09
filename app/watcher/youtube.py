@@ -70,6 +70,9 @@ class YouTubePlaylistWatcher:
 
         # ---------------------------------------------------------
         # Apply watch mode: limit entries to the latest N
+        # (Scans both top N and bottom N entries to catch newly added
+        # songs regardless of whether playlist is sorted newest-first
+        # or newest-last)
         # ---------------------------------------------------------
         if (
             watch_mode == "last_n"
@@ -77,18 +80,33 @@ class YouTubePlaylistWatcher:
             and watch_limit > 0
         ):
             total = len(entries)
-            if watch_limit < total:
+            if total > watch_limit:
+                top_entries = entries[:watch_limit]
+                bottom_entries = entries[-watch_limit:]
+
+                seen_ids = set()
+                selected = []
+                for entry in top_entries + bottom_entries:
+                    if entry and isinstance(entry, dict):
+                        vid = entry.get("id")
+                        key = vid if vid else id(entry)
+                        if key not in seen_ids:
+                            seen_ids.add(key)
+                            selected.append(entry)
+                    elif entry:
+                        selected.append(entry)
+
+                entries = selected
                 print(
                     f"Watch mode: last_{watch_limit} "
                     f"(playlist has {total} entries, "
-                    f"scanning last {watch_limit})"
+                    f"scanning top {watch_limit} & bottom {watch_limit} entries: {len(entries)} unique total)"
                 )
-                entries = entries[-watch_limit:]
             else:
                 print(
                     f"Watch mode: last_{watch_limit} "
                     f"(playlist has {total} entries, "
-                    f"scanning all — limit >= total)"
+                    f"scanning all — total <= limit)"
                 )
         else:
             print(

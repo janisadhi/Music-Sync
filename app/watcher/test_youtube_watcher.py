@@ -185,21 +185,47 @@ def test_last_n_mode_limits_entries():
     print("TEST: Last N Mode Limits Entries (N=2)")
     print("=" * 60)
 
+    class MockYoutubeDLLargePlaylist(MockYoutubeDL):
+        def extract_info(self, url, download=False):
+            if "list=" in url or "playlist" in url:
+                return {
+                    "id": "test_playlist_id",
+                    "title": "Test Playlist",
+                    "entries": [
+                        {"id": "vid1", "title": "Song 1", "playlist_index": 1},
+                        {"id": "vid2", "title": "Song 2", "playlist_index": 2},
+                        {"id": "vid3", "title": "Song 3", "playlist_index": 3},
+                        {"id": "vid4", "title": "Song 4", "playlist_index": 4},
+                        {"id": "vid5", "title": "Song 5", "playlist_index": 5},
+                        {"id": "vid6", "title": "Song 6", "playlist_index": 6},
+                        {"id": "vid7", "title": "Song 7", "playlist_index": 7},
+                        {"id": "vid8", "title": "Song 8", "playlist_index": 8},
+                        {"id": "vid9", "title": "Song 9", "playlist_index": 9},
+                        {"id": "vid10", "title": "Song 10", "playlist_index": 10},
+                    ],
+                }
+            # Per-video extraction fallback
+            vid_id = url.split("v=")[-1]
+            return {
+                "title": f"Song {vid_id.replace('vid', '')}",
+                "artist": "Artist",
+                "album": "Album",
+                "duration": 180,
+            }
+
     watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
 
-    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDL):
-        # Playlist entries in MockYoutubeDL: vid1 (1), vid_unavail (2), vid3 (3), vid_private (4), vid5 (5)
-        # Last 2 entries are vid_private (4) and vid5 (5). Since vid_private is skipped, only vid5 is valid.
-        # Last 3 entries are vid3, vid_private, vid5 -> valid: vid3, vid5.
-        songs = watcher.fetch(watch_mode="last_n", watch_limit=3)
+    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDLLargePlaylist):
+        # N=2 -> top 2 (vid1, vid2) + bottom 2 (vid9, vid10) = 4 total songs
+        songs = watcher.fetch(watch_mode="last_n", watch_limit=2)
 
     video_ids = [s.video_id for s in songs]
-    print(f"Discovered songs (last 3 entries): {video_ids}")
+    print(f"Discovered songs (top 2 & bottom 2 entries): {video_ids}")
 
-    assert len(songs) == 2, f"Expected 2 valid songs from last 3 entries, got {len(songs)}"
-    assert video_ids == ["vid3", "vid5"], f"Unexpected video IDs: {video_ids}"
+    assert len(songs) == 4, f"Expected 4 valid songs from top 2 and bottom 2, got {len(songs)}"
+    assert video_ids == ["vid1", "vid2", "vid9", "vid10"], f"Unexpected video IDs: {video_ids}"
 
-    print("PASS: Last N mode correctly limited entry scanning.")
+    print("PASS: Last N mode correctly limited entry scanning to top N & bottom N.")
 
 
 def test_last_n_mode_larger_than_total():
