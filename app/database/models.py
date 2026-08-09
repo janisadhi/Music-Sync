@@ -191,6 +191,18 @@ class AppSettings(Base):
         nullable=False,
     )
 
+    playlist_watch_mode: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="whole",
+    )
+
+    playlist_watch_limit: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        default=None,
+    )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),

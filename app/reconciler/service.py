@@ -15,6 +15,7 @@ class PlaylistReconciler:
         youtube_playlist_id: str,
         playlist_name: str,
         songs: list[YouTubeSong],
+        skip_deletions: bool = False,
     ) -> list[Song]:
 
         playlist = self.session.scalar(
@@ -86,17 +87,21 @@ class PlaylistReconciler:
             new_songs.append(song)
 
         # Remove songs that are no longer in the YouTube playlist.
-        for existing_song in existing_songs:
+        # Skip deletions when using "last_n" watch mode, because
+        # the scan only covers a subset of the playlist and old
+        # songs outside the window should not be removed.
+        if not skip_deletions:
+            for existing_song in existing_songs:
 
-            if existing_song.youtube_video_id not in youtube_video_ids:
+                if existing_song.youtube_video_id not in youtube_video_ids:
 
-                print(
-                    f"Removed from playlist: "
-                    f"{existing_song.title} "
-                    f"({existing_song.youtube_video_id})"
-                )
+                    print(
+                        f"Removed from playlist: "
+                        f"{existing_song.title} "
+                        f"({existing_song.youtube_video_id})"
+                    )
 
-                self.session.delete(existing_song)
+                    self.session.delete(existing_song)
 
         self.session.commit()
 

@@ -23,6 +23,8 @@ function Settings() {
         max_download_retries: 3,
         download_retry_delay_seconds: 5,
         auto_start_scheduler: false,
+        playlist_watch_mode: "whole",
+        playlist_watch_limit: 10,
     });
 
     const [loading, setLoading] = useState(true);
@@ -39,7 +41,10 @@ function Settings() {
             setLoading(true);
             setError("");
             const response = await api.get("/settings");
-            setSettings(response.data);
+            setSettings({
+                ...response.data,
+                playlist_watch_limit: response.data.playlist_watch_limit ?? 10,
+            });
         } catch (err) {
             console.error("Failed to load settings:", err);
             setError("Unable to load application settings.");
@@ -49,10 +54,10 @@ function Settings() {
     }
 
     function handleChange(event) {
-        const { name, value } = event.target;
+        const { name, value, type } = event.target;
         setSettings((current) => ({
             ...current,
-            [name]: Number(value),
+            [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
         }));
         setMessage("");
         setError("");
@@ -71,21 +76,39 @@ function Settings() {
     async function handleSubmit(event) {
         event.preventDefault();
 
+        if (settings.playlist_watch_mode === "last_n") {
+            const limit = Number(settings.playlist_watch_limit);
+            if (!limit || limit < 1 || !Number.isInteger(limit)) {
+                setError("Number of songs for 'Last N' mode must be a positive integer.");
+                return;
+            }
+        }
+
         try {
             setSaving(true);
             setMessage("");
             setError("");
 
-            const response = await api.patch("/settings", {
+            const payload = {
                 sync_interval_seconds: settings.sync_interval_seconds,
                 download_limit: settings.download_limit,
                 lyrics_limit: settings.lyrics_limit,
                 max_download_retries: settings.max_download_retries,
                 download_retry_delay_seconds: settings.download_retry_delay_seconds,
                 auto_start_scheduler: settings.auto_start_scheduler,
-            });
+                playlist_watch_mode: settings.playlist_watch_mode,
+                playlist_watch_limit:
+                    settings.playlist_watch_mode === "last_n"
+                        ? Number(settings.playlist_watch_limit)
+                        : null,
+            };
 
-            setSettings(response.data);
+            const response = await api.patch("/settings", payload);
+
+            setSettings({
+                ...response.data,
+                playlist_watch_limit: response.data.playlist_watch_limit ?? 10,
+            });
             setMessage("Settings saved successfully.");
         } catch (err) {
             console.error("Failed to save settings:", err);
@@ -199,6 +222,72 @@ function Settings() {
                             <span className="unit-tag">sec</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Section 3: Playlist Watch Mode */}
+                <div className="settings-card">
+                    <div className="card-section-header">
+                        <Sliders size={20} className="section-icon blue" />
+                        <div>
+                            <h3>Playlist Watch Mode</h3>
+                            <p>Configure how Music Sync monitors YouTube playlists.</p>
+                        </div>
+                    </div>
+
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <label className="setting-label">Watch Strategy</label>
+                            <p className="setting-desc">
+                                Choose whether to scan every track in playlists or only inspect the newest additions.
+                            </p>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "600", color: "var(--text-primary)" }}>
+                                <input
+                                    type="radio"
+                                    name="playlist_watch_mode"
+                                    value="whole"
+                                    checked={settings.playlist_watch_mode === "whole"}
+                                    onChange={handleChange}
+                                />
+                                Whole playlist
+                            </label>
+                            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "600", color: "var(--text-primary)" }}>
+                                <input
+                                    type="radio"
+                                    name="playlist_watch_mode"
+                                    value="last_n"
+                                    checked={settings.playlist_watch_mode === "last_n"}
+                                    onChange={handleChange}
+                                />
+                                Last N songs
+                            </label>
+                        </div>
+                    </div>
+
+                    {settings.playlist_watch_mode === "last_n" && (
+                        <div className="setting-row">
+                            <div className="setting-info">
+                                <label htmlFor="playlist_watch_limit" className="setting-label">
+                                    Number of Songs (N)
+                                </label>
+                                <p className="setting-desc">
+                                    Number of recent playlist items to check during each sync loop. Must be a positive integer.
+                                </p>
+                            </div>
+                            <div className="input-with-unit">
+                                <input
+                                    id="playlist_watch_limit"
+                                    name="playlist_watch_limit"
+                                    type="number"
+                                    min="1"
+                                    value={settings.playlist_watch_limit}
+                                    onChange={handleChange}
+                                />
+                                <span className="unit-tag">songs</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Section 3: Concurrency & Processing Limits */}

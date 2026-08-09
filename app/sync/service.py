@@ -31,6 +31,8 @@ class SyncService:
 
         download_limit = app_settings.download_limit
         lyrics_limit = app_settings.lyrics_limit
+        watch_mode = app_settings.playlist_watch_mode
+        watch_limit = app_settings.playlist_watch_limit
 
         print(
             f"Download concurrency: {download_limit}"
@@ -38,6 +40,11 @@ class SyncService:
 
         print(
             f"Lyrics concurrency: {lyrics_limit}"
+        )
+
+        print(
+            f"Playlist watch mode: {watch_mode}"
+            + (f" (limit: {watch_limit})" if watch_mode == "last_n" else "")
         )
 
         # ---------------------------------------------------------
@@ -93,6 +100,8 @@ class SyncService:
                         playlist.youtube_playlist_id
                     ),
                     playlist_name=playlist.name,
+                    watch_mode=watch_mode,
+                    watch_limit=watch_limit,
                 )
                 total_discovered += discovered
                 total_new += new_count
@@ -145,6 +154,8 @@ class SyncService:
         playlist_url: str,
         youtube_playlist_id: str,
         playlist_name: str,
+        watch_mode: str = "whole",
+        watch_limit: int | None = None,
     ) -> tuple[int, int]:
         # ---------------------------------------------------------
         # Fetch YouTube playlist
@@ -153,7 +164,10 @@ class SyncService:
             playlist_url
         )
 
-        youtube_songs = watcher.fetch()
+        youtube_songs = watcher.fetch(
+            watch_mode=watch_mode,
+            watch_limit=watch_limit,
+        )
 
         print(
             f"Playlist songs discovered: "
@@ -195,6 +209,7 @@ class SyncService:
                 ),
                 playlist_name=playlist_name,
                 songs=youtube_songs,
+                skip_deletions=(watch_mode == "last_n"),
             )
 
             print(

@@ -179,11 +179,82 @@ def test_system_error_propagates():
     print("PASS: System error propagated as expected.")
 
 
+def test_last_n_mode_limits_entries():
+    print()
+    print("=" * 60)
+    print("TEST: Last N Mode Limits Entries (N=2)")
+    print("=" * 60)
+
+    class MockYoutubeDLLargePlaylist(MockYoutubeDL):
+        def extract_info(self, url, download=False):
+            if "list=" in url or "playlist" in url:
+                return {
+                    "id": "test_playlist_id",
+                    "title": "Test Playlist",
+                    "entries": [
+                        {"id": "vid1", "title": "Song 1", "playlist_index": 1},
+                        {"id": "vid2", "title": "Song 2", "playlist_index": 2},
+                        {"id": "vid3", "title": "Song 3", "playlist_index": 3},
+                        {"id": "vid4", "title": "Song 4", "playlist_index": 4},
+                        {"id": "vid5", "title": "Song 5", "playlist_index": 5},
+                        {"id": "vid6", "title": "Song 6", "playlist_index": 6},
+                        {"id": "vid7", "title": "Song 7", "playlist_index": 7},
+                        {"id": "vid8", "title": "Song 8", "playlist_index": 8},
+                        {"id": "vid9", "title": "Song 9", "playlist_index": 9},
+                        {"id": "vid10", "title": "Song 10", "playlist_index": 10},
+                    ],
+                }
+            # Per-video extraction fallback
+            vid_id = url.split("v=")[-1]
+            return {
+                "title": f"Song {vid_id.replace('vid', '')}",
+                "artist": "Artist",
+                "album": "Album",
+                "duration": 180,
+            }
+
+    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
+
+    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDLLargePlaylist):
+        # N=2 -> top 2 (vid1, vid2) + bottom 2 (vid9, vid10) = 4 total songs
+        songs = watcher.fetch(watch_mode="last_n", watch_limit=2)
+
+    video_ids = [s.video_id for s in songs]
+    print(f"Discovered songs (top 2 & bottom 2 entries): {video_ids}")
+
+    assert len(songs) == 4, f"Expected 4 valid songs from top 2 and bottom 2, got {len(songs)}"
+    assert video_ids == ["vid1", "vid2", "vid9", "vid10"], f"Unexpected video IDs: {video_ids}"
+
+    print("PASS: Last N mode correctly limited entry scanning to top N & bottom N.")
+
+
+def test_last_n_mode_larger_than_total():
+    print()
+    print("=" * 60)
+    print("TEST: Last N Mode Limit Larger Than Total (N=10)")
+    print("=" * 60)
+
+    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
+
+    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDL):
+        songs = watcher.fetch(watch_mode="last_n", watch_limit=10)
+
+    video_ids = [s.video_id for s in songs]
+    print(f"Discovered songs: {video_ids}")
+
+    assert len(songs) == 3, f"Expected 3 valid songs, got {len(songs)}"
+    assert video_ids == ["vid1", "vid3", "vid5"]
+
+    print("PASS: Last N mode with limit larger than playlist size handled correctly.")
+
+
 def main():
     test_valid_unavailable_valid()
     test_unavailable_at_start()
     test_unavailable_at_end()
     test_system_error_propagates()
+    test_last_n_mode_limits_entries()
+    test_last_n_mode_larger_than_total()
     print()
     print("=" * 60)
     print("ALL WATCHER TESTS PASSED SUCCESSFULLY!")
