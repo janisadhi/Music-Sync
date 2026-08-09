@@ -137,6 +137,51 @@ docker compose up -d --build
 
 ---
 
+## Running on Windows and Linux
+
+The application is containerized with Docker Compose, so the same commands work on both Windows and Linux. Ensure Docker Desktop (Windows) or Docker Engine (Linux) is installed.
+
+### Windows
+
+1. Open PowerShell or Command Prompt.
+2. Navigate to the repository folder:
+   ```powershell
+   cd C:\path\to\Music-Sync
+   ```
+3. Run Docker Compose:
+   ```powershell
+   docker compose up -d --build
+   ```
+
+### Linux
+
+```bash
+cd /path/to/Music-Sync
+docker compose up -d --build
+```
+
+### Download folder
+
+Audio files and lyric files are stored inside the container at `/app/downloads`. The compose file mounts this directory to `./data/downloads` on the host, so you will find the files under `data/downloads` in the project root.
+
+### Changing the download directory
+
+If you prefer a different location, edit the `volumes` entry for the `app` service in `docker-compose.yml`:
+
+```yaml
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - /your/custom/path:/app/downloads   # <-- change this line
+```
+
+After editing, restart the containers:
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
 ## Web Dashboard Features
 
 Navigate to `http://localhost:3000` to manage your music library:
