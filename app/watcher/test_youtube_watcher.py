@@ -179,11 +179,56 @@ def test_system_error_propagates():
     print("PASS: System error propagated as expected.")
 
 
+def test_last_n_mode_limits_entries():
+    print()
+    print("=" * 60)
+    print("TEST: Last N Mode Limits Entries (N=2)")
+    print("=" * 60)
+
+    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
+
+    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDL):
+        # Playlist entries in MockYoutubeDL: vid1 (1), vid_unavail (2), vid3 (3), vid_private (4), vid5 (5)
+        # Last 2 entries are vid_private (4) and vid5 (5). Since vid_private is skipped, only vid5 is valid.
+        # Last 3 entries are vid3, vid_private, vid5 -> valid: vid3, vid5.
+        songs = watcher.fetch(watch_mode="last_n", watch_limit=3)
+
+    video_ids = [s.video_id for s in songs]
+    print(f"Discovered songs (last 3 entries): {video_ids}")
+
+    assert len(songs) == 2, f"Expected 2 valid songs from last 3 entries, got {len(songs)}"
+    assert video_ids == ["vid3", "vid5"], f"Unexpected video IDs: {video_ids}"
+
+    print("PASS: Last N mode correctly limited entry scanning.")
+
+
+def test_last_n_mode_larger_than_total():
+    print()
+    print("=" * 60)
+    print("TEST: Last N Mode Limit Larger Than Total (N=10)")
+    print("=" * 60)
+
+    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
+
+    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDL):
+        songs = watcher.fetch(watch_mode="last_n", watch_limit=10)
+
+    video_ids = [s.video_id for s in songs]
+    print(f"Discovered songs: {video_ids}")
+
+    assert len(songs) == 3, f"Expected 3 valid songs, got {len(songs)}"
+    assert video_ids == ["vid1", "vid3", "vid5"]
+
+    print("PASS: Last N mode with limit larger than playlist size handled correctly.")
+
+
 def main():
     test_valid_unavailable_valid()
     test_unavailable_at_start()
     test_unavailable_at_end()
     test_system_error_propagates()
+    test_last_n_mode_limits_entries()
+    test_last_n_mode_larger_than_total()
     print()
     print("=" * 60)
     print("ALL WATCHER TESTS PASSED SUCCESSFULLY!")

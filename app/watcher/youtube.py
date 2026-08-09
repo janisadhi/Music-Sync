@@ -44,7 +44,11 @@ class YouTubePlaylistWatcher:
             or "YouTube Playlist",
         }
 
-    def fetch(self) -> list[YouTubeSong]:
+    def fetch(
+        self,
+        watch_mode: str = "whole",
+        watch_limit: int | None = None,
+    ) -> list[YouTubeSong]:
         options = {
             "quiet": True,
             "no_warnings": True,
@@ -62,10 +66,40 @@ class YouTubePlaylistWatcher:
         if not info:
             return []
 
+        entries = list(info.get("entries", []))
+
+        # ---------------------------------------------------------
+        # Apply watch mode: limit entries to the latest N
+        # ---------------------------------------------------------
+        if (
+            watch_mode == "last_n"
+            and watch_limit is not None
+            and watch_limit > 0
+        ):
+            total = len(entries)
+            if watch_limit < total:
+                print(
+                    f"Watch mode: last_{watch_limit} "
+                    f"(playlist has {total} entries, "
+                    f"scanning last {watch_limit})"
+                )
+                entries = entries[-watch_limit:]
+            else:
+                print(
+                    f"Watch mode: last_{watch_limit} "
+                    f"(playlist has {total} entries, "
+                    f"scanning all — limit >= total)"
+                )
+        else:
+            print(
+                f"Watch mode: whole "
+                f"(scanning all {len(entries)} entries)"
+            )
+
         songs = []
 
         for fallback_position, entry in enumerate(
-            info.get("entries", [])
+            entries
         ):
             if not entry:
                 continue

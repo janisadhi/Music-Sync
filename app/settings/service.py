@@ -21,6 +21,8 @@ class SettingsService:
                     download_retry_delay_seconds=60,
                     youtube_playlist_url=None,
                     auto_start_scheduler=False,
+                    playlist_watch_mode="whole",
+                    playlist_watch_limit=None,
                 )
 
                 session.add(app_settings)
@@ -39,6 +41,8 @@ class SettingsService:
         download_retry_delay_seconds: int | None = None,
         youtube_playlist_url: str | None = None,
         auto_start_scheduler: bool | None = None,
+        playlist_watch_mode: str | None = None,
+        playlist_watch_limit: int | None = ...,
     ) -> AppSettings:
 
         with SessionLocal() as session:
@@ -57,6 +61,8 @@ class SettingsService:
                     download_retry_delay_seconds=60,
                     youtube_playlist_url=None,
                     auto_start_scheduler=False,
+                    playlist_watch_mode="whole",
+                    playlist_watch_limit=None,
                 )
 
                 session.add(app_settings)
@@ -94,6 +100,17 @@ class SettingsService:
             if auto_start_scheduler is not None:
                 app_settings.auto_start_scheduler = (
                     auto_start_scheduler
+                )
+
+            if playlist_watch_mode is not None:
+                app_settings.playlist_watch_mode = (
+                    playlist_watch_mode
+                )
+
+            # Use sentinel (...) so that explicit None can clear the limit.
+            if playlist_watch_limit is not ...:
+                app_settings.playlist_watch_limit = (
+                    playlist_watch_limit
                 )
 
             session.commit()
