@@ -43,7 +43,7 @@ def get_playlist_music_root(song: Song) -> Path:
         )
 
     return _get_playlist_music_root(
-        song.playlist.id
+        song.playlist.name
     )
 
 
@@ -55,7 +55,7 @@ def get_playlist_no_lyrics_root(song: Song) -> Path:
         )
 
     return _get_playlist_no_lyrics_root(
-        song.playlist.id
+        song.playlist.name
     )
 
 # ---------------------------------------------------------

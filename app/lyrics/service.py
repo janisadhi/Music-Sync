@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.database.models import Song
 from app.database.session import SessionLocal
 from app.settings.service import SettingsService
-from app.core.paths import get_download_root
+from app.core.paths import get_download_root, get_playlist_no_lyrics_root
 
 
 @dataclass
@@ -327,19 +327,8 @@ class LyricsService:
                 f"{source}"
             )
 
-        download_root = (
-            self._get_download_root()
-        )
-
-        no_lyrics_root = (
-            download_root
-            / str(song.playlist.id)
-            / "no-lyrics"
-        )
-
-        no_lyrics_root.mkdir(
-            parents=True,
-            exist_ok=True,
+        no_lyrics_root = get_playlist_no_lyrics_root(
+            song.playlist.name
         )
 
         destination = (
