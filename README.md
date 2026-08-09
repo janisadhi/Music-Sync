@@ -258,6 +258,27 @@ The sync engine executes the following pipeline when triggered (either manually 
 | `PUT` | `/settings` | Update sync interval, download limit, lyrics limit, and retry parameters |
 
 ---
+## Watcher Settings
+
+The sync service includes configurable options for how playlists are watched. These settings are persisted in the database and can be edited from the **Settings** page in the dashboard.
+
+| Setting | Options | Description |
+| :--- | :--- | :--- |
+| `playlist_watch_mode` | `whole` – Watch the entire playlist.<br>`last_n` – Watch only the most recent **N** songs. | Determines the scope of each sync cycle. `whole` guarantees all songs are processed, while `last_n` reduces sync time for large playlists. |
+| `playlist_watch_limit` | Integer (default `20`). | When `playlist_watch_mode` is `last_n`, this value specifies how many recent songs to consider. The watcher scans both the newest **N** and the oldest **N** entries to catch newly added tracks regardless of playlist ordering. |
+
+### Common Errors & Debugging
+
+* **Invalid limit value** – Setting `playlist_watch_limit` to a non‑positive number will cause the watcher to skip all tracks. The dashboard validates this, but if you bypass the UI you will see warnings in the app logs: `Watch limit must be > 0`.  
+* **Mode/limit mismatch** – Using `last_n` with a limit larger than the playlist size is harmless, but may generate unnecessary DB queries.  
+* **Database connectivity** – If the settings cannot be read, the app logs `Failed to load settings: <error>`. Ensure the Postgres container is healthy (`docker compose logs postgres`).  
+
+#### Watching Logs
+
+* **Docker logs** – Run `docker compose logs -f app` to stream the FastAPI container logs. Look for entries prefixed with `watcher` to see which mode and limit are applied.  
+* **In‑app logs** – The dashboard shows recent sync activity on the **Dashboard** page; click the “View logs” button on a playlist to see detailed watcher output.  
+* **Increasing verbosity** – Set `LOG_LEVEL=DEBUG` in the `.env` file and restart the containers to get detailed step‑by‑step traces of the watcher, including which song IDs are fetched and reconciled.
+
 
 ## Local Development Setup
 
