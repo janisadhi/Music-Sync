@@ -173,7 +173,7 @@ class SongDownloader:
         try:
             playlist_music_root = (
                 get_playlist_music_root(
-                    song.playlist.id
+                    song.playlist.name
                 )
             )
 

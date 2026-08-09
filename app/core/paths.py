@@ -1,6 +1,19 @@
+import re
 from pathlib import Path
 
 from app.core.config import DOWNLOADS_DIR
+
+
+def sanitize_filename(name: str) -> str:
+    """
+    Sanitize playlist name for safe use as a directory name across OSes.
+    """
+    # Replace invalid/unsafe filesystem characters with underscores
+    sanitized = re.sub(r'[\\/*?:"<>|]', "_", name)
+    # Strip leading/trailing whitespace and dots
+    sanitized = sanitized.strip(" .")
+    # Fallback if empty after sanitizing
+    return sanitized if sanitized else "unnamed_playlist"
 
 
 def get_download_root() -> Path:
@@ -20,18 +33,23 @@ def get_download_root() -> Path:
 
 
 def get_playlist_music_root(
-    playlist_id: int,
+    playlist_name: str | int,
 ) -> Path:
     """
-    Return the playlist-specific music directory.
+    Return the playlist-specific music directory using playlist name.
 
     Example:
-        /app/downloads/1/music
+        /app/downloads/Check/music
     """
+    folder_name = (
+        sanitize_filename(playlist_name)
+        if isinstance(playlist_name, str)
+        else str(playlist_name)
+    )
 
     path = (
         get_download_root()
-        / str(playlist_id)
+        / folder_name
         / "music"
     )
 
@@ -44,18 +62,23 @@ def get_playlist_music_root(
 
 
 def get_playlist_no_lyrics_root(
-    playlist_id: int,
+    playlist_name: str | int,
 ) -> Path:
     """
-    Return the playlist-specific no-lyrics directory.
+    Return the playlist-specific no-lyrics directory using playlist name.
 
     Example:
-        /app/downloads/1/no-lyrics
+        /app/downloads/Check/no-lyrics
     """
+    folder_name = (
+        sanitize_filename(playlist_name)
+        if isinstance(playlist_name, str)
+        else str(playlist_name)
+    )
 
     path = (
         get_download_root()
-        / str(playlist_id)
+        / folder_name
         / "no-lyrics"
     )
 
