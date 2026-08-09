@@ -159,7 +159,8 @@ The application is containerized with Docker Compose, so the same commands work 
 cd /path/to/Music-Sync
 docker compose up -d --build
 ```
-
+open ```localhost:3000``` for the dashboard , the default username: ```admin``` password:```admin``` 
+>PS: You have to change the password after the first login keep your password safe as there no option for the password reset in the current version. 
 ### Download folder
 
 Audio files and lyric files are stored inside the container at `/app/downloads`. The compose file mounts this directory to `./data/downloads` on the host, so you will find the files under `data/downloads` in the project root.
