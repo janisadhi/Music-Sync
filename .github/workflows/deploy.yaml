@@ -63,7 +63,8 @@ jobs:
 
     deploy:
         runs-on: self-hosted
-        needs: build-backend
+        needs: [ build-frontend, build-backend ]
+
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
