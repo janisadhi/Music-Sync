@@ -23,7 +23,7 @@ services:
       start_period: 10s
 
   app:
-    image: ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
+    image: ghcr.io/janisadhi/music-sync-backend:latest
     container_name: music-sync-app
     restart: unless-stopped
 
@@ -43,7 +43,7 @@ services:
       - ./data/downloads:/app/downloads
 
   dashboard:
-    image: ghcr.io/${{ github.repository_owner }}/music-sync-frontend:latest
+    image: ghcr.io/janisadhi/music-sync-frontend:latest
     container_name: music-sync-dashboard
     restart: unless-stopped
 
