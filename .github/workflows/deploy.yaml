@@ -1,0 +1,83 @@
+name: CICD for Music-Sync
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+    DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USR }}
+    DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  
+jobs:
+    build-backend:
+        runs-on: self-hosted
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+              
+            - name: Docker Login in GHCR
+              uses: docker/login-action@v2
+              with:
+                username: ${{ env.DOCKER_USERNAME }}
+                password: ${{ env.DOCKER_PASSWORD }}
+                registry: ghcr.io
+            
+            - name: Build Backend Docker Image
+              run: docker build -t music-sync-backend:latest .
+
+            - name: Push Backend to GHCR
+              run: | 
+                docker tag music-sync-backend:latest ghcr.io/${{ github.repository_owner }}/music-sync-backend:${GITHUB_SHA}
+                docker push ghcr.io/${{ github.repository_owner }}/music-sync-backend:${GITHUB_SHA}
+                docker tag music-sync-backend:latest ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
+                docker push ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
+
+    build-frontend:
+        runs-on: self-hosted
+        needs: build-backend
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Docker Login in GHCR
+              uses: docker/login-action@v2
+              with:
+                username: ${{ env.DOCKER_USERNAME }}
+                password: ${{ env.DOCKER_PASSWORD }}
+                registry: ghcr.io
+
+            - name: Build Frontend Docker Image
+              run: docker build -t music-sync-frontend:latest ./dashboard
+
+            - name: Push Frontend to GHCR
+              run: | 
+                docker tag music-sync-frontend:latest ghcr.io/${{ github.repository_owner }}/music-sync-frontend:${GITHUB_SHA}
+                docker push ghcr.io/${{ github.repository_owner }}/music-sync-frontend:${GITHUB_SHA}
+                docker tag music-sync-frontend:latest ghcr.io/${{ github.repository_owner }}/music-sync-frontend:latest
+                docker push ghcr.io/${{ github.repository_owner }}/music-sync-frontend:latest
+
+
+    deploy:
+        runs-on: self-hosted
+        needs: build-backend
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Docker Login in GHCR
+              uses: docker/login-action@v2
+              with:
+                username: ${{ env.DOCKER_USERNAME }}
+                password: ${{ env.DOCKER_PASSWORD }}
+                registry: ghcr.io
+
+            - name: Docker Compose Up
+              run: |
+                docker compose -f docker-compose-cd.yaml down --remove-orphans
+                docker compose -f docker-compose-cd.yaml pull 
+                docker compose -f docker-compose-cd.yaml up -d
+                docker system prune -af
