@@ -24,7 +24,7 @@ services:
       start_period: 10s
 
   app:
-    image: ghcr.io/${{ github.repository_owner }}/music-sync-backend :latest
+    image: ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
 
     container_name: music-sync-app
     restart: unless-stopped
