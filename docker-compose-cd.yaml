@@ -1,5 +1,4 @@
 services:
-
   postgres:
     image: postgres:17
     container_name: music-sync-postgres
@@ -17,7 +16,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U $${POSTGRES_USER:-music_sync} -d $${POSTGRES_DB:-music_sync}
+        - 'pg_isready -U $${POSTGRES_USER:-music_sync} -d $${POSTGRES_DB:-music_sync}'
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,7 +24,6 @@ services:
 
   app:
     image: ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
-
     container_name: music-sync-app
     restart: unless-stopped
 
