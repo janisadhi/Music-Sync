@@ -1,4 +1,4 @@
-name: CICD for Music-Sync
+name: CI for Music-Sync
 on:
   push:
     branches:
@@ -15,7 +15,7 @@ env:
   
 jobs:
     build-backend:
-        runs-on: self-hosted
+        runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
@@ -38,8 +38,7 @@ jobs:
                 docker push ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
 
     build-frontend:
-        runs-on: self-hosted
-        needs: build-backend
+        runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
@@ -61,31 +60,3 @@ jobs:
                 docker tag music-sync-frontend:latest ghcr.io/${{ github.repository_owner }}/music-sync-frontend:latest
                 docker push ghcr.io/${{ github.repository_owner }}/music-sync-frontend:latest
 
-
-    deploy:
-        runs-on: self-hosted
-        needs: [ build-frontend, build-backend ]
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v3
-
-            - name: Docker Login in GHCR
-              uses: docker/login-action@v2
-              with:
-                username: ${{ env.DOCKER_USERNAME }}
-                password: ${{ env.DOCKER_PASSWORD }}
-                registry: ghcr.io
-
-            - name: create .env file
-              run: |
-                cat <<EOT >> .env
-                ${{env.ENV_FILE}}
-                EOT
-
-            - name: Docker Compose Up
-              run: |
-                docker compose -f docker-compose-cd.yaml down --remove-orphans
-                docker compose -f docker-compose-cd.yaml pull 
-                docker compose -f docker-compose-cd.yaml up -d
-                docker system prune -af
