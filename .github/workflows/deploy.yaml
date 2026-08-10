@@ -11,6 +11,7 @@ permissions:
 env:
     DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USR }}
     DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+    ENV_FILE: .env
   
 jobs:
     build-backend:
@@ -75,6 +76,12 @@ jobs:
                 username: ${{ env.DOCKER_USERNAME }}
                 password: ${{ env.DOCKER_PASSWORD }}
                 registry: ghcr.io
+
+            - name: create .env file
+              run: |
+                cat <<EOT >> .env
+                ${{env.ENV_FILE}}
+                EOT
 
             - name: Docker Compose Up
               run: |
