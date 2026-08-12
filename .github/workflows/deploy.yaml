@@ -18,10 +18,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v7
               
             - name: Docker Login in GHCR
-              uses: docker/login-action@v2
+              uses: docker/login-action@v4
               with:
                 username: ${{ env.DOCKER_USERNAME }}
                 password: ${{ env.DOCKER_PASSWORD }}
@@ -41,10 +41,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v7
 
             - name: Docker Login in GHCR
-              uses: docker/login-action@v2
+              uses: docker/login-action@v4
               with:
                 username: ${{ env.DOCKER_USERNAME }}
                 password: ${{ env.DOCKER_PASSWORD }}
