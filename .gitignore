@@ -10,3 +10,4 @@ data/music/*
 !data/music/.gitkeep
 
 data/*
+.github_wiki
