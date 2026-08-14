@@ -11,7 +11,7 @@ from app.api.sync import router as sync_router
 from app.api.dashboard import router as dashboard_router
 from app.api.settings import router as settings_router
 from app.core.config import settings
-from app.core.runtime import scheduler
+from app.core.runtime import scheduler, downloader_worker
 from app.database.session import Base, engine, SessionLocal
 from app.settings.service import SettingsService
 
@@ -22,12 +22,29 @@ async def lifespan(app: FastAPI):
     print("Starting Music Sync application")
     print("=" * 60)
 
+    # ----------------------------------------------------------------
+    # Seed the admin user if it doesn't exist yet.
+    # ----------------------------------------------------------------
     try:
         with SessionLocal() as db:
             ensure_admin_exists(db)
     except Exception as exc:
         print(f"Could not seed admin user on startup: {exc}")
 
+    # ----------------------------------------------------------------
+    # Start the Downloader worker unconditionally.
+    # It is independent of the Scheduler – it simply consumes whatever
+    # pending work exists in the Sync DB.
+    # ----------------------------------------------------------------
+    try:
+        downloader_worker.start()
+    except Exception as exc:
+        print(f"Could not start Downloader worker on startup: {exc}")
+
+    # ----------------------------------------------------------------
+    # Start the Scheduler only if auto_start is enabled.
+    # The Scheduler's only job is to trigger SyncService periodically.
+    # ----------------------------------------------------------------
     try:
         app_settings = SettingsService().get()
         if app_settings.auto_start_scheduler:
@@ -40,11 +57,18 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # ----------------------------------------------------------------
+    # Graceful shutdown
+    # ----------------------------------------------------------------
     print("=" * 60)
     print("Shutting down Music Sync application")
     print("=" * 60)
 
+    # Stop the Scheduler first so no new sync jobs are queued.
     scheduler.stop()
+
+    # Signal the Downloader worker to stop and wait for it.
+    downloader_worker.stop(timeout=30.0)
 
 
 app = FastAPI(
@@ -86,4 +110,5 @@ def health_check():
         "service": settings.app_name,
         "environment": settings.app_env,
         "database": database_status,
+        "downloader_worker": downloader_worker.get_status(),
     }
