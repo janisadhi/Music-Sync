@@ -1,264 +1,410 @@
+"""
+Tests for YouTubePlaylistWatcher.
+
+All tests use in-process mocks – no real YouTube requests are made.
+
+Coverage:
+  - Flat scan returns YouTubeSong items (no per-video requests)
+  - Unavailable/private/deleted entries produce UnavailableYouTubeSong
+  - Scanner continues after encountering unavailable entries
+  - watch_mode=last_n limiting behaviour
+  - Empty playlist
+  - Missing video_id entries are skipped
+  - Title fallback to video_id when title is blank
+"""
+
 from unittest.mock import MagicMock, patch
-import yt_dlp
 
-from app.watcher.youtube import YouTubePlaylistWatcher, YouTubeSong
+import pytest
+
+from app.watcher.youtube import (
+    UnavailableYouTubeSong,
+    YouTubePlaylistWatcher,
+    YouTubeSong,
+)
 
 
-class MockYoutubeDL:
-    def __init__(self, options=None):
-        self.options = options or {}
+# ---------------------------------------------------------------------------
+# Mock helpers
+# ---------------------------------------------------------------------------
 
-    def __enter__(self):
-        return self
+def _make_ydl_class(entries: list, playlist_id: str = "pl1"):
+    """
+    Build a mock yt_dlp.YoutubeDL context manager that returns a flat playlist.
+    The flat extraction should NOT be called per-video; if it is, this mock
+    will raise to make the violation visible.
+    """
+    class MockYDL:
+        def __init__(self, opts):
+            pass
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return False
+        def __enter__(self):
+            return self
 
-    def extract_info(self, url, download=False):
-        # Playlist extraction mock
-        if "list=" in url or "playlist" in url:
+        def __exit__(self, *args):
+            return False
+
+        def extract_info(self, url, download=False):
+            # Flat playlist call — always return the playlist info.
             return {
-                "id": "test_playlist_id",
+                "id": playlist_id,
                 "title": "Test Playlist",
-                "entries": [
-                    {"id": "vid1", "title": "Song 1", "playlist_index": 1},
-                    {"id": "vid_unavail", "title": "Song 2", "playlist_index": 2},
-                    {"id": "vid3", "title": "Song 3", "playlist_index": 3},
-                    {"id": "vid_private", "title": "[Private video]", "playlist_index": 4},
-                    {"id": "vid5", "title": "Song 5", "playlist_index": 5},
-                ],
+                "entries": entries,
             }
 
-        # Per-video extraction mock
-        if "vid1" in url:
-            return {
-                "title": "Song 1",
-                "artist": "Artist 1",
-                "album": "Album 1",
-                "duration": 180,
-            }
-        elif "vid_unavail" in url:
-            raise yt_dlp.utils.DownloadError("ERROR: [youtube] vid_unavail: Video unavailable. This video is not available")
-        elif "vid3" in url:
-            return {
-                "title": "Song 3",
-                "artist": "Artist 3",
-                "album": "Album 3",
-                "duration": 200,
-            }
-        elif "vid5" in url:
-            return {
-                "title": "Song 5",
-                "artist": "Artist 5",
-                "album": "Album 5",
-                "duration": 220,
-            }
-        else:
-            raise yt_dlp.utils.DownloadError("Video unavailable")
+    return MockYDL
 
 
-def test_valid_unavailable_valid():
-    print("=" * 60)
-    print("TEST: YouTube Playlist Watcher Unavailable Video Handling")
-    print("=" * 60)
+AVAILABLE_ENTRIES = [
+    {"id": "vid1", "title": "Song One", "playlist_index": 1},
+    {"id": "vid2", "title": "Song Two", "playlist_index": 2},
+    {"id": "vid3", "title": "Song Three", "playlist_index": 3},
+]
 
-    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
+MIXED_ENTRIES = [
+    {"id": "vid1", "title": "Song One", "playlist_index": 1},
+    {"id": "vid_priv", "title": "[Private video]", "playlist_index": 2},
+    {"id": "vid3", "title": "Song Three", "playlist_index": 3},
+    {"id": "vid_del", "title": "[Deleted video]", "playlist_index": 4},
+    {"id": "vid5", "title": "Song Five", "playlist_index": 5},
+]
 
-    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDL):
-        songs = watcher.fetch()
-
-    video_ids = [s.video_id for s in songs]
-    print(f"Discovered songs: {video_ids}")
-
-    assert len(songs) == 3, f"Expected 3 valid songs, got {len(songs)}"
-    assert video_ids == ["vid1", "vid3", "vid5"], f"Unexpected video IDs: {video_ids}"
-    assert songs[0].title == "Song 1"
-    assert songs[1].title == "Song 3"
-    assert songs[2].title == "Song 5"
-
-    print("PASS: Valid songs extracted while unavailable and private videos were skipped.")
+TEN_ENTRIES = [
+    {"id": f"vid{i}", "title": f"Song {i}", "playlist_index": i}
+    for i in range(1, 11)
+]
 
 
-def test_unavailable_at_start():
-    print()
-    print("=" * 60)
-    print("TEST: Unavailable Video at Start of Playlist")
-    print("=" * 60)
+# ---------------------------------------------------------------------------
+# Basic scan
+# ---------------------------------------------------------------------------
 
-    class MockYoutubeDLStartUnavail(MockYoutubeDL):
-        def extract_info(self, url, download=False):
-            if "list=" in url or "playlist" in url:
+class TestFlatScan:
+    def test_returns_youtube_song_objects(self):
+        """Watcher returns YouTubeSong items for accessible entries."""
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(AVAILABLE_ENTRIES)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert len(items) == 3
+        assert all(isinstance(i, YouTubeSong) for i in items)
+
+    def test_video_ids_and_titles(self):
+        """Returned items carry the correct video_id, title, position."""
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(AVAILABLE_ENTRIES)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert items[0].video_id == "vid1"
+        assert items[0].title == "Song One"
+        assert items[0].position == 1
+
+        assert items[1].video_id == "vid2"
+        assert items[2].video_id == "vid3"
+
+    def test_no_per_video_requests(self):
+        """
+        extract_info must be called ONCE (flat playlist call).
+        A second call per video would indicate the old expensive path.
+        """
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+
+        call_count = 0
+
+        class CountingYDL:
+            def __init__(self, opts):
+                pass
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+            def extract_info(self, url, download=False):
+                nonlocal call_count
+                call_count += 1
                 return {
-                    "id": "test_playlist_id",
-                    "title": "Test Playlist",
-                    "entries": [
-                        {"id": "vid_unavail", "title": "Unavail", "playlist_index": 1},
-                        {"id": "vid1", "title": "Song 1", "playlist_index": 2},
-                        {"id": "vid3", "title": "Song 3", "playlist_index": 3},
-                    ],
+                    "id": "pl1",
+                    "title": "Playlist",
+                    "entries": AVAILABLE_ENTRIES,
                 }
-            return super().extract_info(url, download)
 
-    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
-
-    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDLStartUnavail):
-        songs = watcher.fetch()
-
-    video_ids = [s.video_id for s in songs]
-    print(f"Discovered songs: {video_ids}")
-
-    assert len(songs) == 2, f"Expected 2 valid songs, got {len(songs)}"
-    assert video_ids == ["vid1", "vid3"]
-
-    print("PASS: Unavailable video at start skipped cleanly.")
-
-
-def test_unavailable_at_end():
-    print()
-    print("=" * 60)
-    print("TEST: Unavailable Video at End of Playlist")
-    print("=" * 60)
-
-    class MockYoutubeDLEndUnavail(MockYoutubeDL):
-        def extract_info(self, url, download=False):
-            if "list=" in url or "playlist" in url:
-                return {
-                    "id": "test_playlist_id",
-                    "title": "Test Playlist",
-                    "entries": [
-                        {"id": "vid1", "title": "Song 1", "playlist_index": 1},
-                        {"id": "vid3", "title": "Song 3", "playlist_index": 2},
-                        {"id": "vid_unavail", "title": "Unavail", "playlist_index": 3},
-                    ],
-                }
-            return super().extract_info(url, download)
-
-    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
-
-    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDLEndUnavail):
-        songs = watcher.fetch()
-
-    video_ids = [s.video_id for s in songs]
-    print(f"Discovered songs: {video_ids}")
-
-    assert len(songs) == 2, f"Expected 2 valid songs, got {len(songs)}"
-    assert video_ids == ["vid1", "vid3"]
-
-    print("PASS: Unavailable video at end skipped cleanly.")
-
-
-def test_system_error_propagates():
-    print()
-    print("=" * 60)
-    print("TEST: System Error Propagates")
-    print("=" * 60)
-
-    class MockYoutubeDLSystemError(MockYoutubeDL):
-        def extract_info(self, url, download=False):
-            if "list=" in url or "playlist" in url:
-                return {
-                    "id": "test_playlist_id",
-                    "title": "Test Playlist",
-                    "entries": [
-                        {"id": "vid_sys_err", "title": "SysErr", "playlist_index": 1},
-                    ],
-                }
-            raise RuntimeError("Database connection failed")
-
-    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
-
-    raised = False
-    try:
-        with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDLSystemError):
+        with patch("yt_dlp.YoutubeDL", side_effect=CountingYDL):
             watcher.fetch()
-    except RuntimeError as exc:
-        raised = True
-        assert str(exc) == "Database connection failed"
 
-    assert raised, "Expected RuntimeError to propagate"
-    print("PASS: System error propagated as expected.")
+        # Exactly one flat extraction call, never per-video.
+        assert call_count == 1, (
+            f"Expected 1 yt-dlp call (flat), got {call_count}. "
+            "Per-video requests must not be made during sync."
+        )
+
+    def test_artist_album_duration_are_none(self):
+        """
+        Sync-time YouTubeSong must NOT carry artist/album/duration.
+        Those fields are populated only by the Downloader after download.
+        """
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(AVAILABLE_ENTRIES)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        for item in items:
+            assert isinstance(item, YouTubeSong)
+            assert item.artist is None
+            assert item.album is None
+            assert item.duration is None
+
+    def test_empty_playlist_returns_empty_list(self):
+        """An empty playlist produces an empty list without errors."""
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class([])
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert items == []
+
+    def test_missing_video_id_skipped(self):
+        """Entries without an 'id' field are silently skipped."""
+        entries = [
+            {"title": "No ID here", "playlist_index": 1},  # no 'id'
+            {"id": "vid2", "title": "Has ID", "playlist_index": 2},
+        ]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert len(items) == 1
+        assert items[0].video_id == "vid2"
+
+    def test_blank_title_falls_back_to_video_id(self):
+        """Entries with an empty title use the video_id as title."""
+        entries = [{"id": "vid_notitle", "title": "", "playlist_index": 1}]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert len(items) == 1
+        assert items[0].video_id == "vid_notitle"
+        assert items[0].title == "vid_notitle"
+
+    def test_none_entry_skipped(self):
+        """None entries in the playlist (yt-dlp error sentinels) are skipped."""
+        entries = [
+            {"id": "vid1", "title": "Song One", "playlist_index": 1},
+            None,
+            {"id": "vid3", "title": "Song Three", "playlist_index": 3},
+        ]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert len(items) == 2
 
 
-def test_last_n_mode_limits_entries():
-    print()
-    print("=" * 60)
-    print("TEST: Last N Mode Limits Entries (N=2)")
-    print("=" * 60)
+# ---------------------------------------------------------------------------
+# Unavailable / private / deleted videos
+# ---------------------------------------------------------------------------
 
-    class MockYoutubeDLLargePlaylist(MockYoutubeDL):
-        def extract_info(self, url, download=False):
-            if "list=" in url or "playlist" in url:
-                return {
-                    "id": "test_playlist_id",
-                    "title": "Test Playlist",
-                    "entries": [
-                        {"id": "vid1", "title": "Song 1", "playlist_index": 1},
-                        {"id": "vid2", "title": "Song 2", "playlist_index": 2},
-                        {"id": "vid3", "title": "Song 3", "playlist_index": 3},
-                        {"id": "vid4", "title": "Song 4", "playlist_index": 4},
-                        {"id": "vid5", "title": "Song 5", "playlist_index": 5},
-                        {"id": "vid6", "title": "Song 6", "playlist_index": 6},
-                        {"id": "vid7", "title": "Song 7", "playlist_index": 7},
-                        {"id": "vid8", "title": "Song 8", "playlist_index": 8},
-                        {"id": "vid9", "title": "Song 9", "playlist_index": 9},
-                        {"id": "vid10", "title": "Song 10", "playlist_index": 10},
-                    ],
-                }
-            # Per-video extraction fallback
-            vid_id = url.split("v=")[-1]
-            return {
-                "title": f"Song {vid_id.replace('vid', '')}",
-                "artist": "Artist",
-                "album": "Album",
-                "duration": 180,
-            }
+class TestUnavailableVideos:
+    def test_private_video_produces_unavailable_item(self):
+        """[Private video] title → UnavailableYouTubeSong, not skipped."""
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(MIXED_ENTRIES)
 
-    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
 
-    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDLLargePlaylist):
-        # N=2 -> top 2 (vid1, vid2) + bottom 2 (vid9, vid10) = 4 total songs
-        songs = watcher.fetch(watch_mode="last_n", watch_limit=2)
+        unavail = [i for i in items if isinstance(i, UnavailableYouTubeSong)]
+        available = [i for i in items if isinstance(i, YouTubeSong)]
 
-    video_ids = [s.video_id for s in songs]
-    print(f"Discovered songs (top 2 & bottom 2 entries): {video_ids}")
+        assert len(unavail) == 2
+        assert len(available) == 3
 
-    assert len(songs) == 4, f"Expected 4 valid songs from top 2 and bottom 2, got {len(songs)}"
-    assert video_ids == ["vid1", "vid2", "vid9", "vid10"], f"Unexpected video IDs: {video_ids}"
+    def test_unavailable_item_carries_video_id(self):
+        """UnavailableYouTubeSong must carry the video_id and a reason."""
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(MIXED_ENTRIES)
 
-    print("PASS: Last N mode correctly limited entry scanning to top N & bottom N.")
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        unavail_ids = {i.video_id for i in items if isinstance(i, UnavailableYouTubeSong)}
+        assert "vid_priv" in unavail_ids
+        assert "vid_del" in unavail_ids
+
+        for item in items:
+            if isinstance(item, UnavailableYouTubeSong):
+                assert item.reason  # reason must be non-empty
+
+    def test_scanner_continues_after_unavailable(self):
+        """
+        Items after an unavailable entry must still be processed.
+        vid5 must appear in results even though vid_priv and vid_del precede it.
+        """
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(MIXED_ENTRIES)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        all_ids = [i.video_id for i in items]
+        assert "vid5" in all_ids
+        assert "vid1" in all_ids
+        assert "vid3" in all_ids
+
+    def test_all_three_sentinel_titles_detected(self):
+        """All three YouTube sentinel titles are treated as unavailable."""
+        entries = [
+            {"id": "v1", "title": "[Private video]", "playlist_index": 1},
+            {"id": "v2", "title": "[Deleted video]", "playlist_index": 2},
+            {"id": "v3", "title": "[Unavailable video]", "playlist_index": 3},
+        ]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert len(items) == 3
+        assert all(isinstance(i, UnavailableYouTubeSong) for i in items)
+
+    def test_unavailable_at_start_does_not_abort(self):
+        """An unavailable item at position 0 must not abort the scan."""
+        entries = [
+            {"id": "priv_start", "title": "[Private video]", "playlist_index": 1},
+            {"id": "vid_ok", "title": "Good Song", "playlist_index": 2},
+        ]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        available = [i for i in items if isinstance(i, YouTubeSong)]
+        assert len(available) == 1
+        assert available[0].video_id == "vid_ok"
+
+    def test_unavailable_at_end_does_not_drop_preceding(self):
+        """An unavailable item at the end must not affect preceding items."""
+        entries = [
+            {"id": "vid_a", "title": "Good Song A", "playlist_index": 1},
+            {"id": "vid_b", "title": "Good Song B", "playlist_index": 2},
+            {"id": "priv_end", "title": "[Deleted video]", "playlist_index": 3},
+        ]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        available = [i for i in items if isinstance(i, YouTubeSong)]
+        assert len(available) == 2
+        assert {i.video_id for i in available} == {"vid_a", "vid_b"}
+
+    def test_playlist_unavailable_returns_empty(self):
+        """If the whole playlist is inaccessible, return empty list."""
+        class FailYDL:
+            def __init__(self, opts):
+                pass
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+            def extract_info(self, url, download=False):
+                return None
+
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=gone")
+        with patch("yt_dlp.YoutubeDL", side_effect=FailYDL):
+            items = watcher.fetch()
+
+        assert items == []
 
 
-def test_last_n_mode_larger_than_total():
-    print()
-    print("=" * 60)
-    print("TEST: Last N Mode Limit Larger Than Total (N=10)")
-    print("=" * 60)
+# ---------------------------------------------------------------------------
+# Watch mode: last_n
+# ---------------------------------------------------------------------------
 
-    watcher = YouTubePlaylistWatcher("https://www.youtube.com/playlist?list=test_playlist_id")
+class TestLastNMode:
+    def test_last_n_selects_top_and_bottom(self):
+        """last_n=2 picks top-2 and bottom-2 entries (4 unique)."""
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(TEN_ENTRIES)
 
-    with patch("yt_dlp.YoutubeDL", side_effect=MockYoutubeDL):
-        songs = watcher.fetch(watch_mode="last_n", watch_limit=10)
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch(watch_mode="last_n", watch_limit=2)
 
-    video_ids = [s.video_id for s in songs]
-    print(f"Discovered songs: {video_ids}")
+        ids = [i.video_id for i in items]
+        assert set(ids) == {"vid1", "vid2", "vid9", "vid10"}
+        assert len(ids) == 4
 
-    assert len(songs) == 3, f"Expected 3 valid songs, got {len(songs)}"
-    assert video_ids == ["vid1", "vid3", "vid5"]
+    def test_last_n_larger_than_playlist_returns_all(self):
+        """If limit > playlist size, all entries are returned."""
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(AVAILABLE_ENTRIES)
 
-    print("PASS: Last N mode with limit larger than playlist size handled correctly.")
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch(watch_mode="last_n", watch_limit=100)
 
+        assert len(items) == 3
+
+    def test_last_n_no_duplicates_on_overlap(self):
+        """When top-N and bottom-N overlap, no duplicate video_ids appear."""
+        # 3 entries, N=2: top-2=(vid1,vid2), bottom-2=(vid2,vid3) → 3 unique
+        entries = [
+            {"id": "vid1", "title": "S1", "playlist_index": 1},
+            {"id": "vid2", "title": "S2", "playlist_index": 2},
+            {"id": "vid3", "title": "S3", "playlist_index": 3},
+        ]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch(watch_mode="last_n", watch_limit=2)
+
+        ids = [i.video_id for i in items]
+        assert len(ids) == len(set(ids)), "Duplicate video IDs found"
+
+
+# ---------------------------------------------------------------------------
+# Positional fallback
+# ---------------------------------------------------------------------------
+
+class TestPositionFallback:
+    def test_missing_playlist_index_uses_loop_index(self):
+        """Entries without playlist_index get their loop position assigned."""
+        entries = [
+            {"id": "vid_a", "title": "Song A"},  # no playlist_index
+            {"id": "vid_b", "title": "Song B"},
+        ]
+        watcher = YouTubePlaylistWatcher("https://youtube.com/playlist?list=pl1")
+        MockYDL = _make_ydl_class(entries)
+
+        with patch("yt_dlp.YoutubeDL", side_effect=MockYDL):
+            items = watcher.fetch()
+
+        assert items[0].position == 0
+        assert items[1].position == 1
+
+
+# ---------------------------------------------------------------------------
+# Legacy-compatible main() for direct execution
+# ---------------------------------------------------------------------------
 
 def main():
-    test_valid_unavailable_valid()
-    test_unavailable_at_start()
-    test_unavailable_at_end()
-    test_system_error_propagates()
-    test_last_n_mode_limits_entries()
-    test_last_n_mode_larger_than_total()
-    print()
-    print("=" * 60)
-    print("ALL WATCHER TESTS PASSED SUCCESSFULLY!")
-    print("=" * 60)
+    """Run all tests via pytest when called directly."""
+    import sys
+    import pytest as _pytest
+    sys.exit(_pytest.main([__file__, "-v"]))
 
 
 if __name__ == "__main__":

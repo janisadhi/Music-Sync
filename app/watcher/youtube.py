@@ -1,21 +1,87 @@
-from dataclasses import dataclass
+"""
+YouTube playlist watcher.
+
+DESIGN PRINCIPLE: SYNC DISCOVERS, DOWNLOADER DOWNLOADS.
+
+The watcher's only job is to produce a minimal list of playlist items from a
+flat YouTube API call.  It does NOT:
+  - make per-video extract_info() calls
+  - fetch artist / album / artwork / thumbnail metadata
+  - download anything
+
+For each playlist entry the flat extraction already gives us everything Sync
+needs:
+  - YouTube video ID
+  - title (as provided by the playlist feed)
+  - playlist position / index
+
+Unavailable / private / deleted videos are detected from the flat-extraction
+title sentinel values ("[Private video]", "[Deleted video]", etc.) and are
+yielded as UnavailableYouTubeSong items so that the Reconciler can mark them
+with download_status='unavailable' rather than silently skipping them.
+"""
+
+from dataclasses import dataclass, field
 
 import yt_dlp
 
 
+# Titles that YouTube uses in flat extraction to flag inaccessible videos.
+_UNAVAILABLE_TITLES = frozenset(
+    {
+        "[Private video]",
+        "[Deleted video]",
+        "[Unavailable video]",
+    }
+)
+
+
 @dataclass
 class YouTubeSong:
+    """
+    Minimal playlist-item descriptor produced by the lightweight flat scan.
+
+    Only fields that are free from the flat extraction are populated here.
+    Rich metadata (artist, album, duration, artwork …) is fetched later by
+    the Downloader when it actually processes the track.
+    """
+
     video_id: str
     title: str
-    artist: str | None
-    album: str | None
-    duration: int | None
+    position: int | None
+
+    # Always None at scan time – populated by Downloader after download.
+    artist: str | None = field(default=None, init=False)
+    album: str | None = field(default=None, init=False)
+    duration: int | None = field(default=None, init=False)
+
+    # Flag: this item was inaccessible during the flat scan.
+    unavailable: bool = field(default=False, init=False)
+
+
+@dataclass
+class UnavailableYouTubeSong:
+    """
+    Represents a playlist slot that is inaccessible (private / deleted /
+    region-locked / etc.).
+
+    The Reconciler uses this to mark the corresponding Song row with
+    download_status='unavailable' so the slot is not silently lost and the
+    Downloader does not keep retrying it.
+    """
+
+    video_id: str
+    reason: str
     position: int | None
 
 
 class YouTubePlaylistWatcher:
     def __init__(self, playlist_url: str):
         self.playlist_url = playlist_url
+
+    # ------------------------------------------------------------------
+    # Playlist-level metadata (used when auto-naming a new playlist)
+    # ------------------------------------------------------------------
 
     def fetch_playlist_metadata(self) -> dict:
         options = {
@@ -27,28 +93,34 @@ class YouTubePlaylistWatcher:
         }
 
         with yt_dlp.YoutubeDL(options) as ydl:
-            info = ydl.extract_info(
-                self.playlist_url,
-                download=False,
-            )
+            info = ydl.extract_info(self.playlist_url, download=False)
 
         if not info:
-            return {
-                "id": None,
-                "name": "YouTube Playlist",
-            }
+            return {"id": None, "name": "YouTube Playlist"}
 
         return {
             "id": info.get("id"),
-            "name": info.get("title")
-            or "YouTube Playlist",
+            "name": info.get("title") or "YouTube Playlist",
         }
+
+    # ------------------------------------------------------------------
+    # Lightweight flat scan
+    # ------------------------------------------------------------------
 
     def fetch(
         self,
         watch_mode: str = "whole",
         watch_limit: int | None = None,
-    ) -> list[YouTubeSong]:
+    ) -> list[YouTubeSong | UnavailableYouTubeSong]:
+        """
+        Return a list of playlist items using a single flat extraction call.
+
+        No per-video requests are made.  The returned list contains either
+        YouTubeSong (accessible) or UnavailableYouTubeSong (inaccessible)
+        items.
+
+        The caller (Reconciler) decides what to do with each item type.
+        """
         options = {
             "quiet": True,
             "no_warnings": True,
@@ -58,22 +130,16 @@ class YouTubePlaylistWatcher:
         }
 
         with yt_dlp.YoutubeDL(options) as ydl:
-            info = ydl.extract_info(
-                self.playlist_url,
-                download=False,
-            )
+            info = ydl.extract_info(self.playlist_url, download=False)
 
         if not info:
             return []
 
         entries = list(info.get("entries", []))
 
-        # ---------------------------------------------------------
-        # Apply watch mode: limit entries to the latest N
-        # (Scans both top N and bottom N entries to catch newly added
-        # songs regardless of whether playlist is sorted newest-first
-        # or newest-last)
-        # ---------------------------------------------------------
+        # ------------------------------------------------------------------
+        # Apply watch mode
+        # ------------------------------------------------------------------
         if (
             watch_mode == "last_n"
             and watch_limit is not None
@@ -84,7 +150,7 @@ class YouTubePlaylistWatcher:
                 top_entries = entries[:watch_limit]
                 bottom_entries = entries[-watch_limit:]
 
-                seen_ids = set()
+                seen_ids: set = set()
                 selected = []
                 for entry in top_entries + bottom_entries:
                     if entry and isinstance(entry, dict):
@@ -100,7 +166,8 @@ class YouTubePlaylistWatcher:
                 print(
                     f"Watch mode: last_{watch_limit} "
                     f"(playlist has {total} entries, "
-                    f"scanning top {watch_limit} & bottom {watch_limit} entries: {len(entries)} unique total)"
+                    f"scanning top {watch_limit} & bottom {watch_limit}: "
+                    f"{len(entries)} unique total)"
                 )
             else:
                 print(
@@ -114,116 +181,52 @@ class YouTubePlaylistWatcher:
                 f"(scanning all {len(entries)} entries)"
             )
 
-        songs = []
+        items: list[YouTubeSong | UnavailableYouTubeSong] = []
 
-        for fallback_position, entry in enumerate(
-            entries
-        ):
+        for fallback_position, entry in enumerate(entries):
             if not entry:
                 continue
 
-            position = entry.get(
-                "playlist_index"
-            )
-
+            # Resolve position: prefer playlist_index, fall back to loop index.
+            position = entry.get("playlist_index")
             if position is None:
                 position = fallback_position
 
             video_id = entry.get("id")
-
             if not video_id:
                 continue
 
             entry_title = entry.get("title") or ""
-            if entry_title in (
-                "[Private video]",
-                "[Deleted video]",
-                "[Unavailable video]",
-            ):
+
+            # ----------------------------------------------------------
+            # Detect unavailable entries from flat-extraction sentinels.
+            # No per-video request needed – the flat feed already tells us.
+            # ----------------------------------------------------------
+            if entry_title in _UNAVAILABLE_TITLES:
+                reason = f"Video marked as '{entry_title}' in playlist feed"
                 print(
-                    f"Skipping unavailable video: {video_id}"
+                    f"Unavailable video detected during scan: {video_id} "
+                    f"— {reason}"
                 )
-                print(
-                    f"Reason: Video is marked as {entry_title}"
-                )
-                print("Playlist scan continuing...")
-                continue
-
-            # Fetch full metadata for the individual video.
-            video_url = (
-                "https://www.youtube.com/watch?v="
-                f"{video_id}"
-            )
-
-            video_options = {
-                "quiet": True,
-                "no_warnings": True,
-                "ignoreerrors": True,
-            }
-
-            try:
-                with yt_dlp.YoutubeDL(
-                    video_options
-                ) as video_ydl:
-                    video_info = video_ydl.extract_info(
-                        video_url,
-                        download=False,
+                items.append(
+                    UnavailableYouTubeSong(
+                        video_id=video_id,
+                        reason=reason,
+                        position=position,
                     )
-            except (
-                yt_dlp.utils.YoutubeDLError,
-                yt_dlp.utils.DownloadError,
-                yt_dlp.utils.ExtractorError,
-            ) as exc:
-                reason = str(exc).strip()
-                if "ERROR: [youtube]" in reason:
-                    reason = reason.split(":", 2)[-1].strip()
-                print(
-                    f"Skipping unavailable video: {video_id}"
                 )
-                print(
-                    f"Reason: {reason or 'Video unavailable'}"
-                )
-                print("Playlist scan continuing...")
                 continue
 
-            if not video_info or not isinstance(video_info, dict):
-                print(
-                    f"Skipping unavailable video: {video_id}"
-                )
-                print("Reason: Video unavailable")
-                print("Playlist scan continuing...")
-                continue
+            # Accessible entry – use title from flat extraction.
+            # If for some reason title is empty, substitute the video ID.
+            title = entry_title.strip() or video_id
 
-            title = video_info.get("title")
-            if not title or title in (
-                "[Private video]",
-                "[Deleted video]",
-                "[Unavailable video]",
-            ):
-                print(
-                    f"Skipping unavailable video: {video_id}"
-                )
-                print(
-                    f"Reason: Video unavailable ({title or 'missing title'})"
-                )
-                print("Playlist scan continuing...")
-                continue
-
-            songs.append(
+            items.append(
                 YouTubeSong(
                     video_id=video_id,
                     title=title,
-                    artist=video_info.get(
-                        "artist"
-                    ),
-                    album=video_info.get(
-                        "album"
-                    ),
-                    duration=video_info.get(
-                        "duration"
-                    ),
                     position=position,
                 )
             )
 
-        return songs
+        return items
