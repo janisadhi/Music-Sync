@@ -162,20 +162,9 @@ class PlaylistReconciler:
 
         if existing is not None:
             # Song already known – update lightweight sync fields.
-            # Never downgrade download_status of an already-processed song.
+            # Never downgrade or reset download_status of an existing song.
             existing.title = item.title
             existing.position = item.position
-
-            # If the song was previously marked unavailable and it's now
-            # accessible again, reset it to pending so it gets downloaded.
-            if existing.download_status == "unavailable":
-                existing.download_status = "pending"
-                existing.error_message = None
-                print(
-                    f"Previously unavailable video is accessible again: "
-                    f"{item.video_id} — reset to pending"
-                )
-
             return None
 
         # New song – insert with pending status.

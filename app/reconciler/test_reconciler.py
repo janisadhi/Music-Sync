@@ -186,8 +186,8 @@ class TestUnavailableSongs:
         session.refresh(song)
         assert song.download_status == "unavailable"
 
-    def test_unavailable_then_accessible_resets_to_pending(self, session):
-        """If a video recovers from unavailable, reset it to pending."""
+    def test_unavailable_remains_unavailable_during_rescan(self, session):
+        """Unavailable songs must remain unavailable during sync scans until manually reset by user."""
         _reconcile(session, [make_unavail("vid1", "Private")])
 
         song = session.scalar(select(Song).where(Song.youtube_video_id == "vid1"))
@@ -196,7 +196,7 @@ class TestUnavailableSongs:
         _reconcile(session, [make_song("vid1", "Back online")])
 
         session.refresh(song)
-        assert song.download_status == "pending"
+        assert song.download_status == "unavailable"
 
     def test_downloaded_song_not_overwritten_by_unavailable(self, session):
         """A downloaded song must stay 'downloaded' even if seen as unavailable."""

@@ -18,7 +18,7 @@ def get_cookie_context(cookies_text: str | None) -> Generator[str | None, None, 
     - Always cleans up temp file in a finally block.
     - Never prints or exposes cookie contents.
     """
-    if not cookies_text or not cookies_text.strip():
+    if not isinstance(cookies_text, str) or not cookies_text.strip():
         yield None
         return
 

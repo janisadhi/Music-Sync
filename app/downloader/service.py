@@ -313,6 +313,7 @@ class SongDownloader:
         # Smart artist resolution
         artist_val = info.get("artist") or info.get("creator")
         title_str = info.get("title") or song.title
+        track.title = title_str
         if not artist_val and title_str:
             clean_title = re.sub(
                 r"\s*[\(\\[]?(?:official|music|video|audio|lyric|lyrics|hd|4k|remastered|remaster|live|acoustic|ft\.|feat\.).*?[\)\\]]?",
