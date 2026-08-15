@@ -5,10 +5,17 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install FFmpeg for yt-dlp audio conversion.
+# Install FFmpeg, AtomicParsley, and Deno for yt-dlp JS challenge solver.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
+        atomicparsley \
+        curl \
+        unzip \
+    && curl -fsSL https://deno.land/install.sh | sh \
+    && mv /root/.deno/bin/deno /usr/local/bin/deno \
+    && apt-get purge -y curl unzip \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

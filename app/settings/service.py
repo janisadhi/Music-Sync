@@ -24,6 +24,7 @@ class SettingsService:
             playlist_watch_mode="whole",
             playlist_watch_limit=None,
             delete_local_file_on_playlist_removal=False,
+            youtube_cookies=None,
         )
 
     def get(self) -> AppSettings:
@@ -52,6 +53,7 @@ class SettingsService:
         # Sentinel default so explicit None can clear the value.
         playlist_watch_limit: int | None = ...,  # type: ignore[assignment]
         delete_local_file_on_playlist_removal: bool | None = None,
+        youtube_cookies: str | None = ...,  # type: ignore[assignment]
     ) -> AppSettings:
 
         with SessionLocal() as session:
@@ -93,6 +95,9 @@ class SettingsService:
                 app_settings.delete_local_file_on_playlist_removal = (
                     delete_local_file_on_playlist_removal
                 )
+
+            if youtube_cookies is not ...:
+                app_settings.youtube_cookies = youtube_cookies
 
             session.commit()
             session.refresh(app_settings)

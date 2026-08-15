@@ -386,6 +386,15 @@ class AppSettings(Base):
         nullable=False,
     )
 
+    # ------------------------------------------------------------------
+    # Optional YouTube Cookies (sensitive credential, plain Netscape format)
+    # ------------------------------------------------------------------
+    youtube_cookies: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
+    )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),

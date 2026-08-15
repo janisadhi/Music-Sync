@@ -26,6 +26,7 @@ class SettingsResponse(BaseModel):
     playlist_watch_mode: str = "whole"
     playlist_watch_limit: int | None = None
     delete_local_file_on_playlist_removal: bool = False
+    has_youtube_cookies: bool = False
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -39,6 +40,8 @@ class SettingsUpdateRequest(BaseModel):
     playlist_watch_mode: Literal["whole", "last_n"] | None = None
     playlist_watch_limit: int | None = None
     delete_local_file_on_playlist_removal: bool | None = None
+    # None = leave unchanged, "" / empty string = clear cookies, str = update cookies
+    youtube_cookies: str | None = None
 
     @model_validator(mode="after")
     def validate_watch_settings(self):
@@ -64,9 +67,28 @@ class SettingsUpdateRequest(BaseModel):
         return self
 
 
+def _build_settings_response(settings_obj) -> SettingsResponse:
+    cookies_val = getattr(settings_obj, "youtube_cookies", None)
+    has_cookies = bool(cookies_val and cookies_val.strip())
+    return SettingsResponse(
+        sync_interval_seconds=settings_obj.sync_interval_seconds,
+        download_limit=settings_obj.download_limit,
+        lyrics_limit=settings_obj.lyrics_limit,
+        youtube_playlist_url=settings_obj.youtube_playlist_url,
+        max_download_retries=settings_obj.max_download_retries,
+        download_retry_delay_seconds=settings_obj.download_retry_delay_seconds,
+        auto_start_scheduler=settings_obj.auto_start_scheduler,
+        playlist_watch_mode=settings_obj.playlist_watch_mode,
+        playlist_watch_limit=settings_obj.playlist_watch_limit,
+        delete_local_file_on_playlist_removal=settings_obj.delete_local_file_on_playlist_removal,
+        has_youtube_cookies=has_cookies,
+    )
+
+
 @router.get("", response_model=SettingsResponse)
 def get_settings():
-    return settings_service.get()
+    s = settings_service.get()
+    return _build_settings_response(s)
 
 
 @router.patch("", response_model=SettingsResponse)
@@ -110,7 +132,13 @@ def update_settings(request: SettingsUpdateRequest):
                 request.delete_local_file_on_playlist_removal
             )
 
-        return settings_service.update(**update_kwargs)
+        if request.youtube_cookies is not None:
+            # If empty string passed, set to None in DB to clear cookies.
+            cookie_val = request.youtube_cookies.strip() if request.youtube_cookies.strip() else None
+            update_kwargs["youtube_cookies"] = cookie_val
+
+        updated = settings_service.update(**update_kwargs)
+        return _build_settings_response(updated)
 
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

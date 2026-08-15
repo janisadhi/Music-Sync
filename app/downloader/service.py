@@ -39,6 +39,7 @@ from app.database.models import DownloadedTrack, Song
 from app.database.session import SessionLocal
 from app.settings.service import SettingsService
 from app.core.paths import get_playlist_music_root
+from app.core.ytdlp import build_ydl_options, get_cookie_context
 
 
 class SongDownloader:
@@ -65,21 +66,31 @@ class SongDownloader:
         return datetime.now(timezone.utc) + timedelta(seconds=delay)
 
     def _is_retryable_error(self, exc: Exception) -> bool:
-        if isinstance(exc, yt_dlp.utils.DownloadError):
-            err_msg = str(exc).lower()
-            unretryable_keywords = [
-                "video unavailable",
-                "this video is unavailable",
-                "private video",
-                "this video is private",
-                "video has been removed",
-                "this video has been removed",
-                "deleted video",
-                "members-only",
-                "sign in to confirm your age",
-            ]
-            if any(kw in err_msg for kw in unretryable_keywords):
-                return False
+        err_msg = str(exc).lower()
+
+        # Permanent/configuration errors that should NOT be retried endlessy
+        unretryable_keywords = [
+            "video unavailable",
+            "this video is unavailable",
+            "private video",
+            "this video is private",
+            "video has been removed",
+            "this video has been removed",
+            "deleted video",
+            "members-only",
+            "sign in to confirm your age",
+            "account has been terminated",
+            "ffmpeg not found",
+            "ffprobe not found",
+            "atomicparsley not found",
+            "unable to find executable",
+            "executable not found",
+            "could not parse cookie",
+            "invalid cookie",
+        ]
+
+        if any(kw in err_msg for kw in unretryable_keywords):
+            return False
 
         return isinstance(
             exc,
@@ -112,35 +123,30 @@ class SongDownloader:
         self,
         song: Song,
         playlist_music_root: Path,
+        cookiefile: str | None = None,
     ) -> dict:
         output_template = str(playlist_music_root / "%(title)s.%(ext)s")
+        postprocessors = [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "opus",
+                "preferredquality": "0",
+            },
+            {
+                "key": "FFmpegMetadata",
+                "add_metadata": True,
+            },
+            {
+                "key": "EmbedThumbnail",
+            },
+        ]
 
-        return {
-            "format": "bestaudio/best",
-            "outtmpl": output_template,
-            "noplaylist": True,
-            "quiet": False,
-            "no_warnings": False,
-            # Download and embed video thumbnail as album art
-            "writethumbnail": True,
-            "postprocessors": [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "opus",
-                    "preferredquality": "0",
-                },
-                {
-                    # Embeds the downloaded thumbnail into the audio file
-                    "key": "EmbedThumbnail",
-                },
-                {
-                    # Write available metadata (title, artist, album, etc.)
-                    # from the yt-dlp info dict into the container tags
-                    "key": "FFmpegMetadata",
-                    "add_metadata": True,
-                },
-            ],
-        }
+        return build_ydl_options(
+            outtmpl=output_template,
+            cookiefile=cookiefile,
+            postprocessors=postprocessors,
+            writethumbnail=True,
+        )
 
     # ------------------------------------------------------------------
     # Download one song
@@ -164,89 +170,94 @@ class SongDownloader:
                 max_retries,
             )
 
-        try:
-            playlist_music_root = get_playlist_music_root(song.playlist.name)
-            video_url = f"https://www.youtube.com/watch?v={song.youtube_video_id}"
+        cookies_text = getattr(app_settings, "youtube_cookies", None)
 
-            ydl_opts = self._build_ydl_options(song, playlist_music_root)
+        with get_cookie_context(cookies_text) as cookie_file_path:
+            try:
+                playlist_music_root = get_playlist_music_root(song.playlist.name)
+                video_url = f"https://www.youtube.com/watch?v={song.youtube_video_id}"
 
-            song.download_status = "downloading"
-            song.error_message = None
-
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(video_url, download=True)
-                prepared = ydl.prepare_filename(info)
-                opus_path = Path(prepared).with_suffix(".opus")
-
-            # ----------------------------------------------------------
-            # Verify the output file exists
-            # ----------------------------------------------------------
-            if not opus_path.exists():
-                raise FileNotFoundError(
-                    f"Downloaded file not found: {opus_path}"
+                ydl_opts = self._build_ydl_options(
+                    song, playlist_music_root, cookiefile=cookie_file_path
                 )
 
-            # ----------------------------------------------------------
-            # Update Sync DB (Song)
-            # ----------------------------------------------------------
-            song.file_path = str(opus_path)
-            song.download_status = "downloaded"
-            song.download_retry_count = 0
-            song.next_download_attempt = None
-            song.error_message = None
+                song.download_status = "downloading"
+                song.error_message = None
 
-            # ----------------------------------------------------------
-            # Write / update Music Library DB (DownloadedTrack)
-            # Rich metadata comes from yt-dlp info dict – fetched here
-            # during download, NOT during playlist scanning.
-            # ----------------------------------------------------------
-            self._upsert_downloaded_track(song, info, opus_path)
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(video_url, download=True)
+                    prepared = ydl.prepare_filename(info)
+                    opus_path = Path(prepared).with_suffix(".opus")
 
-            print(f"Downloaded: {song.title} ({song.youtube_video_id})")
-            print(f"File: {opus_path}")
+                # ----------------------------------------------------------
+                # Verify the output file exists
+                # ----------------------------------------------------------
+                if not opus_path.exists():
+                    raise FileNotFoundError(
+                        f"Downloaded file not found: {opus_path}"
+                    )
 
-            return True
-
-        except Exception as exc:
-            # Strip ANSI escape codes from yt-dlp error output.
-            song.error_message = re.sub(
-                r"\x1B\[[0-?]*[ -/]*[@-~]",
-                "",
-                str(exc),
-            )
-
-            # ----------------------------------------------------------
-            # Non-retryable error (unavailable, private, deleted, …)
-            # ----------------------------------------------------------
-            if not self._is_retryable_error(exc):
-                song.download_status = "failed"
+                # ----------------------------------------------------------
+                # Update Sync DB (Song)
+                # ----------------------------------------------------------
+                song.file_path = str(opus_path)
+                song.download_status = "downloaded"
+                song.download_retry_count = 0
                 song.next_download_attempt = None
-                print(f"Non-retryable download failure: {song.title}")
+                song.error_message = None
+
+                # ----------------------------------------------------------
+                # Write / update Music Library DB (DownloadedTrack)
+                # Rich metadata comes from yt-dlp info dict – fetched here
+                # during download, NOT during playlist scanning.
+                # ----------------------------------------------------------
+                self._upsert_downloaded_track(song, info, opus_path)
+
+                print(f"Downloaded: {song.title} ({song.youtube_video_id})")
+                print(f"File: {opus_path}")
+
+                return True
+
+            except Exception as exc:
+                # Strip ANSI escape codes from yt-dlp error output.
+                song.error_message = re.sub(
+                    r"\x1B\[[0-?]*[ -/]*[@-~]",
+                    "",
+                    str(exc),
+                )
+
+                # ----------------------------------------------------------
+                # Non-retryable error (unavailable, private, deleted, …)
+                # ----------------------------------------------------------
+                if not self._is_retryable_error(exc):
+                    song.download_status = "failed"
+                    song.next_download_attempt = None
+                    print(f"Non-retryable download failure: {song.title}")
+                    print(f"Error: {song.error_message}")
+                    return False
+
+                # ----------------------------------------------------------
+                # Retryable error – apply exponential backoff
+                # ----------------------------------------------------------
+                song.download_retry_count += 1
+                song.download_status = "failed"
+
+                if song.download_retry_count < max_retries:
+                    song.next_download_attempt = self._calculate_retry_time(
+                        song.download_retry_count, retry_delay
+                    )
+                    print(f"Download failed (retryable): {song.title}")
+                    print(
+                        f"Retry {song.download_retry_count}/{max_retries} "
+                        f"at {song.next_download_attempt}"
+                    )
+                else:
+                    song.next_download_attempt = None
+                    print(f"Download permanently failed (max retries): {song.title}")
+                    print(f"Max retries: {max_retries}")
+
                 print(f"Error: {song.error_message}")
                 return False
-
-            # ----------------------------------------------------------
-            # Retryable error – apply exponential backoff
-            # ----------------------------------------------------------
-            song.download_retry_count += 1
-            song.download_status = "failed"
-
-            if song.download_retry_count < max_retries:
-                song.next_download_attempt = self._calculate_retry_time(
-                    song.download_retry_count, retry_delay
-                )
-                print(f"Download failed (retryable): {song.title}")
-                print(
-                    f"Retry {song.download_retry_count}/{max_retries} "
-                    f"at {song.next_download_attempt}"
-                )
-            else:
-                song.next_download_attempt = None
-                print(f"Download permanently failed (max retries): {song.title}")
-                print(f"Max retries: {max_retries}")
-
-            print(f"Error: {song.error_message}")
-            return False
 
     # ------------------------------------------------------------------
     # Music Library DB – DownloadedTrack upsert
@@ -297,10 +308,26 @@ class SongDownloader:
         track.file_path = str(opus_path)
         track.file_format = "opus"
         track.file_size_bytes = file_size
-        track.title = info.get("title") or song.title
-        track.artist = info.get("artist") or info.get("uploader")
+        # Smart artist resolution
+        artist_val = info.get("artist") or info.get("creator")
+        title_str = info.get("title") or song.title
+        if not artist_val and title_str:
+            clean_title = re.sub(
+                r"\s*[\(\\[]?(?:official|music|video|audio|lyric|lyrics|hd|4k|remastered|remaster|live|acoustic|ft\.|feat\.).*?[\)\\]]?",
+                "",
+                title_str,
+                flags=re.IGNORECASE,
+            ).strip()
+            if " - " in clean_title:
+                artist_val = clean_title.split(" - ", 1)[0].strip()
+
+        if not artist_val:
+            uploader = info.get("uploader") or ""
+            artist_val = re.sub(r"\s*-\s*Topic$", "", uploader, flags=re.IGNORECASE).strip() or None
+
+        track.artist = artist_val
         track.album = info.get("album")
-        track.album_artist = info.get("album_artist") or info.get("artist") or info.get("uploader")
+        track.album_artist = info.get("album_artist") or artist_val
         track.genre = info.get("genre")
         track.track_number = info.get("track_number")
         track.duration_seconds = info.get("duration")

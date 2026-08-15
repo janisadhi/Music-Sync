@@ -47,7 +47,10 @@ class SongResponse(BaseModel):
     lyrics_status: str
     file_path: str | None
     lyrics_path: str | None
-    error_message: str | None
+    artist: str | None = None
+    album: str | None = None
+    thumbnail_url: str | None = None
+    duration_seconds: int | None = None
     created_at: datetime
     updated_at: datetime
 

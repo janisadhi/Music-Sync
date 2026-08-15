@@ -7,11 +7,16 @@ import {
     Download,
     FileText,
     HardDrive,
+    HelpCircle,
+    Key,
+    Lock,
     RefreshCw,
     RotateCcw,
     Save,
+    ShieldCheck,
     Sliders,
     Trash2,
+    X,
     Zap,
 } from "lucide-react";
 import api from "../services/api";
@@ -52,6 +57,12 @@ function Settings() {
         delete_local_file_on_playlist_removal: false,
     });
 
+    // YouTube Cookie state
+    const [hasYoutubeCookies, setHasYoutubeCookies] = useState(false);
+    const [youtubeCookiesInput, setYoutubeCookiesInput] = useState("");
+    const [showCookieGuide, setShowCookieGuide] = useState(false);
+    const [clearingCookies, setClearingCookies] = useState(false);
+
     // Live status from /sync/status
     const [syncStatus, setSyncStatus] = useState(null);
 
@@ -87,6 +98,7 @@ function Settings() {
                 ...settingsRes.data,
                 playlist_watch_limit: settingsRes.data.playlist_watch_limit ?? 10,
             });
+            setHasYoutubeCookies(Boolean(settingsRes.data.has_youtube_cookies));
             setSyncStatus(statusRes.data);
         } catch (err) {
             console.error("Failed to load settings:", err);
@@ -154,6 +166,22 @@ function Settings() {
         setPendingDeleteValue(false);
     }
 
+    async function handleClearCookies() {
+        try {
+            setClearingCookies(true);
+            setMessage("");
+            setError("");
+            const res = await api.patch("/settings", { youtube_cookies: "" });
+            setHasYoutubeCookies(Boolean(res.data.has_youtube_cookies));
+            setYoutubeCookiesInput("");
+            setMessage("YouTube cookies cleared.");
+        } catch (err) {
+            setError(err.response?.data?.detail || "Failed to clear cookies.");
+        } finally {
+            setClearingCookies(false);
+        }
+    }
+
     async function handleSubmit(event) {
         event.preventDefault();
 
@@ -186,12 +214,18 @@ function Settings() {
                     settings.delete_local_file_on_playlist_removal,
             };
 
+            if (youtubeCookiesInput.trim()) {
+                payload.youtube_cookies = youtubeCookiesInput.trim();
+            }
+
             const response = await api.patch("/settings", payload);
 
             setSettings({
                 ...response.data,
                 playlist_watch_limit: response.data.playlist_watch_limit ?? 10,
             });
+            setHasYoutubeCookies(Boolean(response.data.has_youtube_cookies));
+            setYoutubeCookiesInput("");
             setMessage("Settings saved successfully.");
 
             // Refresh status to reflect any interval change
@@ -755,6 +789,85 @@ function Settings() {
                     </div>
                 </div>
 
+                {/* ============================================================
+                    SECTION 7 – YouTube Authentication / Cookies (Optional)
+                    ============================================================ */}
+                <div className="settings-card">
+                    <div className="card-section-header">
+                        <Key size={20} className="section-icon purple" />
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                                <div>
+                                    <h3>YouTube Authentication & Cookies</h3>
+                                    <p>Optional cookie configuration for age-restricted videos and restricted playback.</p>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <span className={`cookie-status-badge ${hasYoutubeCookies ? "configured" : "not-configured"}`}>
+                                        {hasYoutubeCookies ? (
+                                            <>
+                                                <CheckCircle2 size={13} /> Configured
+                                            </>
+                                        ) : (
+                                            "Not Configured"
+                                        )}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={() => setShowCookieGuide(true)}
+                                    >
+                                        <HelpCircle size={14} /> How to get cookies?
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="setting-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "12px" }}>
+                        <div className="setting-info" style={{ maxWidth: "100%" }}>
+                            <label htmlFor="youtube_cookies" className="setting-label">
+                                YouTube Cookies (Netscape format)
+                            </label>
+                            <p className="setting-desc">
+                                Paste your exported YouTube cookies in Netscape format below. Cookies are <strong>completely optional</strong> and only used when downloading restricted tracks.
+                            </p>
+                        </div>
+
+                        <div className="cookie-input-wrapper">
+                            <textarea
+                                id="youtube_cookies"
+                                name="youtube_cookies"
+                                rows={5}
+                                className="cookie-textarea"
+                                placeholder={
+                                    hasYoutubeCookies
+                                        ? "YouTube cookies are currently configured and saved securely. To update, paste a new Netscape format cookie string here."
+                                        : "Paste Netscape cookie file content here (# Netscape HTTP Cookie File...)"
+                                }
+                                value={youtubeCookiesInput}
+                                onChange={(e) => setYoutubeCookiesInput(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="cookie-footer-row">
+                            <div className="cookie-security-notice">
+                                <ShieldCheck size={14} className="security-icon" />
+                                <span>Cookies are stored securely, never logged, and omitted from API responses.</span>
+                            </div>
+                            {hasYoutubeCookies && (
+                                <button
+                                    type="button"
+                                    className="btn btn-danger-soft btn-sm"
+                                    onClick={handleClearCookies}
+                                    disabled={clearingCookies}
+                                >
+                                    {clearingCookies ? <RefreshCw size={13} className="spin-icon" /> : <Trash2 size={13} />} Clear Cookies
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {/* Save Bar */}
                 <div className="settings-save-footer">
                     <button type="submit" disabled={saving} className="btn btn-primary btn-lg">
@@ -763,6 +876,66 @@ function Settings() {
                     </button>
                 </div>
             </form>
+
+            {/* ----------------------------------------------------------------
+                How to get YouTube cookies modal guide
+            ---------------------------------------------------------------- */}
+            {showCookieGuide && (
+                <div className="settings-warning-modal-overlay">
+                    <div className="settings-warning-modal cookie-guide-modal">
+                        <div className="warning-modal-header">
+                            <Key size={22} className="warning-icon purple" style={{ color: "#a855f7" }} />
+                            <h3>How to Get YouTube Cookies</h3>
+                            <button
+                                type="button"
+                                className="modal-close-btn"
+                                onClick={() => setShowCookieGuide(false)}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="cookie-guide-body">
+                            <div className="guide-callout info">
+                                <ShieldCheck size={16} />
+                                <span>
+                                    <strong>Cookies are 100% Optional.</strong> Normal YouTube videos download without any cookie configuration.
+                                </span>
+                            </div>
+
+                            <h4 className="guide-step-title">1. When are cookies needed?</h4>
+                            <p className="warning-modal-body">
+                                YouTube cookies are useful if you want to download <strong>age-restricted videos</strong>, private/unlisted playlists you own, or if YouTube applies strict anti-bot playback restrictions to specific videos in your library.
+                            </p>
+
+                            <h4 className="guide-step-title">2. How to export cookies from your browser</h4>
+                            <ol className="guide-steps-list">
+                                <li>Open your browser (Chrome, Firefox, Edge, or Brave) and go to <strong>YouTube.com</strong> while signed in.</li>
+                                <li>Install a browser extension for exporting cookies in Netscape format, such as <strong>"Get cookies.txt LOCALLY"</strong> (available on Chrome Web Store and Firefox Add-ons).</li>
+                                <li>Click the extension icon while on YouTube and select <strong>Export</strong> or <strong>Download</strong> (Netscape format).</li>
+                            </ol>
+
+                            <h4 className="guide-step-title">3. How to save them in Music Sync</h4>
+                            <ol className="guide-steps-list">
+                                <li>Open the downloaded <code>cookies.txt</code> file in a text editor.</li>
+                                <li>Copy all the text (starting with <code># Netscape HTTP Cookie File</code>).</li>
+                                <li>Paste the text into the <strong>YouTube Cookies</strong> text area on this page and click <strong>Save Settings</strong>.</li>
+                            </ol>
+
+                            <div className="guide-callout security">
+                                <Lock size={16} />
+                                <span>
+                                    <strong>Security & Privacy:</strong> Cookie contents are saved locally in your database and passed securely to yt-dlp during downloads. Cookie contents are never displayed in application logs or returned in public API responses.
+                                </span>
+                            </div>
+                        </div>
+                        <div className="warning-modal-actions">
+                            <button className="btn btn-primary" onClick={() => setShowCookieGuide(false)}>
+                                Got it, Close Guide
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

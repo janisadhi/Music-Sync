@@ -25,6 +25,9 @@ from dataclasses import dataclass, field
 
 import yt_dlp
 
+from app.settings.service import SettingsService
+from app.core.ytdlp import build_ydl_options, get_cookie_context
+
 
 # Titles that YouTube uses in flat extraction to flag inaccessible videos.
 _UNAVAILABLE_TITLES = frozenset(
@@ -78,22 +81,33 @@ class UnavailableYouTubeSong:
 class YouTubePlaylistWatcher:
     def __init__(self, playlist_url: str):
         self.playlist_url = playlist_url
+        self.settings_service = SettingsService()
+
+    def _get_cookies_text(self) -> str | None:
+        try:
+            s = self.settings_service.get()
+            return getattr(s, "youtube_cookies", None)
+        except Exception:
+            return None
 
     # ------------------------------------------------------------------
     # Playlist-level metadata (used when auto-naming a new playlist)
     # ------------------------------------------------------------------
 
     def fetch_playlist_metadata(self) -> dict:
-        options = {
-            "quiet": True,
-            "no_warnings": True,
-            "extract_flat": True,
-            "skip_download": True,
-            "ignoreerrors": True,
-        }
+        cookies_text = self._get_cookies_text()
+        with get_cookie_context(cookies_text) as cookiefile:
+            options = build_ydl_options(
+                quiet=True,
+                no_warnings=True,
+                extract_flat=True,
+                skip_download=True,
+                ignoreerrors=True,
+                cookiefile=cookiefile,
+            )
 
-        with yt_dlp.YoutubeDL(options) as ydl:
-            info = ydl.extract_info(self.playlist_url, download=False)
+            with yt_dlp.YoutubeDL(options) as ydl:
+                info = ydl.extract_info(self.playlist_url, download=False)
 
         if not info:
             return {"id": None, "name": "YouTube Playlist"}
@@ -121,16 +135,19 @@ class YouTubePlaylistWatcher:
 
         The caller (Reconciler) decides what to do with each item type.
         """
-        options = {
-            "quiet": True,
-            "no_warnings": True,
-            "extract_flat": True,
-            "skip_download": True,
-            "ignoreerrors": True,
-        }
+        cookies_text = self._get_cookies_text()
+        with get_cookie_context(cookies_text) as cookiefile:
+            options = build_ydl_options(
+                quiet=True,
+                no_warnings=True,
+                extract_flat=True,
+                skip_download=True,
+                ignoreerrors=True,
+                cookiefile=cookiefile,
+            )
 
-        with yt_dlp.YoutubeDL(options) as ydl:
-            info = ydl.extract_info(self.playlist_url, download=False)
+            with yt_dlp.YoutubeDL(options) as ydl:
+                info = ydl.extract_info(self.playlist_url, download=False)
 
         if not info:
             return []
