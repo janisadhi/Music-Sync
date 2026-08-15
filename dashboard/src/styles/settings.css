@@ -273,3 +273,179 @@ input:checked + .slider:before {
     align-items: center;
     gap: 14px;
 }
+
+/* ==============================================================================
+   Settings – additional styles added for architecture update
+   ============================================================================== */
+
+/* Radio option */
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Toggle rows (inline label + switch) */
+.setting-row.toggle-row {
+    align-items: flex-start;
+}
+
+/* Service status rows inside the Services card */
+.service-status-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.service-status-row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.service-status-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.status-beacon-sm {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.status-beacon-sm.running {
+    background-color: var(--success-emerald);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.status-beacon-sm.stopped {
+    background-color: var(--text-muted);
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.15);
+}
+
+.service-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: block;
+}
+
+.service-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 3px 0 0;
+    line-height: 1.5;
+}
+
+.service-error {
+    color: var(--danger-rose);
+    font-weight: 600;
+}
+
+.service-actions {
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+}
+
+/* Inline destructive warning under toggle */
+.destructive-warning-inline {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background-color: var(--warning-soft);
+    border: 1px solid #fcd34d;
+    border-radius: var(--radius-md);
+    color: #92400e;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.destructive-warning-inline svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: #d97706;
+}
+
+/* Confirmation modal overlay */
+.settings-warning-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.settings-warning-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.warning-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.warning-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.warning-icon {
+    color: var(--danger-rose);
+    flex-shrink: 0;
+}
+
+.warning-modal-body {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.warning-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+/* btn-secondary for the reset header button */
+.btn-secondary {
+    background-color: var(--bg-card);
+    color: var(--text-secondary);
+    border-color: var(--border-light);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--bg-card-hover);
+    color: var(--text-primary);
+}

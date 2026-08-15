@@ -119,8 +119,8 @@ function SyncHistory() {
                                         <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "12px", color: "var(--text-muted)", fontWeight: "700" }}>STARTED AT</th>
                                         <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "12px", color: "var(--text-muted)", fontWeight: "700" }}>COMPLETED AT</th>
                                         <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "12px", color: "var(--text-muted)", fontWeight: "700" }}>DURATION</th>
-                                        <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "12px", color: "var(--text-muted)", fontWeight: "700" }}>ERROR DETAILS</th>
-                                    </tr>
+                                        <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "12px", color: "var(--text-muted)", fontWeight: "700" }}>SCAN STATS</th>
+                                        <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "12px", color: "var(--text-muted)", fontWeight: "700" }}>ERROR DETAILS</th>                                    </tr>
                                 </thead>
                                 <tbody>
                                     {syncs.map((sync, index) => (
@@ -142,6 +142,14 @@ function SyncHistory() {
                                                     <Clock size={14} />
                                                     <span>{calculateDuration(sync.started_at, sync.completed_at)}</span>
                                                 </div>
+                                            </td>
+                                            <td style={{ padding: "14px 20px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                                                {sync.stats ? (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                                        <span>{sync.stats.playlists_scanned ?? 0} playlists</span>
+                                                        <span>{sync.stats.total_new ?? 0} new · {sync.stats.total_unavailable ?? 0} unavail</span>
+                                                    </div>
+                                                ) : "—"}
                                             </td>
                                             <td style={{ padding: "14px 20px", fontSize: "13px", color: sync.error ? "var(--danger-rose)" : "var(--text-muted)" }}>
                                                 {sync.error ? (
