@@ -11,16 +11,20 @@ graph TD
         API --> Scheduler["APScheduler Engine"]
     end
 
-    subgraph Workers["Sync & Download Pipelines"]
-        Scheduler --> Watcher["1. YouTube Watcher<br/>(Flat Scraper)"]
+    subgraph Workers["Background Worker Threads"]
+        Scheduler -->|"Periodic Trigger"| SyncService["SyncService<br/>(Sync Orchestrator)"]
+        SyncService --> Watcher["1. YouTube Watcher<br/>(Flat Scraper)"]
         Watcher --> Reconciler["2. Playlist Reconciler"]
-        Reconciler --> DB
-        
-        Scheduler --> Downloader["3. Song Downloader<br/>(yt-dlp + Deno JS Solver + FFmpeg)"]
-        CoreYTDLP --> Watcher
-        CoreYTDLP --> Downloader
-        
-        Scheduler --> LyricsService["4. Lyrics Worker<br/>(LRCLIB Client)"]
+        Reconciler -->|"INSERT/UPDATE Song rows<br/>(commits per item)"| DB
+
+        CoreYTDLP -.->|"yt-dlp Options & Cookies"| Watcher
+        CoreYTDLP -.->|"yt-dlp Options & Cookies"| SongDownloader
+
+        DownloaderWorker["3. Downloader Worker<br/>(Independent Daemon Thread)"] -->|"Polls pending/retryable songs"| DB
+        DownloaderWorker --> SongDownloader["Song Downloader<br/>(yt-dlp + Deno + FFmpeg)"]
+
+        LyricsWorker["4. Lyrics Worker<br/>(Independent Daemon Thread)"] -->|"Polls downloaded songs<br/>with pending lyrics"| DB
+        LyricsWorker --> LyricsService["Lyrics Service<br/>(LRCLIB Client)"]
     end
 
     subgraph Persistence["Persistence Layer"]
@@ -30,16 +34,17 @@ graph TD
     end
 
     subgraph Storage["Local Storage Mounts"]
-        Downloader -->|Write Audio & Embed Tags| AudioFiles["/app/downloads/<Playlist>/music/*.opus"]
-        LyricsService -->|Write Synced Lyrics| LyricsFiles["/app/downloads/<Playlist>/no-lyrics/*.lrc"]
-        API -->|Stream Media & Lyrics| AudioFiles
-        API -->|Stream Media & Lyrics| LyricsFiles
+        SongDownloader -->|"Write Opus Audio &<br/>Embed Artwork/Tags"| AudioFiles["/app/downloads/&lt;Playlist&gt;/music/*.opus"]
+        LyricsService -->|"Write .lrc Files"| AudioFiles
+        LyricsService -->|"Move Audio<br/>(No Lyrics Found)"| NoLyricsFiles["/app/downloads/&lt;Playlist&gt;/no-lyrics/*.opus"]
+        API -->|"Stream Audio & Lyrics"| AudioFiles
+        API -->|"Stream Audio"| NoLyricsFiles
     end
 
     subgraph External["External Services"]
-        Watcher -->|Flat Playlist Extraction| YT["YouTube Music"]
-        Downloader -->|Stream & Deno Challenge Solving| YT
-        LyricsService -->|Fetch Synced LRC| LRCLIB["LRCLIB API"]
+        Watcher -->|"Flat Playlist Extraction"| YT["YouTube Music"]
+        SongDownloader -->|"Stream Audio &<br/>Deno Challenge Solving"| YT
+        LyricsService -->|"Fetch Synced .lrc"| LRCLIB["LRCLIB.net API"]
     end
 
     style Client fill:#1e1e2e,stroke:#89b4fa,color:#cdd6f4
