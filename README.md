@@ -5,16 +5,16 @@
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
 
-**Music Sync** is an automated, self-hosted media management and synchronization platform designed to continuously back up YouTube playlists into a locally organized, high-fidelity audio library. Built with a decoupled microservice-ready architecture, it automatically monitors changes across target playlists, extracts audio metadata, downloads high-quality audio streams using `yt-dlp`, retrieves synchronized `.lrc` lyrics via LRCLIB, and exposes a rich React web dashboard for streaming, metadata management, and continuous sync configuration.
+**Music Sync** is an automated, self-hosted media management and synchronization platform designed to continuously back up YouTube playlists into a locally organized, high-fidelity audio library. Built with a decoupled microservice-ready architecture (**SYNC DISCOVERS → DOWNLOADER DOWNLOADS → LYRICS FETCHES**), it automatically monitors changes across target playlists, extracts audio metadata, downloads high-quality audio streams using `yt-dlp` and `Deno`, retrieves synchronized `.lrc` lyrics via LRCLIB, and exposes a rich React web dashboard for streaming, metadata management, and continuous sync configuration.
 
 ---
 
 ## Built With
 
-- **Backend Framework**: Python 3.13, FastAPI, Uvicorn, Pydantic v2
+- **Backend Framework**: Python 3.13 / 3.14-slim, FastAPI, Uvicorn, Pydantic v2
 - **Database & ORM**: PostgreSQL 17, SQLAlchemy 2.0, Alembic migrations
 - **Frontend Dashboard**: React 19, Vite, Tailwind CSS, Lucide Icons, Axios
-- **Audio Extraction & Processing**: `yt-dlp`, FFmpeg (Opus audio encoding)
+- **Audio Extraction & JS Solver**: `yt-dlp`, `yt-dlp-ejs`, **Deno** 2.9+ (JS Challenge Solver), FFmpeg (Opus audio encoding)
 - **Lyrics Provider**: LRCLIB API (Synchronized `.lrc` lyrics search & parser)
 - **Task Scheduling**: APScheduler (Background periodic synchronization engine)
 - **Containerization & Server**: Docker, Docker Compose, Nginx (Frontend SPA proxy)
@@ -29,6 +29,9 @@
 
 ## Key Features
 
+- **Strict Architecture Principles**: Decoupled lifecycle (**SYNC DISCOVERS → DOWNLOADER DOWNLOADS**). Sync only performs flat, fast scanning without metadata extractions or audio downloads.
+- **Deno JS Challenge Solver**: Bundled Deno 2.9+ and `yt-dlp-ejs` inside container runtime to execute complex YouTube JS challenges seamlessly without missing formats or 403 Forbidden errors.
+- **Authenticated & Private Sync (YouTube Cookies)**: Supports Netscape format YouTube cookies stored directly in encrypted/secure database settings to sync age-restricted and private playlists safely.
 - **JWT Authentication & Security**: Custom bearer token authentication with PBKDF2-HMAC-SHA256 password hashing and protected dashboard routes.
 - **Multi-Playlist Sync**: Register multiple YouTube playlists with granular per-playlist toggle switches and metadata tracking.
 - **Flexible Watch Modes**: Switch between full playlist monitoring (**Whole Playlist**) or fast delta syncing (**Last N Songs**).
@@ -36,7 +39,7 @@
 - **High-Quality Opus Audio Downloading**: Extracts lossy/lossless audio streams using `yt-dlp` and normalizes metadata tags with FFmpeg.
 - **Synchronized `.lrc` Lyrics Search**: Automatically matches title and artist metadata against LRCLIB to store synchronized lyrics files.
 - **Interactive Web Player & Dashboard**: Real-time React dashboard with dynamic lyric scrolling, status filtering, and playback controls.
-- **GUI-Based Sync & Concurrency Controls**: Live scheduler controls, manual batch execution, download worker queue limits, and retry policy management.
+- **GUI-Based Sync & Concurrency Controls**: Live scheduler controls, manual batch execution, download worker queue limits, retry policy management, and cookie management.
 - **Container-Native Infrastructure**: Production-ready deployment using Docker Compose orchestrating PostgreSQL, FastAPI backend, and Nginx frontend.
 
 ---
@@ -140,12 +143,15 @@ Once the containers are running, follow these steps to set up your library:
 2. **Initial Login**:
    - **Default Username**: `admin`
    - **Default Password**: `admin`
-   > **Note**: Update your password upon initial login under . Keep your new password safe as administrative resets require database intervention.No password reset available on current version .
+   > **Note**: Update your password upon initial login under Settings. Keep your new password safe as administrative resets require database intervention.
 3. **Register a Playlist**:
    - Navigate to the **Playlists** tab (`/playlists`).
    - Click **Add Playlist**, paste your YouTube playlist URL (e.g., `https://www.youtube.com/playlist?list=...`), and assign a name.
    - Ensure the playlist switch is toggled to **Enabled**.
-4. **Trigger Synchronization**:
+4. **Configure YouTube Cookies (Optional)**:
+   - Go to **Settings** (`/settings`) -> **YouTube Cookies Configuration**.
+   - Paste your exported Netscape HTTP format cookies (e.g. from *Get cookies.txt LOCALLY* extension) to enable private/member video extraction.
+5. **Trigger Synchronization**:
    - **Manual Single-Run**: Click **Sync Now** on the **Dashboard** page (`/`) or trigger sync for an individual playlist.
    - **Continuous Background Sync**: Navigate to **Settings** (`/settings`), configure your sync interval, and click **Start Scheduler**.
 
@@ -153,7 +159,7 @@ Once the containers are running, follow these steps to set up your library:
 
 ## Configuration & Settings Reference
 
-All synchronization controls are managed persistent in PostgreSQL and customizable directly via the Settings GUI:
+All synchronization controls are managed persistently in PostgreSQL and customizable directly via the Settings GUI:
 
 - **Automation & Startup**:
   - `auto_start_scheduler`: Automatically activates the periodic background sync engine on application launch.
@@ -164,6 +170,8 @@ All synchronization controls are managed persistent in PostgreSQL and customizab
     - `whole`: Scans the entire playlist during every sync run to ensure complete synchronization.
     - `last_n`: Scans only the top **N** and bottom **N** tracks of the playlist for fast incremental syncs.
   - `playlist_watch_limit`: Number of tracks (*N*) evaluated when operating in `last_n` mode (default: `20`).
+- **YouTube Authentication**:
+  - `youtube_cookies`: Exported Netscape HTTP cookie string used by `yt-dlp` for age-restricted / private playlist downloads. Automatically sanitized and used via temporary file context manager.
 - **Concurrency Limits**:
   - `max_concurrent_downloads`: Maximum parallel audio download workers managed by `yt-dlp`.
   - `max_concurrent_lyrics`: Maximum parallel LRCLIB request workers.
@@ -182,7 +190,7 @@ The end-to-end download and synchronization process operates through a coordinat
            │
            ▼
 ┌──────────────────────┐
-│  1. Playlist Watcher │ ── Scrapes playlist entries (Whole or Last N mode)
+│  1. Playlist Watcher │ ── Performs fast flat scanning only (Whole or Last N mode)
 └──────────────────────┘
            │
            ▼
@@ -192,8 +200,8 @@ The end-to-end download and synchronization process operates through a coordinat
            │
            ▼
 ┌──────────────────────┐
-│ 3. Downloader Engine │ ── Queues pending tracks, fetches high-quality audio via yt-dlp,
-└──────────────────────┘    encodes Opus files, and embeds ID3 metadata
+│ 3. Downloader Engine │ ── Queues pending tracks, executes yt-dlp with Deno JS solver & cookies,
+└──────────────────────┘    fetches full metadata, encodes Opus files, and embeds tags
            │
            ▼
 ┌──────────────────────┐
@@ -214,8 +222,9 @@ The end-to-end download and synchronization process operates through a coordinat
 - **Playlists (`/playlists`)**: Interface to add, edit, toggle, or remove tracked YouTube playlists.
 - **Playlist Detail (`/playlists/:id/detail`)**: Granular view of tracks associated with a specific playlist, showing track positions, download status badges, and manual re-sync buttons.
 - **Songs Catalog (`/songs`)**: Complete audio library catalog with search filters (by title, artist, or status), built-in audio player, and real-time synchronized `.lrc` lyric display.
+- **Artists View (`/songs/artists`)**: Unique artist grouping and library navigation.
 - **Sync History (`/history`)**: Historical audit log recording execution timestamps, duration, track download statistics, and detailed failure logs.
-- **Settings (`/settings`)**: Runtime configuration center for watch modes, worker concurrency, sync schedules, and administrative security credentials.
+- **Settings (`/settings`)**: Runtime configuration center for watch modes, YouTube cookie management, worker concurrency, sync schedules, and administrative security credentials.
 - **System Health (`/health`)**: Real-time status reporting for PostgreSQL database connection, storage path availability, and FastAPI backend health.
 
 ---
@@ -227,6 +236,7 @@ To run the application locally without Docker containers:
 ### Prerequisites
 - Python 3.13+
 - Node.js 18+ and `npm`
+- Deno 2.9+ installed and accessible in system `PATH`
 - FFmpeg installed and accessible in system `PATH`
 - PostgreSQL 17 running locally
 
@@ -298,6 +308,7 @@ To run the application locally without Docker containers:
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/songs` | List library songs with status/artist/playlist filtering |
+| `GET` | `/songs/artists` | Retrieve distinct artist list |
 | `GET` | `/songs/{id}` | Get detailed metadata for a specific song |
 | `GET` | `/songs/{id}/lyrics` | Fetch synchronized `.lrc` lyric content |
 | `GET` | `/songs/{id}/audio` | Stream or download `.opus` audio file |
@@ -320,7 +331,7 @@ To run the application locally without Docker containers:
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/settings` | Retrieve active application runtime settings |
-| `PUT` | `/settings` | Update sync intervals, watch modes, worker concurrency, and retry limits |
+| `PUT` | `/settings` | Update sync intervals, watch modes, YouTube cookies, worker concurrency, and retry limits |
 
 ---
 
