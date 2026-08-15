@@ -9,7 +9,7 @@ assignees: ''
 ## Documentation Issue Description
 
 **Affected File / Wiki Page**
-<!-- Specify the affected file path or Wiki document URL (e.g. Wiki/Architecture/Data-Flow.md) -->
+<!-- Specify the affected Wiki page URL or name (e.g. Data-Flow or https://github.com/janisadhi/Music-Sync/wiki/Data-Flow) -->
 
 **Describe the Inaccuracy or Gap**
 <!-- Explain what is incorrect, missing, outdated, or inconsistent with the actual codebase -->

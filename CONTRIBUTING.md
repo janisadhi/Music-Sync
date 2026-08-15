@@ -32,7 +32,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating a feature re
 
 ### 3. Improving Documentation
 
-If you notice inaccuracies, broken links, or missing information in the documentation or [Wiki](Wiki/Home.md), please submit a documentation issue or open a pull request directly.
+If you notice inaccuracies, broken links, or missing information in the documentation or [Wiki](https://github.com/janisadhi/Music-Sync/wiki), please submit a documentation issue or open a pull request directly.
 
 ---
 

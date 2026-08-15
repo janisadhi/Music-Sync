@@ -27,41 +27,9 @@
 Music-Sync operates on a strict decoupled worker contract:
 > **SYNC DISCOVERS → DOWNLOADER DOWNLOADS → LYRICS PROCESSES → SCHEDULER TRIGGERS**
 
-```text
-                  +--------------------------+
-                  |  YouTube Music Playlists |
-                  +------------+-------------+
-                               |
-                               v
-                     [ YouTube Watcher ]
-                               | (Flat Extraction)
-                               v
-                   [ Playlist Reconciler ]
-                               |
-                               v
-                  +------------+-------------+
-                  |    PostgreSQL Database   |
-                  +------+-------------+-----+
-                         |             |
-           +-------------+             +-------------+
-           | Pending Downloads                       | Pending Lyrics
-           v                                         v
-   [ Song Downloader ]                       [ Lyrics Worker ]
-   (`yt-dlp` + Deno)                           (LRCLIB API)
-           |                                         |
-           v                                         v
-   `downloads/<Playlist>/music/*.opus`       `downloads/<Playlist>/music/*.lrc`
-           \                                         /
-            +--------------------+------------------+
-                                 |
-                                 v
-                     [ FastAPI REST Backend ]
-                                 |
-                                 v
-                 [ Nginx + React Web Dashboard ]
-```
+![Music-Sync Architecture Diagram](architecture.svg)
 
-For in-depth architectural details, refer to the [System Architecture Wiki](Wiki/Architecture/Architecture-Overview.md).
+For in-depth architectural details, refer to the [System Architecture Wiki](https://github.com/janisadhi/Music-Sync/wiki/Architecture-Overview).
 
 ---
 
@@ -99,8 +67,7 @@ Music-Sync/
 ├── data/                     # Persistent mounted storage (bind mount target)
 ├── docker-compose.yml        # Local development container orchestration
 ├── docker-compose-cd.yaml     # Production CD stack (GHCR image deployment)
-├── Dockerfile                # Backend container definition (Python 3.14-slim + Deno + FFmpeg)
-└── Wiki/                     # Comprehensive Technical Documentation Wiki
+└── Dockerfile                # Backend container definition (Python 3.14-slim + Deno + FFmpeg)
 ```
 
 ---
@@ -168,30 +135,30 @@ npm run dev
 
 ## Technical Documentation Wiki
 
-For detailed technical documentation, architectural diagrams, API reference, database schema specifications, and operations guides, explore the repository **[Wiki/](Wiki/Home.md)**:
+For detailed technical documentation, architectural diagrams, API reference, database schema specifications, and operations guides, explore the repository **[GitHub Wiki](https://github.com/janisadhi/Music-Sync/wiki)**:
 
 - 📐 **Architecture**
-  - [Architecture Overview](Wiki/Architecture/Architecture-Overview.md)
-  - [Component Architecture](Wiki/Architecture/Component-Architecture.md)
-  - [Runtime Architecture](Wiki/Architecture/Runtime-Architecture.md)
-  - [Data Flow & Workflows](Wiki/Architecture/Data-Flow.md)
-  - [Authentication & Security](Wiki/Architecture/Authentication-and-Authorization.md)
-  - [External Integrations](Wiki/Architecture/External-Integrations.md)
+  - [Architecture Overview](https://github.com/janisadhi/Music-Sync/wiki/Architecture-Overview)
+  - [Component Architecture](https://github.com/janisadhi/Music-Sync/wiki/Component-Architecture)
+  - [Runtime Architecture](https://github.com/janisadhi/Music-Sync/wiki/Runtime-Architecture)
+  - [Data Flow & Workflows](https://github.com/janisadhi/Music-Sync/wiki/Data-Flow)
+  - [Authentication & Security](https://github.com/janisadhi/Music-Sync/wiki/Authentication-and-Authorization)
+  - [External Integrations](https://github.com/janisadhi/Music-Sync/wiki/External-Integrations)
 - 🗄️ **Database**
-  - [Database Overview](Wiki/Database/Database-Overview.md)
-  - [Schema & Tables](Wiki/Database/Schema.md)
-  - [Entity Relationships](Wiki/Database/Relationships.md)
-  - [Data Lifecycle & Migrations](Wiki/Database/Data-Lifecycle.md)
+  - [Database Overview](https://github.com/janisadhi/Music-Sync/wiki/Database-Overview)
+  - [Schema & Tables](https://github.com/janisadhi/Music-Sync/wiki/Schema)
+  - [Entity Relationships](https://github.com/janisadhi/Music-Sync/wiki/Relationships)
+  - [Data Lifecycle & Migrations](https://github.com/janisadhi/Music-Sync/wiki/Data-Lifecycle)
 - 🔌 **API Reference**
-  - [API Overview](Wiki/API/API-Overview.md)
-  - [Endpoint Catalog](Wiki/API/Endpoints.md)
-  - [Authentication & Headers](Wiki/API/Authentication.md)
-  - [Error Handling](Wiki/API/Error-Handling.md)
+  - [API Overview](https://github.com/janisadhi/Music-Sync/wiki/API-Overview)
+  - [Endpoint Catalog](https://github.com/janisadhi/Music-Sync/wiki/Endpoints)
+  - [Authentication & Headers](https://github.com/janisadhi/Music-Sync/wiki/Authentication)
+  - [Error Handling](https://github.com/janisadhi/Music-Sync/wiki/Error-Handling)
 - 💻 **Development & Operations**
-  - [Local Setup & Environment](Wiki/Development/Local-Setup.md)
-  - [Testing Guide](Wiki/Development/Testing.md)
-  - [Container Build & Deployment](Wiki/Operations/Build.md)
-  - [Technical Debt & Known Issues](Wiki/Technical-Debt-and-Known-Issues.md)
+  - [Local Setup & Environment](https://github.com/janisadhi/Music-Sync/wiki/Local-Setup)
+  - [Testing Guide](https://github.com/janisadhi/Music-Sync/wiki/Testing)
+  - [Container Build & Deployment](https://github.com/janisadhi/Music-Sync/wiki/Build)
+  - [Technical Debt & Known Issues](https://github.com/janisadhi/Music-Sync/wiki/Technical-Debt-and-Known-Issues)
 
 ---
 
