@@ -107,11 +107,12 @@ class SongDownloader:
         message: str,
         max_retries: int,
     ) -> bool:
-        song.download_status = "failed"
+        song.download_status = "unavailable"
+        song.lyrics_status = "unavailable"
         song.download_retry_count = max_retries
         song.next_download_attempt = None
         song.error_message = message
-        print(f"Download permanently failed: {song.title}")
+        print(f"Download permanently failed (marked unavailable): {song.title}")
         print(f"Error: {message}")
         return False
 
@@ -231,6 +232,7 @@ class SongDownloader:
                 # ----------------------------------------------------------
                 if not self._is_retryable_error(exc):
                     song.download_status = "unavailable"
+                    song.lyrics_status = "unavailable"
                     song.next_download_attempt = None
                     print(f"Non-retryable download failure (marked unavailable): {song.title}")
                     print(f"Error: {song.error_message}")

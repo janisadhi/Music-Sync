@@ -161,6 +161,7 @@ class TestUnavailableSongs:
         song = session.scalar(select(Song).where(Song.youtube_video_id == "vid_priv"))
         assert song is not None
         assert song.download_status == "unavailable"
+        assert song.lyrics_status == "unavailable"
 
     def test_unavailable_song_not_in_new_list(self, session):
         """Unavailable items must not appear in the 'new songs' return value."""

@@ -215,6 +215,7 @@ class PlaylistReconciler:
                 "unavailable",
             ):
                 existing.download_status = "unavailable"
+                existing.lyrics_status = "unavailable"
                 existing.error_message = item.reason
                 print(
                     f"Marked unavailable: {item.video_id} — {item.reason}"
@@ -230,7 +231,7 @@ class PlaylistReconciler:
             title=f"[Unavailable] {item.video_id}",
             position=item.position,
             download_status="unavailable",
-            lyrics_status="pending",
+            lyrics_status="unavailable",
             error_message=item.reason,
         )
         self.session.add(song)
