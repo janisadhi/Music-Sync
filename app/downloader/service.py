@@ -230,9 +230,9 @@ class SongDownloader:
                 # Non-retryable error (unavailable, private, deleted, …)
                 # ----------------------------------------------------------
                 if not self._is_retryable_error(exc):
-                    song.download_status = "failed"
+                    song.download_status = "unavailable"
                     song.next_download_attempt = None
-                    print(f"Non-retryable download failure: {song.title}")
+                    print(f"Non-retryable download failure (marked unavailable): {song.title}")
                     print(f"Error: {song.error_message}")
                     return False
 

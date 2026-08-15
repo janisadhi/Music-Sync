@@ -349,7 +349,7 @@ class TestRetryLogic:
                     result = downloader.download_song(song)
 
             assert result is False
-            assert song.download_status == "failed"
+            assert song.download_status == "unavailable"
             assert song.download_retry_count == 0
             assert song.next_download_attempt is None
 
