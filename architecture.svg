@@ -1,171 +1,207 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1422.750833333333 1218.4" width="1422.750833333333" height="1218.4" style="--bg:#1F1F1F;--fg:#CCCCCC;--line:#CCCCCC;--accent:#0078D4;--muted:#CCCCCCCC;--surface:#181818;--border:#CCCCCC;background:var(--bg)">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
-  text { font-family: 'Inter', system-ui, sans-serif; }
-  svg {
-    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
-    --_text:          var(--fg);
-    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
-    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
-    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
-    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
-    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
-    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
-    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
-    --_group-fill:    var(--bg);
-    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
-    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
-    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
-  }
-</style>
-<defs>
-  <marker id="arrowhead" markerWidth="8" markerHeight="5" refX="7" refY="2.5" orient="auto">
-    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
-  </marker>
-  <marker id="arrowhead-start" markerWidth="8" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse">
-    <polygon points="8 0, 0 2.5, 8 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
-  </marker>
-</defs>
-<g class="subgraph" data-id="Frontend" data-label="Client Layer (React Dashboard / Nginx)">
-  <rect x="521.90225" y="40" width="366.645" height="266.70000000000005" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <rect x="521.90225" y="40" width="366.645" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <text x="533.90225" y="54" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">Client Layer (React Dashboard / Nginx)</text>
-</g>
-<g class="subgraph" data-id="Backend" data-label="API &amp; Core Layer (FastAPI / Uvicorn)">
-  <rect x="363.1835" y="435.00000000000006" width="568.4357999999999" height="181.8" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <rect x="363.1835" y="435.00000000000006" width="568.4357999999999" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <text x="375.1835" y="449.00000000000006" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">API &amp; Core Layer (FastAPI / Uvicorn)</text>
-</g>
-<g class="subgraph" data-id="Database" data-label="Persistence Layer">
-  <rect x="40" y="930.6000000000003" width="206.58899999999997" height="195.8" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <rect x="40" y="930.6000000000003" width="206.58899999999997" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <text x="52" y="944.6000000000003" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">Persistence Layer</text>
-</g>
-<g class="subgraph" data-id="Workers" data-label="Sync &amp; Download Pipelines">
-  <rect x="154.29449999999997" y="688.8000000000001" width="802.9449999999998" height="181.8" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <rect x="154.29449999999997" y="688.8000000000001" width="802.9449999999998" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <text x="166.29449999999997" y="702.8000000000001" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">Sync &amp; Download Pipelines</text>
-</g>
-<g class="subgraph" data-id="Storage" data-label="Local Storage (Docker Volume Mounts)">
-  <rect x="881.6888333333332" y="930.6000000000001" width="501.0619999999999" height="96.9" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <rect x="881.6888333333332" y="930.6000000000001" width="501.0619999999999" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <text x="893.6888333333332" y="944.6000000000001" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">Local Storage (Docker Volume Mounts)</text>
-</g>
-<g class="subgraph" data-id="External" data-label="External Web Services">
-  <rect x="371.40475" y="1081.5" width="515.1409999999998" height="96.9" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <rect x="371.40475" y="1081.5" width="515.1409999999998" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
-  <text x="383.40475" y="1095.5" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">External Web Services</text>
-</g>
-<polyline class="edge" data-from="Axios" data-to="API" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="HTTP /api (JWT Bearer Token)" points="705.22475,290.70000000000005 705.2247499999999,479.00000000000006" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="AuthDep" data-to="DB" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="521.1969999999999,600.8000000000001 521.1969999999999,914.6000000000001 143.29449999999997,914.6000000000001 143.29449999999997,974.6000000000003" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="API" data-to="DB" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="705.2247499999999,515.9000000000001 705.2247499999999,914.6000000000001 143.29449999999997,914.6000000000001 143.29449999999997,974.6000000000003" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="Scheduler" data-to="Watcher" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="779.7314999999999,600.8000000000001 779.7314999999999,666.8000000000001 291.67499999999995,666.8000000000001 291.67499999999995,732.8000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="Watcher" data-to="YT" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="Fetch Metadata" points="332.1351666666666,769.7 332.1351666666666,781.7 334.76474999999994,781.7 334.76474999999994,995.2000000000002 362.12424999999996,995.2000000000002 362.12424999999996,1063.5 469.06608333333327,1063.5 469.0660833333333,1125.5" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="Reconciler" data-to="DB" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="248.58524999999992,854.6 248.58524999999992,914.6000000000001 143.29449999999997,914.6000000000001 143.29449999999997,974.6000000000003" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="Scheduler" data-to="Downloader" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="779.7314999999999,600.8000000000001 779.7314999999999,666.8000000000001 565.3999999999999,666.8000000000001 565.3999999999999,732.8000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="Downloader" data-to="YT" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="Download &amp; Transcode" points="523.9518333333333,769.7 523.9518333333333,995.2000000000002 550.7274166666666,995.2000000000002 550.7274166666666,1125.5" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="Downloader" data-to="AudioFiles" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="606.8481666666665,769.7 606.8481666666665,781.7 879.7411666666665,781.7 879.7411666666665,900.6000000000001 1217.2601666666665,900.6000000000001 1217.2601666666662,974.6000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="Scheduler" data-to="LyricsService" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="779.7314999999999,600.8000000000001 779.7314999999999,666.8000000000001 829.4919999999998,666.8000000000001 829.4919999999998,732.8000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="LyricsService" data-to="LRCLIB" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="Fetch Synced Lyrics" points="792.2428333333332,769.7 792.2428333333332,1063.5 765.4672499999999,1063.5 765.4672499999999,1125.5" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="LyricsService" data-to="LyricsFiles" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="866.7411666666665,769.7 866.7411666666665,912.6000000000001 969.9641666666664,912.6000000000001 969.9641666666664,974.6000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="API" data-to="AudioFiles" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="Stream Audio &amp; Lyrics" points="761.8251499999999,515.9000000000001 761.8251499999999,527.9000000000001 914.6192999999998,527.9000000000001 914.6192999999998,658.8000000000001 1257.2819999999997,658.8000000000001 1257.2819999999997,912.6000000000001 1292.0054999999998,912.6000000000001 1292.0054999999998,974.6000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="API" data-to="LyricsFiles" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="Stream Audio &amp; Lyrics" points="724.0915499999999,515.9000000000001 724.0915499999999,539.9000000000001 889.2524999999998,539.9000000000001 889.2524999999998,670.8000000000001 1042.2394999999997,670.8000000000001 1042.2394999999997,974.6000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="UI" data-to="AuthRoute" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="705.22475,120.9 705.22475,168.9" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="AuthRoute" data-to="Axios" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="705.22475,205.8 705.22475,253.8" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="API" data-to="AuthDep" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="686.3579499999998,515.9000000000001 686.3579499999998,539.9000000000001 521.1969999999999,539.9000000000001 521.1969999999999,563.9000000000001" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<polyline class="edge" data-from="DB" data-to="Alembic" data-style="solid" data-arrow-start="false" data-arrow-end="false" points="143.29449999999997,1025.5000000000002 143.29449999999997,1073.5000000000002" fill="none" stroke="var(--_line)" stroke-width="1" />
-<polyline class="edge" data-from="Watcher" data-to="Reconciler" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="251.21483333333327,769.7 251.21483333333327,781.7 248.58524999999992,781.7 248.58524999999992,817.7" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
-<g class="edge-label" data-from="Axios" data-to="API" data-label="HTTP /api (JWT Bearer Token)">
-  <rect x="622.72475" y="355.70000000000005" width="164.96200000000002" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
-  <text x="705.20575" y="370.85" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">HTTP /api (JWT Bearer Token)</text>
-</g>
-<g class="edge-label" data-from="Watcher" data-to="YT" data-label="Fetch Metadata">
-  <rect x="316.62424999999996" y="1002.2000000000002" width="90.11800000000002" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
-  <text x="361.68325" y="1017.3500000000001" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Fetch Metadata</text>
-</g>
-<g class="edge-label" data-from="Downloader" data-to="YT" data-label="Download &amp; Transcode">
-  <rect x="487.22741666666656" y="1002.2000000000002" width="126.94600000000003" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
-  <text x="550.7004166666666" y="1017.3500000000001" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Download &amp; Transcode</text>
-</g>
-<g class="edge-label" data-from="LyricsService" data-to="LRCLIB" data-label="Fetch Synced Lyrics">
-  <rect x="733.2428333333331" y="1002.2000000000002" width="117.44200000000002" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
-  <text x="791.9638333333331" y="1017.3500000000001" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Fetch Synced Lyrics</text>
-</g>
-<g class="edge-label" data-from="API" data-to="AudioFiles" data-label="Stream Audio &amp; Lyrics">
-  <rect x="1196.2819999999997" y="851.3000000000002" width="121.60000000000002" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
-  <text x="1257.0819999999997" y="866.4500000000002" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Stream Audio &amp; Lyrics</text>
-</g>
-<g class="edge-label" data-from="API" data-to="LyricsFiles" data-label="Stream Audio &amp; Lyrics">
-  <rect x="981.2394999999999" y="851.3000000000002" width="121.60000000000002" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
-  <text x="1042.0394999999999" y="866.4500000000002" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Stream Audio &amp; Lyrics</text>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 950" width="1400" height="950" style="background:#11111b; font-family:'Inter', system-ui, -apple-system, sans-serif;">
+  <defs>
+    <linearGradient id="grad-client" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e"/>
+      <stop offset="100%" stop-color="#181825"/>
+    </linearGradient>
+    <linearGradient id="grad-backend" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181825"/>
+      <stop offset="100%" stop-color="#11111b"/>
+    </linearGradient>
+    <linearGradient id="grad-node" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#313244"/>
+      <stop offset="100%" stop-color="#1e1e2e"/>
+    </linearGradient>
 
-<g class="node" data-id="UI" data-label="React 19 Dashboard UI" data-shape="rectangle">
-  <rect x="619.41225" y="84" width="171.62499999999997" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="705.22475" y="102.45" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">React 19 Dashboard UI</text>
-</g>
-<g class="node" data-id="Axios" data-label="Axios API Client (JWT Interceptor)" data-shape="rectangle">
-  <rect x="585.32625" y="253.8" width="239.79699999999994" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="705.22475" y="272.25" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">Axios API Client (JWT Interceptor)</text>
-</g>
-<g class="node" data-id="AuthRoute" data-label="ProtectedRoute / Login &amp; Change Password Views" data-shape="rectangle">
-  <rect x="537.90225" y="168.9" width="334.645" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="705.22475" y="187.35000000000002" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">ProtectedRoute / Login &amp; Change Password Views</text>
-</g>
-<g class="node" data-id="API" data-label="FastAPI REST Endpoints" data-shape="rectangle">
-  <rect x="610.8907499999999" y="479.00000000000006" width="188.66799999999995" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="705.2247499999999" y="497.45000000000005" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">FastAPI REST Endpoints</text>
-</g>
-<g class="node" data-id="AuthDep" data-label="JWT Auth Handler (PBKDF2 Hashing)" data-shape="rectangle">
-  <rect x="390.1835" y="563.9000000000001" width="262.02699999999993" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="521.1969999999999" y="582.3500000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">JWT Auth Handler (PBKDF2 Hashing)</text>
-</g>
-<g class="node" data-id="Scheduler" data-label="APScheduler Sync Engine" data-shape="rectangle">
-  <rect x="680.2104999999999" y="563.9000000000001" width="199.04199999999994" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="779.7314999999999" y="582.3500000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">APScheduler Sync Engine</text>
-</g>
-<g class="node" data-id="DB" data-label="PostgreSQL Database" data-shape="cylinder">
-  <rect x="56" y="981.6000000000003" width="174.58899999999997" height="36.900000000000006" fill="var(--_node-fill)" stroke="none" />
-  <line x1="56" y1="981.6000000000003" x2="56" y2="1018.5000000000002" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <line x1="230.58899999999997" y1="981.6000000000003" x2="230.58899999999997" y2="1018.5000000000002" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <ellipse cx="143.29449999999997" cy="1018.5000000000002" rx="87.29449999999999" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <ellipse cx="143.29449999999997" cy="981.6000000000003" rx="87.29449999999999" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="143.29449999999997" y="1000.0500000000003" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">PostgreSQL Database</text>
-</g>
-<g class="node" data-id="Alembic" data-label="Alembic Migrations" data-shape="rectangle">
-  <rect x="66.74449999999997" y="1073.5000000000002" width="153.10000000000002" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="143.29449999999997" y="1091.9500000000003" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">Alembic Migrations</text>
-</g>
-<g class="node" data-id="Watcher" data-label="YouTube Watcher (yt-dlp Scraper)" data-shape="rectangle">
-  <rect x="170.29449999999997" y="732.8000000000001" width="242.76099999999997" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="291.67499999999995" y="751.2500000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">YouTube Watcher (yt-dlp Scraper)</text>
-</g>
-<g class="node" data-id="Reconciler" data-label="Playlist Reconciler" data-shape="rectangle">
-  <rect x="172.4057499999999" y="817.7" width="152.359" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="248.58524999999992" y="836.1500000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">Playlist Reconciler</text>
-</g>
-<g class="node" data-id="Downloader" data-label="Song Downloader (yt-dlp + FFmpeg)" data-shape="rectangle">
-  <rect x="441.05549999999994" y="732.8000000000001" width="248.68899999999996" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="565.3999999999999" y="751.2500000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">Song Downloader (yt-dlp + FFmpeg)</text>
-</g>
-<g class="node" data-id="LyricsService" data-label="Lyrics Service (LRCLIB Client)" data-shape="rectangle">
-  <rect x="717.7444999999999" y="732.8000000000001" width="223.49499999999992" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="829.4919999999998" y="751.2500000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">Lyrics Service (LRCLIB Client)</text>
-</g>
-<g class="node" data-id="AudioFiles" data-label="data/music/*.opus (Audio Files)" data-shape="rectangle">
-  <rect x="1142.5148333333332" y="974.6000000000001" width="224.23599999999993" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="1254.632833333333" y="993.0500000000002" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">data/music/*.opus (Audio Files)</text>
-</g>
-<g class="node" data-id="LyricsFiles" data-label="data/music/*.lrc (Lyrics Files)" data-shape="rectangle">
-  <rect x="897.6888333333332" y="974.6000000000001" width="216.82599999999994" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="1006.1018333333332" y="993.0500000000002" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">data/music/*.lrc (Lyrics Files)</text>
-</g>
-<g class="node" data-id="YT" data-label="YouTube Music (Playlists / Videos)" data-shape="rectangle">
-  <rect x="387.40475" y="1125.5" width="244.98399999999992" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="509.89674999999994" y="1143.95" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">YouTube Music (Playlists / Videos)</text>
-</g>
-<g class="node" data-id="LRCLIB" data-label="LRCLIB API (Synced Lyrics)" data-shape="rectangle">
-  <rect x="660.3887499999998" y="1125.5" width="210.15699999999995" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
-  <text x="765.4672499999998" y="1143.95" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">LRCLIB API (Synced Lyrics)</text>
-</g>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#89b4fa"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#a6e3a1"/>
+    </marker>
+    <marker id="arrow-peach" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#fab387"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 22px; font-weight: 700; fill: #cdd6f4; }
+    .subtitle { font-size: 13px; font-weight: 500; fill: #a6adc8; }
+    .group-title { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .node-title { font-size: 13px; font-weight: 600; fill: #cdd6f4; }
+    .node-sub { font-size: 11px; fill: #bac2de; }
+    .edge-label { font-size: 11px; font-weight: 500; fill: #89b4fa; }
+    .link { stroke: #45475a; stroke-width: 2; fill: none; }
+    .link-active { stroke: #89b4fa; stroke-width: 2; fill: none; stroke-dasharray: 4,4; }
+  </style>
+
+  <!-- Title Header -->
+  <text x="50" y="45" class="title">Music Sync — Architecture Diagram</text>
+  <text x="50" y="68" class="subtitle">Decoupled Microservice Pipeline (Sync Discovers → Downloader Downloads → Lyrics Fetches)</text>
+
+  <!-- 1. Client Layer -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="100" width="380" height="240" rx="12" fill="url(#grad-client)" stroke="#89b4fa" stroke-width="1.5"/>
+    <text x="70" y="130" class="group-title" fill="#89b4fa">Client Layer (React 19 / Nginx)</text>
+    
+    <!-- Nodes -->
+    <rect x="70" y="150" width="340" height="48" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="85" y="170" class="node-title">React 19 Web Dashboard</text>
+    <text x="85" y="186" class="node-sub">SPA, Audio Player, Lyric Sync, Live Settings Controls</text>
+
+    <rect x="70" y="215" width="340" height="48" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="85" y="235" class="node-title">ProtectedRoute &amp; Auth Views</text>
+    <text x="85" y="251" class="node-sub">Login, Change Password, Token Storage</text>
+
+    <rect x="70" y="278" width="340" height="48" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="85" y="298" class="node-title">Axios API Client</text>
+    <text x="85" y="314" class="node-sub">JWT Bearer Token Interceptor &amp; Error Handling</text>
+  </g>
+
+  <!-- 2. Backend & Core Layer -->
+  <g filter="url(#shadow)">
+    <rect x="470" y="100" width="460" height="240" rx="12" fill="url(#grad-client)" stroke="#f9e2af" stroke-width="1.5"/>
+    <text x="490" y="130" class="group-title" fill="#f9e2af">API &amp; Core Layer (FastAPI / Uvicorn)</text>
+
+    <rect x="490" y="150" width="420" height="48" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="505" y="170" class="node-title">FastAPI REST Endpoints (/songs, /playlists, /settings)</text>
+    <text x="505" y="186" class="node-sub">Routing, Request Validation, Audio/Lyric Streaming</text>
+
+    <rect x="490" y="215" width="200" height="48" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="505" y="235" class="node-title">JWT Auth &amp; Security</text>
+    <text x="505" y="251" class="node-sub">PBKDF2 Password Hashing</text>
+
+    <rect x="710" y="215" width="200" height="48" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="725" y="235" class="node-title">APScheduler Engine</text>
+    <text x="725" y="251" class="node-sub">Periodic Auto-Sync Trigger</text>
+
+    <rect x="490" y="278" width="420" height="48" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="505" y="298" class="node-title">Core YTDLP &amp; Cookie Context Manager (app.core.ytdlp)</text>
+    <text x="505" y="314" class="node-sub">Deno JS Solver Config &amp; Secure Netscape Cookie Tempfile Lifecycle</text>
+  </g>
+
+  <!-- 3. Workers & Pipeline -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="380" width="880" height="260" rx="12" fill="url(#grad-client)" stroke="#a6e3a1" stroke-width="1.5"/>
+    <text x="70" y="410" class="group-title" fill="#a6e3a1">Sync &amp; Download Workers Pipeline</text>
+
+    <!-- Worker 1: Watcher -->
+    <rect x="70" y="430" width="260" height="85" rx="8" fill="url(#grad-node)" stroke="#a6e3a1"/>
+    <text x="85" y="455" class="node-title" fill="#a6e3a1">1. YouTube Watcher</text>
+    <text x="85" y="475" class="node-sub">Fast Flat Scraping Only</text>
+    <text x="85" y="493" class="node-sub">(Whole / Last N Watch Modes)</text>
+
+    <!-- Reconciler -->
+    <rect x="70" y="535" width="260" height="85" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="85" y="560" class="node-title">2. Playlist Reconciler</text>
+    <text x="85" y="580" class="node-sub">Diffs YouTube vs DB</text>
+    <text x="85" y="598" class="node-sub">Queues missing songs as 'pending'</text>
+
+    <!-- Worker 2: Downloader -->
+    <rect x="360" y="430" width="260" height="190" rx="8" fill="url(#grad-node)" stroke="#a6e3a1"/>
+    <text x="375" y="455" class="node-title" fill="#a6e3a1">3. Song Downloader Engine</text>
+    <text x="375" y="475" class="node-sub">• Polls 'pending' queue</text>
+    <text x="375" y="495" class="node-sub">• yt-dlp + Deno 2.9+ JS Solver</text>
+    <text x="375" y="515" class="node-sub">• Secure Cookie Context Manager</text>
+    <text x="375" y="535" class="node-sub">• FFmpeg Opus Transcoding</text>
+    <text x="375" y="555" class="node-sub">• Embeds Artwork &amp; Metadata Tags</text>
+    <text x="375" y="575" class="node-sub">• Exponential Backoff Retry Policy</text>
+
+    <!-- Worker 3: Lyrics -->
+    <rect x="650" y="430" width="260" height="190" rx="8" fill="url(#grad-node)" stroke="#a6e3a1"/>
+    <text x="665" y="455" class="node-title" fill="#a6e3a1">4. Lyrics Worker Service</text>
+    <text x="665" y="475" class="node-sub">• Scans downloaded songs</text>
+    <text x="665" y="495" class="node-sub">• Queries LRCLIB API</text>
+    <text x="665" y="515" class="node-sub">• Matches Title &amp; Artist</text>
+    <text x="665" y="535" class="node-sub">• Writes .lrc synced lyrics</text>
+    <text x="665" y="555" class="node-sub">• Fallback to 'no-lyrics/' folder</text>
+  </g>
+
+  <!-- 4. Persistence Layer -->
+  <g filter="url(#shadow)">
+    <rect x="970" y="100" width="380" height="240" rx="12" fill="url(#grad-client)" stroke="#fab387" stroke-width="1.5"/>
+    <text x="990" y="130" class="group-title" fill="#fab387">Persistence Layer</text>
+
+    <rect x="990" y="150" width="340" height="100" rx="8" fill="url(#grad-node)" stroke="#fab387"/>
+    <text x="1005" y="175" class="node-title" fill="#fab387">PostgreSQL 17 Database</text>
+    <text x="1005" y="195" class="node-sub">• Playlists &amp; Song Metadata</text>
+    <text x="1005" y="213" class="node-sub">• Download Queue &amp; Retry States</text>
+    <text x="1005" y="231" class="node-sub">• App Settings &amp; YouTube Cookies</text>
+
+    <rect x="990" y="268" width="340" height="55" rx="8" fill="url(#grad-node)" stroke="#45475a"/>
+    <text x="1005" y="293" class="node-title">Alembic Database Migrations</text>
+    <text x="1005" y="309" class="node-sub">Automatic DDL Schema Upgrades</text>
+  </g>
+
+  <!-- 5. Local Storage Mounts -->
+  <g filter="url(#shadow)">
+    <rect x="970" y="380" width="380" height="260" rx="12" fill="url(#grad-client)" stroke="#94e2d5" stroke-width="1.5"/>
+    <text x="990" y="410" class="group-title" fill="#94e2d5">Local Storage (Docker Mounts)</text>
+
+    <rect x="990" y="430" width="340" height="90" rx="8" fill="url(#grad-node)" stroke="#94e2d5"/>
+    <text x="1005" y="455" class="node-title" fill="#94e2d5">data/downloads/&lt;Playlist_Name&gt;/music/</text>
+    <text x="1005" y="475" class="node-sub">High-Fidelity Opus (.opus) Audio Files</text>
+    <text x="1005" y="495" class="node-sub">Embedded Cover Art &amp; ID3 Tags</text>
+
+    <rect x="990" y="535" width="340" height="85" rx="8" fill="url(#grad-node)" stroke="#94e2d5"/>
+    <text x="1005" y="560" class="node-title" fill="#94e2d5">data/downloads/&lt;Playlist_Name&gt;/no-lyrics/</text>
+    <text x="1005" y="580" class="node-sub">Synchronized .lrc Lyrics Files</text>
+    <text x="1005" y="598" class="node-sub">Tracks without lyrics fallback store</text>
+  </g>
+
+  <!-- 6. External Web Services -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="680" width="1300" height="220" rx="12" fill="url(#grad-client)" stroke="#f38ba8" stroke-width="1.5"/>
+    <text x="70" y="710" class="group-title" fill="#f38ba8">External Web Services</text>
+
+    <rect x="70" y="730" width="600" height="140" rx="8" fill="url(#grad-node)" stroke="#f38ba8"/>
+    <text x="85" y="755" class="node-title" fill="#f38ba8">YouTube Music / YouTube Video Platform</text>
+    <text x="85" y="775" class="node-sub">• Flat Playlist Scanning via Watcher</text>
+    <text x="85" y="795" class="node-sub">• Deno 2.9+ JavaScript Challenge Solving for Stream Extraction</text>
+    <text x="85" y="815" class="node-sub">• Netscape HTTP Cookie Authentication (Private &amp; Member Playlists)</text>
+    <text x="85" y="835" class="node-sub">• Opus Audio Stream Download</text>
+
+    <rect x="710" y="730" width="620" height="140" rx="8" fill="url(#grad-node)" stroke="#f38ba8"/>
+    <text x="725" y="755" class="node-title" fill="#f38ba8">LRCLIB API Services</text>
+    <text x="725" y="775" class="node-sub">• Synchronized Lyrics Database (.lrc)</text>
+    <text x="725" y="795" class="node-sub">• Title &amp; Artist Fuzzy Metadata Search</text>
+    <text x="725" y="815" class="node-sub">• Exact Duration Timestamp Matching</text>
+  </g>
+
+  <!-- Connectors -->
+  <!-- Client to Backend -->
+  <path d="M 430 220 L 470 220" class="link" marker-end="url(#arrow)"/>
+  <text x="435" y="210" class="edge-label">REST API</text>
+
+  <!-- Core to DB -->
+  <path d="M 930 180 L 970 180" class="link" marker-end="url(#arrow)"/>
+
+  <!-- Core to Workers -->
+  <path d="M 700 340 L 700 380" class="link" marker-end="url(#arrow)"/>
+
+  <!-- Watcher to Reconciler -->
+  <path d="M 200 515 L 200 535" class="link" marker-end="url(#arrow-green)"/>
+
+  <!-- Reconciler to DB -->
+  <path d="M 330 580 L 990 240" class="link-active" marker-end="url(#arrow-peach)"/>
+
+  <!-- Downloader to Storage -->
+  <path d="M 620 500 L 990 475" class="link" marker-end="url(#arrow-green)"/>
+
+  <!-- Lyrics to Storage -->
+  <path d="M 910 560 L 990 560" class="link" marker-end="url(#arrow-green)"/>
+
+  <!-- Watcher to YouTube -->
+  <path d="M 200 625 L 200 730" class="link" marker-end="url(#arrow)"/>
+
+  <!-- Downloader to YouTube -->
+  <path d="M 490 625 L 490 730" class="link" marker-end="url(#arrow)"/>
+
+  <!-- Lyrics to LRCLIB -->
+  <path d="M 780 625 L 780 730" class="link" marker-end="url(#arrow)"/>
+
 </svg>

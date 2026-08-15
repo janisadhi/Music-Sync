@@ -1,0 +1,50 @@
+graph TD
+    subgraph Client["Client Layer (React 19 / Nginx)"]
+        UI["React 19 Web Dashboard"] --> AuthRoute["ProtectedRoute / Auth Views"]
+        AuthRoute --> Axios["Axios API Client (JWT Interceptor)"]
+    end
+
+    subgraph Backend["API & Core Layer (FastAPI)"]
+        Axios -->|HTTP /api + JWT| API["FastAPI REST Endpoints"]
+        API --> AuthDep["JWT Auth & Security Handler"]
+        API --> CoreYTDLP["Core YTDLP & Cookie Context"]
+        API --> Scheduler["APScheduler Engine"]
+    end
+
+    subgraph Workers["Sync & Download Pipelines"]
+        Scheduler --> Watcher["1. YouTube Watcher<br/>(Flat Scraper)"]
+        Watcher --> Reconciler["2. Playlist Reconciler"]
+        Reconciler --> DB
+        
+        Scheduler --> Downloader["3. Song Downloader<br/>(yt-dlp + Deno JS Solver + FFmpeg)"]
+        CoreYTDLP --> Watcher
+        CoreYTDLP --> Downloader
+        
+        Scheduler --> LyricsService["4. Lyrics Worker<br/>(LRCLIB Client)"]
+    end
+
+    subgraph Persistence["Persistence Layer"]
+        AuthDep --> DB[("PostgreSQL 17 Database")]
+        API --> DB
+        Alembic["Alembic Migrations"] --- DB
+    end
+
+    subgraph Storage["Local Storage Mounts"]
+        Downloader -->|Write Audio & Embed Tags| AudioFiles["/app/downloads/<Playlist>/music/*.opus"]
+        LyricsService -->|Write Synced Lyrics| LyricsFiles["/app/downloads/<Playlist>/no-lyrics/*.lrc"]
+        API -->|Stream Media & Lyrics| AudioFiles
+        API -->|Stream Media & Lyrics| LyricsFiles
+    end
+
+    subgraph External["External Services"]
+        Watcher -->|Flat Playlist Extraction| YT["YouTube Music"]
+        Downloader -->|Stream & Deno Challenge Solving| YT
+        LyricsService -->|Fetch Synced LRC| LRCLIB["LRCLIB API"]
+    end
+
+    style Client fill:#1e1e2e,stroke:#89b4fa,color:#cdd6f4
+    style Backend fill:#181825,stroke:#f9e2af,color:#cdd6f4
+    style Workers fill:#11111b,stroke:#a6e3a1,color:#cdd6f4
+    style Persistence fill:#181825,stroke:#fab387,color:#cdd6f4
+    style Storage fill:#1e1e2e,stroke:#94e2d5,color:#cdd6f4
+    style External fill:#1e1e2e,stroke:#f38ba8,color:#cdd6f4
