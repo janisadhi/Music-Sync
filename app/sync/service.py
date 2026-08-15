@@ -150,6 +150,44 @@ class SyncService:
             "elapsed_seconds": round(elapsed, 2),
         }
 
+    def sync_single_playlist(self, playlist_id: int) -> dict:
+        """
+        Execute sync for a single playlist by ID.
+        """
+        start_time = time.time()
+        app_settings = self.settings_service.get()
+        watch_mode = app_settings.playlist_watch_mode
+        watch_limit = app_settings.playlist_watch_limit
+        delete_local = app_settings.delete_local_file_on_playlist_removal
+
+        with SessionLocal() as session:
+            playlist = session.get(Playlist, playlist_id)
+            if playlist is None:
+                raise ValueError(f"Playlist {playlist_id} not found")
+
+            playlist_name = playlist.name
+            playlist_url = playlist.url
+            youtube_playlist_id = playlist.youtube_playlist_id
+
+        discovered, new_count, unavail_count = self._sync_playlist(
+            playlist_id=playlist_id,
+            playlist_url=playlist_url,
+            youtube_playlist_id=youtube_playlist_id,
+            playlist_name=playlist_name,
+            watch_mode=watch_mode,
+            watch_limit=watch_limit,
+            delete_local_on_removal=delete_local,
+        )
+
+        return {
+            "playlist_id": playlist_id,
+            "playlist_name": playlist_name,
+            "discovered": discovered,
+            "new_songs": new_count,
+            "unavailable": unavail_count,
+            "elapsed_seconds": round(time.time() - start_time, 2),
+        }
+
     # ------------------------------------------------------------------
     # Per-playlist sync
     # ------------------------------------------------------------------
