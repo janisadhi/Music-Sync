@@ -1,4 +1,12 @@
-from unittest.mock import MagicMock, patch
+"""
+Queue-draining architecture tests.
+
+Updated for new architecture:
+  - Song model no longer has artist/album/duration fields
+  - SongDownloader is decoupled from SyncService
+"""
+
+from unittest.mock import patch
 
 from app.downloader.service import SongDownloader
 from app.lyrics.service import LyricsService
@@ -34,7 +42,11 @@ def test_queue_draining_single_sync():
     setup_db()
 
     with SessionLocal() as session:
-        pl = Playlist(youtube_playlist_id="pl1", name="Test PL", url="https://youtube.com/playlist?list=pl1")
+        pl = Playlist(
+            youtube_playlist_id="pl1",
+            name="Test PL",
+            url="https://youtube.com/playlist?list=pl1",
+        )
         session.add(pl)
         session.flush()
 
@@ -75,7 +87,11 @@ def test_stale_download_recovery():
     setup_db()
 
     with SessionLocal() as session:
-        pl = Playlist(youtube_playlist_id="pl1", name="Test PL", url="https://youtube.com/playlist?list=pl1")
+        pl = Playlist(
+            youtube_playlist_id="pl1",
+            name="Test PL",
+            url="https://youtube.com/playlist?list=pl1",
+        )
         session.add(pl)
         session.flush()
 
@@ -104,7 +120,9 @@ def test_stale_download_recovery():
     with SessionLocal() as session:
         pending_count = session.query(Song).filter(Song.download_status == "pending").count()
 
-    assert pending_count == 2, "Stuck downloading songs without existing files should reset to pending"
+    assert pending_count == 2, (
+        "Stuck downloading songs without existing files should reset to pending"
+    )
 
     print("PASS: Stale download recovery succeeded.")
 
@@ -118,7 +136,11 @@ def test_lyrics_queue_draining():
     setup_db()
 
     with SessionLocal() as session:
-        pl = Playlist(youtube_playlist_id="pl1", name="Test PL", url="https://youtube.com/playlist?list=pl1")
+        pl = Playlist(
+            youtube_playlist_id="pl1",
+            name="Test PL",
+            url="https://youtube.com/playlist?list=pl1",
+        )
         session.add(pl)
         session.flush()
 

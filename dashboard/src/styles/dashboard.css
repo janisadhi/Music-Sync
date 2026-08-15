@@ -907,3 +907,188 @@ body {
     margin: 4px 0 0;
     word-break: break-word;
 }
+
+/* ==============================================================================
+   Services Panel – Scheduler + Downloader side-by-side
+   ============================================================================== */
+
+.services-panel {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.service-card {
+    flex: 1;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.service-card:first-child {
+    border-right: 1px solid var(--border-light);
+}
+
+.services-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 4px;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    min-width: 44px;
+    background-color: #f8fafc;
+    border-left: 1px solid var(--border-light);
+    border-right: 1px solid var(--border-light);
+}
+
+.divider-arrow {
+    font-size: 18px;
+    color: var(--primary-blue);
+    opacity: 0.5;
+}
+
+.divider-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+}
+
+.service-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.service-card-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.service-card-action {
+    flex-shrink: 0;
+}
+
+.service-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.service-card-stats {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: #f8fafc;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+.service-card-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: #b91c1c;
+    background-color: var(--danger-soft);
+    border: 1px solid #fecaca;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+@media (max-width: 780px) {
+    .services-panel {
+        flex-direction: column;
+    }
+    .service-card:first-child {
+        border-right: none;
+        border-bottom: 1px solid var(--border-light);
+    }
+    .services-divider {
+        flex-direction: row;
+        writing-mode: horizontal-tb;
+        min-width: unset;
+        padding: 8px 16px;
+        border-left: none;
+        border-right: none;
+        border-top: 1px solid var(--border-light);
+        border-bottom: 1px solid var(--border-light);
+    }
+    .divider-label {
+        writing-mode: horizontal-tb;
+    }
+}
+
+/* ==============================================================================
+   Sync scan stats row inside the last-sync panel
+   ============================================================================== */
+
+.sync-scan-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.scan-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 8px 14px;
+    min-width: 60px;
+}
+
+.scan-stat-val {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.scan-stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    text-align: center;
+}
+
+/* Status pill for "running" state in sync panel */
+.status-pill.running {
+    background-color: var(--primary-blue-soft);
+    color: var(--primary-blue-hover);
+}
+
+.status-pill.success {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-pill.failed {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Table wrapper for sync history */
+.table-wrapper {
+    overflow-x: auto;
+}

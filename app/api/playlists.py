@@ -249,3 +249,42 @@ def get_playlist_songs(
         )
         .order_by(Song.position)
     ).all()
+
+
+@router.post(
+    "/{playlist_id}/sync",
+)
+def sync_playlist(
+    playlist_id: int,
+    db: Session = Depends(get_db),
+):
+    playlist = db.get(
+        Playlist,
+        playlist_id,
+    )
+
+    if playlist is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Playlist not found",
+        )
+
+    from app.sync.service import SyncService
+
+    try:
+        sync_service = SyncService()
+        result = sync_service.sync_single_playlist(playlist_id)
+        return {
+            "message": f"Playlist '{playlist.name}' synced successfully",
+            "stats": result,
+        }
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sync failed: {str(exc)}",
+        )

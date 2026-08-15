@@ -7,4 +7,5 @@ pydantic-settings
 httpx
 apscheduler
 yt-dlp
+yt-dlp-ejs
 mutagen

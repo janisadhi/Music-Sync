@@ -166,6 +166,7 @@ function Songs() {
                 if (songFilter === "downloaded" && status !== "success") return false;
                 if (songFilter === "pending" && status !== "pending") return false;
                 if (songFilter === "failed" && status !== "failed") return false;
+                if (songFilter === "unavailable" && status !== "unavailable") return false;
             }
 
             if (lyricsFilter !== "all") {
@@ -366,6 +367,7 @@ function Songs() {
                         <option value="downloaded">Downloaded</option>
                         <option value="pending">Pending Download</option>
                         <option value="failed">Failed Download</option>
+                        <option value="unavailable">Unavailable (YouTube)</option>
                     </select>
 
                     <select value={lyricsFilter} onChange={(e) => setLyricsFilter(e.target.value)}>

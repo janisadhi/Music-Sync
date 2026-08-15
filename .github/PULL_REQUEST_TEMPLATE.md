@@ -1,37 +1,38 @@
-## 📌 Description
-Provide a concise summary of the changes introduced in this pull request and the motivation behind them.
+## Summary of Changes
 
-Fixes #(issue)
+<!-- Brief summary of what changes are introduced in this Pull Request -->
 
----
+## Motivation & Context
 
-## ⚙️ Type of Change
-Please delete options that are not relevant:
+<!-- Why is this change required? What problem does it solve? Link to related issue(s) -->
+Closes #
+
+## Type of Change
 
 - [ ] 🐛 Bug fix (non-breaking change fixing an issue)
 - [ ] ✨ New feature (non-breaking change adding functionality)
-- [ ] 💥 Breaking change (fix or feature causing existing functionality to change)
-- [ ] 📝 Documentation update
-- [ ] ⚙️ Maintenance / Refactoring / Performance improvement
+- [ ] ⚠️ Breaking change (fix or feature causing existing functionality to change)
+- [ ] 📚 Documentation update (Wiki or repository markdown)
+- [ ] 🧹 Refactoring / Code cleanup
+- [ ] ⚙️ CI/CD / Infrastructure change
 
----
+## Verification & Testing
 
-## 🧪 How Has This Been Tested?
-Describe the tests you ran to verify your changes. Provide instructions so we can reproduce.
+<!-- Explain how these changes were tested -->
 
-- [ ] Manual verification in Web Dashboard UI (`http://localhost:3000`)
-- [ ] Verified Docker Compose stack build (`docker compose up --build`)
-- [ ] Backend API verification (`http://localhost:8000/docs`)
+- [ ] Automated tests pass cleanly (`pytest`)
+- [ ] New unit tests added for new logic
+- [ ] React frontend build verified (`npm run build` inside `dashboard/`)
+- [ ] Docker Compose stack verified locally (`docker compose up`)
 
-**Test Environment**:
-- OS: [e.g. Ubuntu 24.04 / macOS / Windows 11]
-- Docker Version: [e.g. 25.0.3]
+## Checklist
 
----
+- [ ] Code follows PEP 8 standards (Python) / React 19 functional component standards (JS)
+- [ ] No application code modified if performing documentation-only tasks
+- [ ] Relevant documentation / Wiki pages updated
+- [ ] No secrets or unmasked tokens committed
 
-## 📋 Checklist
-- [ ] My code follows the style guidelines of this project.
-- [ ] I have performed a self-review of my own code.
-- [ ] I have commented my code, particularly in hard-to-understand areas.
-- [ ] I have updated corresponding documentation (`README.md`, `WIKI.md`, etc.).
-- [ ] My changes generate no new warnings or errors.
+## Security & Database Implications
+
+- [ ] **Database Migration Required**: (If checked, Alembic script included and tested)
+- [ ] **Security Implications**: (If checked, describe authentication/authorization/data exposure impact below)

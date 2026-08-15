@@ -1,4 +1,5 @@
 
+import re
 import shutil
 from pathlib import Path
 
@@ -63,18 +64,96 @@ def get_playlist_no_lyrics_root(song: Song) -> Path:
 # ---------------------------------------------------------
 
 
-@router.get("", response_model=list[SongResponse])
-def get_songs(
+def _extract_artist_fallback(title: str) -> str | None:
+    clean_title = re.sub(
+        r"\s*[\(\\[]?(?:official|music|video|audio|lyric|lyrics|hd|4k|remastered|remaster|live|acoustic|ft\.|feat\.).*?[\)\\]]?",
+        "",
+        title,
+        flags=re.IGNORECASE,
+    ).strip()
+    if " - " in clean_title:
+        return clean_title.split(" - ", 1)[0].strip()
+    return None
+
+
+def _to_song_response(song: Song) -> SongResponse:
+    artist = None
+    album = None
+    thumbnail_url = None
+    duration_seconds = None
+
+    if song.downloaded_track:
+        artist = song.downloaded_track.artist
+        album = song.downloaded_track.album
+        thumbnail_url = song.downloaded_track.thumbnail_url
+        duration_seconds = song.downloaded_track.duration_seconds
+
+    if not artist:
+        artist = _extract_artist_fallback(song.title)
+
+    return SongResponse(
+        id=song.id,
+        playlist_id=song.playlist_id,
+        youtube_video_id=song.youtube_video_id,
+        title=song.title,
+        position=song.position,
+        download_status=song.download_status,
+        lyrics_status=song.lyrics_status,
+        file_path=song.file_path,
+        lyrics_path=song.lyrics_path,
+        error_message=song.error_message,
+        artist=artist,
+        album=album,
+        thumbnail_url=thumbnail_url,
+        duration_seconds=duration_seconds,
+        created_at=song.created_at,
+        updated_at=song.updated_at,
+    )
+
+
+@router.get("/artists", response_model=list[str])
+def get_artists(
     db: Session = Depends(get_db),
 ):
-    songs = db.scalars(
-        select(Song).order_by(
-            Song.playlist_id,
-            Song.position,
-        )
-    ).all()
+    songs = db.scalars(select(Song)).all()
+    artists_set = set()
+    for song in songs:
+        artist = None
+        if song.downloaded_track and song.downloaded_track.artist:
+            artist = song.downloaded_track.artist
+        if not artist:
+            artist = _extract_artist_fallback(song.title)
+        if artist:
+            artists_set.add(artist)
 
-    return songs
+    return sorted(list(artists_set))
+
+
+@router.get("", response_model=list[SongResponse])
+def get_songs(
+    artist: str | None = None,
+    playlist_id: int | None = None,
+    db: Session = Depends(get_db),
+):
+    stmt = select(Song)
+    if playlist_id is not None:
+        stmt = stmt.where(Song.playlist_id == playlist_id)
+
+    stmt = stmt.order_by(
+        Song.playlist_id,
+        Song.position,
+    )
+    songs = db.scalars(stmt).all()
+    responses = [_to_song_response(s) for s in songs]
+
+    if artist and artist != "all":
+        artist_lower = artist.lower()
+        responses = [
+            r for r in responses
+            if r.artist and r.artist.lower() == artist_lower
+        ]
+
+    return responses
 
 
 @router.get("/{song_id}", response_model=SongResponse)
@@ -90,7 +169,7 @@ def get_song(
             detail="Song not found",
         )
 
-    return song
+    return _to_song_response(song)
 
 
 # ---------------------------------------------------------

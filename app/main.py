@@ -11,7 +11,7 @@ from app.api.sync import router as sync_router
 from app.api.dashboard import router as dashboard_router
 from app.api.settings import router as settings_router
 from app.core.config import settings
-from app.core.runtime import scheduler
+from app.core.runtime import downloader_worker, lyrics_worker, scheduler
 from app.database.session import Base, engine, SessionLocal
 from app.settings.service import SettingsService
 
@@ -22,12 +22,40 @@ async def lifespan(app: FastAPI):
     print("Starting Music Sync application")
     print("=" * 60)
 
+    # ----------------------------------------------------------------
+    # Seed the admin user if it doesn't exist yet.
+    # ----------------------------------------------------------------
     try:
         with SessionLocal() as db:
             ensure_admin_exists(db)
     except Exception as exc:
         print(f"Could not seed admin user on startup: {exc}")
 
+    # ----------------------------------------------------------------
+    # Start the Downloader worker unconditionally.
+    # Drains the pending audio download queue.
+    # Independent of the Scheduler.
+    # ----------------------------------------------------------------
+    try:
+        downloader_worker.start()
+    except Exception as exc:
+        print(f"Could not start Downloader worker on startup: {exc}")
+
+    # ----------------------------------------------------------------
+    # Start the Lyrics worker unconditionally.
+    # Drains the pending lyrics queue (songs with download_status=downloaded
+    # and lyrics_status=pending).
+    # Independent of the Scheduler and Downloader.
+    # ----------------------------------------------------------------
+    try:
+        lyrics_worker.start()
+    except Exception as exc:
+        print(f"Could not start Lyrics worker on startup: {exc}")
+
+    # ----------------------------------------------------------------
+    # Start the Scheduler only if auto_start is enabled.
+    # The Scheduler's only job is to trigger SyncService periodically.
+    # ----------------------------------------------------------------
     try:
         app_settings = SettingsService().get()
         if app_settings.auto_start_scheduler:
@@ -40,11 +68,16 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # ----------------------------------------------------------------
+    # Graceful shutdown — stop in reverse startup order.
+    # ----------------------------------------------------------------
     print("=" * 60)
     print("Shutting down Music Sync application")
     print("=" * 60)
 
     scheduler.stop()
+    downloader_worker.stop(timeout=30.0)
+    lyrics_worker.stop(timeout=30.0)
 
 
 app = FastAPI(
@@ -86,4 +119,6 @@ def health_check():
         "service": settings.app_name,
         "environment": settings.app_env,
         "database": database_status,
+        "downloader_worker": downloader_worker.get_status(),
+        "lyrics_worker": lyrics_worker.get_status(),
     }

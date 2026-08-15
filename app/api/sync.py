@@ -2,7 +2,7 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
-from app.core.runtime import scheduler
+from app.core.runtime import downloader_worker, lyrics_worker, scheduler
 
 router = APIRouter(
     prefix="/sync",
@@ -19,7 +19,76 @@ class SyncIntervalRequest(BaseModel):
 
 @router.get("/status")
 def get_sync_status():
-    return scheduler.get_status()
+    status = scheduler.get_status()
+    status["downloader_worker"] = downloader_worker.get_status()
+    status["lyrics_worker"] = lyrics_worker.get_status()
+    return status
+
+
+@router.get("/downloader")
+def get_downloader_status():
+    return downloader_worker.get_status()
+
+
+@router.post("/downloader/start")
+def start_downloader():
+    started = downloader_worker.start()
+    if not started:
+        return {
+            "status": "already_running",
+            "message": "Downloader worker is already running.",
+        }
+    return {
+        "status": "started",
+        "message": "Downloader worker started.",
+    }
+
+
+@router.post("/downloader/stop")
+def stop_downloader():
+    stopped = downloader_worker.stop()
+    if not stopped:
+        return {
+            "status": "already_stopped",
+            "message": "Downloader worker is already stopped.",
+        }
+    return {
+        "status": "stopped",
+        "message": "Downloader worker stopped.",
+    }
+
+
+@router.get("/lyrics")
+def get_lyrics_worker_status():
+    return lyrics_worker.get_status()
+
+
+@router.post("/lyrics/start")
+def start_lyrics_worker():
+    started = lyrics_worker.start()
+    if not started:
+        return {
+            "status": "already_running",
+            "message": "Lyrics worker is already running.",
+        }
+    return {
+        "status": "started",
+        "message": "Lyrics worker started.",
+    }
+
+
+@router.post("/lyrics/stop")
+def stop_lyrics_worker():
+    stopped = lyrics_worker.stop()
+    if not stopped:
+        return {
+            "status": "already_stopped",
+            "message": "Lyrics worker is already stopped.",
+        }
+    return {
+        "status": "stopped",
+        "message": "Lyrics worker stopped.",
+    }
 
 
 @router.post("")

@@ -70,6 +70,26 @@ def main():
         "PASS: ValueError is not retryable."
     )
 
+    # ---------------------------------------------------------
+    # TEST 5: HTTP 403 and Network Unreachable (Retryable)
+    # ---------------------------------------------------------
+    error_403 = yt_dlp.utils.DownloadError("ERROR: unable to download video data: HTTP Error 403: Forbidden")
+    assert downloader._is_retryable_error(error_403) is True
+
+    error_net = yt_dlp.utils.DownloadError("[download] Got error: [Errno 101] Network is unreachable")
+    assert downloader._is_retryable_error(error_net) is True
+    print("PASS: HTTP 403 and Network Unreachable errors are retryable.")
+
+    # ---------------------------------------------------------
+    # TEST 6: Missing Executables & Permanent Failures (Unretryable)
+    # ---------------------------------------------------------
+    error_ffmpeg = yt_dlp.utils.PostProcessingError("ffmpeg not found. Please install ffmpeg.")
+    assert downloader._is_retryable_error(error_ffmpeg) is False
+
+    error_unavail = yt_dlp.utils.DownloadError("ERROR: [youtube] Video unavailable")
+    assert downloader._is_retryable_error(error_unavail) is False
+    print("PASS: Missing binaries and video unavailable are permanent/unretryable.")
+
     print()
     print("=" * 60)
     print("ALL FAILURE CLASSIFICATION TESTS PASSED")
