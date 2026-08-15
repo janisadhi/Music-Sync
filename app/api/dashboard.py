@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
-from app.core.runtime import downloader_worker, scheduler
+from app.core.runtime import downloader_worker, lyrics_worker, scheduler
 from app.database.models import Playlist, Song
 from app.database.session import SessionLocal
 
@@ -86,6 +86,7 @@ def get_dashboard():
 
     status = scheduler.get_status()
     dl_status = downloader_worker.get_status()
+    lrc_status = lyrics_worker.get_status()
 
     return {
         "playlist": playlist_data,
@@ -114,6 +115,13 @@ def get_dashboard():
             "last_poll_error": dl_status["last_poll_error"],
             "last_poll_downloaded": dl_status["last_poll_downloaded"],
             "total_downloaded": dl_status["total_downloaded"],
+        },
+        "lyrics": {
+            "running": lrc_status["worker_running"],
+            "last_poll_completed_at": lrc_status["last_poll_completed_at"],
+            "last_poll_status": lrc_status["last_poll_status"],
+            "last_poll_error": lrc_status["last_poll_error"],
+            "total_processed": lrc_status["total_processed"],
         },
         "last_sync": {
             "status": status["last_sync_status"],

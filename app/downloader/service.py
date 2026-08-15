@@ -121,6 +121,7 @@ class SongDownloader:
             "noplaylist": True,
             "quiet": False,
             "no_warnings": False,
+            # Download and embed video thumbnail as album art
             "writethumbnail": True,
             "postprocessors": [
                 {
@@ -129,10 +130,16 @@ class SongDownloader:
                     "preferredquality": "0",
                 },
                 {
+                    # Embeds the downloaded thumbnail into the audio file
                     "key": "EmbedThumbnail",
                 },
+                {
+                    # Write available metadata (title, artist, album, etc.)
+                    # from the yt-dlp info dict into the container tags
+                    "key": "FFmpegMetadata",
+                    "add_metadata": True,
+                },
             ],
-            "addmetadata": True,
         }
 
     # ------------------------------------------------------------------
