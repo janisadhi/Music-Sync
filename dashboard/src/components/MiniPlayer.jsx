@@ -38,6 +38,7 @@ export default function MiniPlayer() {
         queue,
         playSong,
         togglePlay,
+        pause,
         next,
         previous,
         seek,
@@ -54,6 +55,11 @@ export default function MiniPlayer() {
     useEffect(() => {
         setClosed(false);
     }, [currentSong?.id]);
+
+    const handleClose = () => {
+        pause();
+        setClosed(true);
+    };
 
     // Do not render mini player on Song Detail page or when user closes it
     const isSongDetailPage = location.pathname.startsWith("/songs/") && location.pathname.endsWith("/detail");
@@ -212,7 +218,7 @@ export default function MiniPlayer() {
                             <Maximize2 size={18} />
                         </Link>
 
-                        <button className="mini-btn icon-only close-mini-btn" onClick={() => setClosed(true)} title="Close player">
+                        <button className="mini-btn icon-only close-mini-btn" onClick={handleClose} title="Close player">
                             <X size={18} />
                         </button>
                     </div>
