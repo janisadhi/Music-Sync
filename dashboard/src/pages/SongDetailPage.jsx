@@ -258,7 +258,7 @@ export default function SongDetailPage() {
                     ) : null}
                 </div>
 
-                <Lyrics song={song} lyrics={lyricsData?.lyrics} currentTime={currentTime} />
+                <Lyrics song={song} lyrics={lyricsData?.lyrics} currentTime={isThisSongCurrent ? currentTime : 0} />
             </div>
         </div>
     );
