@@ -416,7 +416,7 @@
     margin-left: 2px;
 }
 
-/* Frameless Lyrics Stage Column (NO Box/Card Border around Lyrics) */
+/* Frameless Lyrics Stage Column (Right Aligned & Hidden Scrollbar) */
 .frameless-lyrics-column {
     width: 100%;
     height: 100%;
@@ -424,6 +424,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: flex-end; /* Align lyrics section to right side */
     padding: 20px 0;
     animation: fadeInLyrics 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -442,11 +443,20 @@
 /* Override Lyrics component when rendered inside frameless lyrics column */
 .frameless-lyrics-column .spotify-lyrics-viewport {
     height: 520px;
+    width: 100%;
     background: transparent;
     border: none;
     box-shadow: none;
     padding: 60px 0;
-    text-align: left;
+    text-align: right; /* Right align text */
+    scrollbar-width: none; /* Hide Firefox scrollbar */
+    -ms-overflow-style: none; /* Hide IE/Edge scrollbar */
+}
+
+.frameless-lyrics-column .spotify-lyrics-viewport::-webkit-scrollbar {
+    display: none; /* Hide Chrome/Safari scrollbar */
+    width: 0;
+    height: 0;
 }
 
 .frameless-lyrics-column .spotify-lyric-line {
@@ -454,7 +464,7 @@
     font-weight: 700;
     color: rgba(255, 255, 255, 0.4);
     padding: 10px 0;
-    text-align: left;
+    text-align: right; /* Right align text */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -464,7 +474,9 @@
     color: #ffffff;
     text-shadow: 0 0 24px rgba(255, 255, 255, 0.5);
     transform: scale(1.02);
+    transform-origin: right center; /* Scale anchored to right side */
     background: transparent;
+    text-align: right;
 }
 
 /* Glass Queue Drawer */
