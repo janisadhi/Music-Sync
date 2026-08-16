@@ -32,7 +32,8 @@ export default function Songs() {
 
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedArtistFilter, setSelectedArtistFilter] = useState("all");
+    const [downloadStatusFilter, setDownloadStatusFilter] = useState("all");
+    const [lyricsStatusFilter, setLyricsStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState("title"); // "title" | "artist" | "album" | "duration"
 
     const handleLayoutChange = (mode) => {
@@ -91,9 +92,10 @@ export default function Songs() {
         const query = searchQuery.toLowerCase();
 
         const matchesSearch = title.includes(query) || artist.includes(query) || album.includes(query);
-        const matchesArtist = selectedArtistFilter === "all" || song.artist === selectedArtistFilter;
+        const matchesDownloadStatus = downloadStatusFilter === "all" || song.download_status === downloadStatusFilter;
+        const matchesLyricsStatus = lyricsStatusFilter === "all" || song.lyrics_status === lyricsStatusFilter;
 
-        return matchesSearch && matchesArtist;
+        return matchesSearch && matchesDownloadStatus && matchesLyricsStatus;
     });
 
     const sortedSongs = [...filteredSongs].sort((a, b) => {
@@ -166,7 +168,7 @@ export default function Songs() {
                 </button>
             </nav>
 
-            {/* Toolbar: Search, Filters, Sorting & Layout Controls */}
+            {/* Toolbar: Search, Status Filters & Layout Controls */}
             {activeTab === "songs" && (
                 <div className="songs-toolbar">
                     <div className="search-box">
@@ -180,30 +182,28 @@ export default function Songs() {
                     </div>
 
                     <div className="toolbar-filters">
-                        {artists.length > 0 && (
-                            <select
-                                className="filter-select"
-                                value={selectedArtistFilter}
-                                onChange={(e) => setSelectedArtistFilter(e.target.value)}
-                            >
-                                <option value="all">All Artists</option>
-                                {artists.map((art) => (
-                                    <option key={art} value={art}>
-                                        {art}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
+                        <select
+                            className="filter-select"
+                            value={downloadStatusFilter}
+                            onChange={(e) => setDownloadStatusFilter(e.target.value)}
+                        >
+                            <option value="all">Song Status: All</option>
+                            <option value="downloaded">Song: Downloaded</option>
+                            <option value="pending">Song: Pending</option>
+                            <option value="failed">Song: Failed</option>
+                            <option value="unavailable">Song: Unavailable</option>
+                        </select>
 
                         <select
                             className="filter-select"
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
+                            value={lyricsStatusFilter}
+                            onChange={(e) => setLyricsStatusFilter(e.target.value)}
                         >
-                            <option value="title">Sort by Title</option>
-                            <option value="artist">Sort by Artist</option>
-                            <option value="album">Sort by Album</option>
-                            <option value="duration">Sort by Duration</option>
+                            <option value="all">Lyrics Status: All</option>
+                            <option value="downloaded">Lyrics: Downloaded</option>
+                            <option value="pending">Lyrics: Pending</option>
+                            <option value="failed">Lyrics: Failed</option>
+                            <option value="unavailable">Lyrics: Unavailable</option>
                         </select>
                     </div>
 
