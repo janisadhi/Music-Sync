@@ -11,7 +11,7 @@ router = APIRouter(
     tags=["Metadata"],
 )
 
-METADATA_SERVICE_URL = os.getenv("METADATA_SERVICE_URL", "http://localhost:8001")
+METADATA_SERVICE_URL = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
 
 
 async def _forward_request(

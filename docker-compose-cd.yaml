@@ -41,8 +41,6 @@ services:
       - "127.0.0.1:8000:8000"
 
     volumes:
-      - ./app:/app/app
-      - ./alembic:/app/alembic
       - ./data/downloads:/app/downloads
 
   metadata:
@@ -57,7 +55,6 @@ services:
     ports:
       - "127.0.0.1:8001:8001"
     volumes:
-      - ./metadata_service:/app/metadata_service
       - ./data/downloads:/app/downloads
       - ./data/beets:/app/data/beets
 
