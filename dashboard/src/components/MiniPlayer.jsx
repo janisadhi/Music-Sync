@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
-    ChevronUp,
     ListMusic,
     Maximize2,
     Music,
@@ -14,6 +13,7 @@ import {
     SkipForward,
     Volume2,
     VolumeX,
+    X,
 } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
 import "../styles/miniPlayer.css";
@@ -26,6 +26,7 @@ function formatTime(seconds) {
 }
 
 export default function MiniPlayer() {
+    const location = useLocation();
     const {
         currentSong,
         isPlaying,
@@ -47,8 +48,16 @@ export default function MiniPlayer() {
 
     const [showQueue, setShowQueue] = useState(false);
     const [prevVolume, setPrevVolume] = useState(0.8);
+    const [closed, setClosed] = useState(false);
 
-    if (!currentSong) return null;
+    // Reset closed state when current song changes
+    useEffect(() => {
+        setClosed(false);
+    }, [currentSong?.id]);
+
+    // Do not render mini player on Song Detail page or when user closes it
+    const isSongDetailPage = location.pathname.startsWith("/songs/") && location.pathname.endsWith("/detail");
+    if (!currentSong || isSongDetailPage || closed) return null;
 
     const artwork = currentSong.thumbnail_url;
     const title = currentSong.title || currentSong.raw_title || "Unknown Track";
@@ -74,7 +83,7 @@ export default function MiniPlayer() {
                             className="queue-close-btn"
                             onClick={() => setShowQueue(false)}
                         >
-                            ✕
+                            <X size={16} />
                         </button>
                     </div>
                     <div className="queue-list">
@@ -174,7 +183,7 @@ export default function MiniPlayer() {
                         </div>
                     </div>
 
-                    {/* Right: Volume + Queue + Expand */}
+                    {/* Right: Volume + Queue + Expand + Close */}
                     <div className="mini-player-right">
                         <div className="mini-player-volume">
                             <button className="mini-btn icon-only" onClick={handleVolumeToggle}>
@@ -202,6 +211,10 @@ export default function MiniPlayer() {
                         <Link to={`/songs/${currentSong.id}/detail`} className="mini-btn icon-only" title="Full Screen Detail">
                             <Maximize2 size={18} />
                         </Link>
+
+                        <button className="mini-btn icon-only close-mini-btn" onClick={() => setClosed(true)} title="Close player">
+                            <X size={18} />
+                        </button>
                     </div>
                 </div>
             </div>
