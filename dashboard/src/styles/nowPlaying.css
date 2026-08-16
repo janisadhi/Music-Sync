@@ -1,5 +1,5 @@
 /* ==============================================================================
-   Liquid Glass Full-Screen Music Player Styles
+   Spotify-Inspired Liquid Glass Full-Screen Music Player Styles
    ============================================================================== */
 
 .now-playing-fullscreen {
@@ -31,20 +31,20 @@
     width: 130%;
     height: 130%;
     object-fit: cover;
-    filter: blur(100px) brightness(0.55) saturate(1.6);
-    transform: scale(1.1);
+    filter: blur(110px) brightness(0.5) saturate(1.8);
+    transform: scale(1.15);
     transition: opacity 1.5s ease;
-    opacity: 0.35;
+    opacity: 0.4;
 }
 
 .ambient-gradient-overlay {
     position: absolute;
     inset: 0;
     background: radial-gradient(
-        circle at 35% 35%,
+        ellipse at 50% 30%,
         var(--glow-color, rgba(59, 130, 246, 0.45)) 0%,
         var(--dominant-color, rgba(30, 41, 59, 0.75)) 50%,
-        var(--dark-color, rgba(15, 23, 42, 0.95)) 100%
+        var(--dark-color, rgba(9, 13, 22, 0.96)) 100%
     );
     transition: background 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -52,15 +52,15 @@
 .ambient-glass-tint {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.3) 0%, rgba(9, 13, 22, 0.8) 100%);
-    backdrop-filter: blur(20px);
+    background: linear-gradient(180deg, rgba(9, 13, 22, 0.35) 0%, rgba(9, 13, 22, 0.88) 100%);
+    backdrop-filter: blur(24px);
 }
 
 /* Top Navigation Exit Bar */
 .now-playing-top-bar {
     position: relative;
     z-index: 10;
-    padding: 24px 40px 0;
+    padding: 28px 48px 0;
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -71,22 +71,22 @@
     align-items: center;
     gap: 8px;
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 30px;
     color: #ffffff;
-    padding: 10px 20px;
+    padding: 10px 22px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .exit-btn:hover {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.35);
     transform: translateY(-2px);
 }
 
@@ -99,8 +99,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px 80px 40px;
-    gap: 60px;
+    padding: 20px 80px 48px;
+    gap: 64px;
     box-sizing: border-box;
     transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -111,16 +111,16 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 24px;
+    gap: 28px;
     width: 100%;
-    max-width: 520px;
+    max-width: 540px;
     transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 2-Panel Transformation when Lyrics are Open */
+/* 2-Panel Spatial Transformation when Lyrics are Open */
 .now-playing-content.lyrics-open {
     justify-content: space-between;
-    padding: 20px 60px 40px;
+    padding: 20px 60px 48px;
 }
 
 .now-playing-content.lyrics-open .left-music-panel {
@@ -137,22 +137,22 @@
 }
 
 .glass-art-card {
-    width: 360px;
-    height: 360px;
-    border-radius: 28px;
+    width: 380px;
+    height: 380px;
+    border-radius: 24px;
     overflow: hidden;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow:
-        0 20px 50px rgba(0, 0, 0, 0.5),
+        0 24px 60px rgba(0, 0, 0, 0.6),
         0 0 50px var(--glow-color, rgba(59, 130, 246, 0.35));
     transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     background: rgba(255, 255, 255, 0.05);
 }
 
 .now-playing-content.lyrics-open .glass-art-card {
-    width: 280px;
-    height: 280px;
+    width: 300px;
+    height: 300px;
     border-radius: 20px;
 }
 
@@ -169,7 +169,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
     color: rgba(255, 255, 255, 0.4);
 }
 
@@ -182,7 +182,7 @@
 }
 
 .song-meta-stage .song-title {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 800;
     color: #ffffff;
     margin: 0;
@@ -190,13 +190,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
 }
 
 .song-meta-stage .song-artist {
-    font-size: 18px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: 20px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -221,24 +221,24 @@
     gap: 5px;
     font-size: 12px;
     background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 20px;
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 /* Floating Liquid Glass Control Panel */
 .glass-controls-panel {
     width: 100%;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: rgba(18, 24, 38, 0.6);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 24px;
-    padding: 20px 24px;
+    padding: 20px 28px;
     box-shadow:
-        0 16px 40px rgba(0, 0, 0, 0.35),
+        0 20px 50px rgba(0, 0, 0, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     display: flex;
     flex-direction: column;
@@ -249,15 +249,15 @@
 .progress-section {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
 }
 
 .time-display {
     font-size: 12px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.65);
     font-variant-numeric: tabular-nums;
-    min-width: 36px;
+    min-width: 40px;
 }
 
 .glass-progress-slider {
@@ -278,47 +278,65 @@
     height: 14px;
     border-radius: 50%;
     background: #ffffff;
-    box-shadow: 0 0 10px var(--accent-color, #3b82f6);
+    box-shadow: 0 0 12px var(--accent-color, #3b82f6);
     cursor: pointer;
 }
 
+/* Flex button container with zero misalignment */
 .controls-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+}
+
+.controls-group-left, .controls-group-right {
+    display: flex;
+    align-items: center;
     gap: 10px;
+    height: 42px;
 }
 
 .glass-btn {
-    background: transparent;
-    border: none;
+    height: 42px;
+    min-width: 42px;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.7);
-    padding: 8px;
     border-radius: 50%;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: 0;
+    padding: 0;
 }
 
 .glass-btn:hover {
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .glass-btn.active {
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.25);
 }
 
 .glass-btn.main-play-btn {
     width: 52px;
     height: 52px;
+    min-width: 52px;
+    border-radius: 50%;
     background: #ffffff;
     color: #0f172a;
-    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+    border: none;
+    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.35);
 }
 
 .glass-btn.main-play-btn:hover {
@@ -357,29 +375,34 @@
 }
 
 .lyrics-toggle-btn {
-    display: flex;
+    height: 42px;
+    min-width: 100px;
+    border-radius: 22px;
+    padding: 0 16px;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 20px;
+    justify-content: center;
+    gap: 8px;
     font-size: 13px;
-    font-weight: 600;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-weight: 700;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .lyrics-toggle-btn.active {
     background: #ffffff;
     color: #0f172a;
     border-color: #ffffff;
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.4);
 }
 
-/* Right Panel: Liquid Glass Lyrics Stage */
+/* Right Panel: Spotify-Style Liquid Glass Lyrics Stage */
 .right-lyrics-panel {
     flex: 1;
     height: 100%;
-    max-height: 600px;
-    min-width: 480px;
+    max-height: 640px;
+    min-width: 520px;
     animation: slideInLyrics 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -396,12 +419,12 @@
 
 .lyrics-glass-card {
     height: 100%;
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
+    background: rgba(18, 24, 38, 0.55);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 28px;
-    padding: 24px 32px;
+    padding: 32px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
     display: flex;
     flex-direction: column;
@@ -413,13 +436,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 12px;
+    padding-bottom: 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .lyrics-card-header h3 {
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 800;
     color: #ffffff;
     margin: 0;
     display: flex;
@@ -434,7 +457,7 @@
     left: 80px;
     width: 360px;
     max-height: 440px;
-    background: rgba(15, 23, 42, 0.85);
+    background: rgba(15, 23, 42, 0.88);
     backdrop-filter: blur(30px);
     -webkit-backdrop-filter: blur(30px);
     border: 1px solid rgba(255, 255, 255, 0.18);
