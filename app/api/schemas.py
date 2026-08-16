@@ -49,6 +49,10 @@ class SongResponse(BaseModel):
     lyrics_path: str | None
     artist: str | None = None
     album: str | None = None
+    album_artist: str | None = None
+    genre: str | None = None
+    release_year: int | None = None
+    track_number: int | None = None
     thumbnail_url: str | None = None
     duration_seconds: int | None = None
     beets_metadata_edited: bool = False

@@ -1,0 +1,334 @@
+.mini-player-bar {
+    position: fixed;
+    bottom: 0;
+    left: 240px; /* Sidebar width */
+    right: 0;
+    height: 80px;
+    background: rgba(18, 20, 29, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .mini-player-bar {
+        left: 0;
+    }
+}
+
+.mini-player-progress-container {
+    width: 100%;
+    height: 4px;
+    position: relative;
+    top: -2px;
+}
+
+.mini-player-progress-bar {
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    outline: none;
+    cursor: pointer;
+    transition: height 0.15s ease;
+    margin: 0;
+    display: block;
+}
+
+.mini-player-progress-bar:hover {
+    height: 6px;
+}
+
+.mini-player-progress-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+}
+
+.mini-player-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    gap: 20px;
+}
+
+.mini-player-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 220px;
+    max-width: 320px;
+}
+
+.mini-player-art-link {
+    display: block;
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.mini-player-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mini-player-art-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+}
+
+.mini-player-track-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.mini-player-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f8fafc;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s ease;
+}
+
+.mini-player-title:hover {
+    color: #3b82f6;
+}
+
+.mini-player-artist {
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mini-player-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.mini-player-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.mini-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.mini-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.mini-btn.active {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.mini-btn.main-play-btn {
+    width: 38px;
+    height: 38px;
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.mini-btn.main-play-btn:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.play-icon-offset {
+    margin-left: 2px;
+}
+
+.mini-player-time {
+    display: flex;
+    gap: 4px;
+    font-size: 11px;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+}
+
+.mini-player-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.mini-player-volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mini-player-volume-slider {
+    width: 80px;
+    height: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.mini-player-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #f8fafc;
+}
+
+/* Queue Drawer */
+.queue-drawer {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    width: 360px;
+    max-height: 460px;
+    background: #131722;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.queue-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.queue-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.queue-close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.queue-list {
+    overflow-y: auto;
+    max-height: 380px;
+    padding: 8px;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.queue-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.queue-item.active {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.queue-item-art {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.queue-item-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.queue-item-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.queue-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-artist {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.queue-playing-tag {
+    font-size: 10px;
+    font-weight: 600;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+}

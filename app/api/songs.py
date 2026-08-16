@@ -81,6 +81,10 @@ def _to_song_response(song: Song) -> SongResponse:
     raw_title = song.title
     artist = None
     album = None
+    album_artist = None
+    genre = None
+    release_year = None
+    track_number = None
     thumbnail_url = None
     duration_seconds = None
     beets_metadata_edited = False
@@ -95,6 +99,10 @@ def _to_song_response(song: Song) -> SongResponse:
         if song.downloaded_track.artist:
             artist = song.downloaded_track.artist
         album = song.downloaded_track.album
+        album_artist = song.downloaded_track.album_artist
+        genre = song.downloaded_track.genre
+        release_year = song.downloaded_track.release_year
+        track_number = song.downloaded_track.track_number
         thumbnail_url = song.downloaded_track.thumbnail_url
         duration_seconds = song.downloaded_track.duration_seconds
         beets_metadata_edited = song.downloaded_track.beets_metadata_edited
@@ -119,6 +127,10 @@ def _to_song_response(song: Song) -> SongResponse:
         error_message=song.error_message,
         artist=artist,
         album=album,
+        album_artist=album_artist,
+        genre=genre,
+        release_year=release_year,
+        track_number=track_number,
         thumbnail_url=thumbnail_url,
         duration_seconds=duration_seconds,
         beets_metadata_edited=beets_metadata_edited,
@@ -147,9 +159,56 @@ def get_artists(
     return sorted(list(artists_set))
 
 
+@router.get("/albums")
+def get_albums(
+    db: Session = Depends(get_db),
+):
+    songs = db.scalars(select(Song)).all()
+    albums_dict = {}
+
+    for song in songs:
+        res = _to_song_response(song)
+        album_name = res.album or "Unknown Album"
+        if album_name not in albums_dict:
+            albums_dict[album_name] = {
+                "name": album_name,
+                "artist": res.album_artist or res.artist or "Unknown Artist",
+                "year": res.release_year,
+                "thumbnail_url": res.thumbnail_url,
+                "song_count": 0,
+            }
+        albums_dict[album_name]["song_count"] += 1
+        if not albums_dict[album_name]["thumbnail_url"] and res.thumbnail_url:
+            albums_dict[album_name]["thumbnail_url"] = res.thumbnail_url
+
+    return sorted(list(albums_dict.values()), key=lambda a: a["name"])
+
+
+@router.get("/genres")
+def get_genres(
+    db: Session = Depends(get_db),
+):
+    songs = db.scalars(select(Song)).all()
+    genres_dict = {}
+
+    for song in songs:
+        res = _to_song_response(song)
+        genre_name = res.genre or "Unknown Genre"
+        if genre_name not in genres_dict:
+            genres_dict[genre_name] = {
+                "name": genre_name,
+                "song_count": 0,
+            }
+        genres_dict[genre_name]["song_count"] += 1
+
+    return sorted(list(genres_dict.values()), key=lambda g: g["name"])
+
+
 @router.get("", response_model=list[SongResponse])
 def get_songs(
     artist: str | None = None,
+    album: str | None = None,
+    genre: str | None = None,
     playlist_id: int | None = None,
     db: Session = Depends(get_db),
 ):
@@ -169,6 +228,20 @@ def get_songs(
         responses = [
             r for r in responses
             if r.artist and r.artist.lower() == artist_lower
+        ]
+
+    if album and album != "all":
+        album_lower = album.lower()
+        responses = [
+            r for r in responses
+            if r.album and r.album.lower() == album_lower
+        ]
+
+    if genre and genre != "all":
+        genre_lower = genre.lower()
+        responses = [
+            r for r in responses
+            if r.genre and r.genre.lower() == genre_lower
         ]
 
     return responses

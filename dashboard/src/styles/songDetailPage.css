@@ -1,0 +1,324 @@
+.song-detail-container {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 32px;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    width: fit-content;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.back-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.song-detail-hero {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.hero-artwork-wrap {
+    width: 240px;
+    height: 240px;
+    border-radius: 16px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    background: #0f172a;
+}
+
+.hero-artwork {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hero-artwork-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+}
+
+.hero-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.hero-badge {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 600;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.hero-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.hero-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #cbd5e1;
+    font-size: 15px;
+    flex-wrap: wrap;
+}
+
+.hero-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meta-bullet {
+    color: #475569;
+}
+
+.hero-player-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 12px;
+}
+
+.card-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.player-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.player-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.player-btn.active {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.player-btn.main-play-btn {
+    width: 48px;
+    height: 48px;
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.player-btn.main-play-btn:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.card-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.card-progress-slider {
+    flex: 1;
+    height: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.card-progress-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #3b82f6;
+}
+
+.song-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 900px) {
+    .song-detail-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .hero-badge {
+        align-self: center;
+    }
+    .hero-meta-row {
+        justify-content: center;
+    }
+    .song-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.detail-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.detail-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.meta-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.meta-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 14px;
+}
+
+.meta-table td:first-child {
+    color: #64748b;
+    width: 35%;
+}
+
+.meta-table td:last-child {
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.path-cell {
+    font-family: monospace;
+    font-size: 12px !important;
+    word-break: break-all;
+    color: #94a3b8 !important;
+}
+
+.status-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    text-transform: capitalize;
+}
+
+.pill-downloaded, .pill-enriched {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.pill-pending, .pill-raw {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+}
+
+.pill-failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.lyrics-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.lyrics-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lyrics-body {
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 280px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.lyrics-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #64748b;
+    gap: 12px;
+}
+
+.song-detail-loading, .song-detail-not-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 0;
+    gap: 16px;
+    color: #64748b;
+}
