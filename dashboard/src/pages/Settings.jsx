@@ -15,6 +15,7 @@ import {
     Save,
     ShieldCheck,
     Sliders,
+    Sparkles,
     Trash2,
     X,
     Zap,
@@ -55,6 +56,10 @@ function Settings() {
         playlist_watch_mode: "whole",
         playlist_watch_limit: 10,
         delete_local_file_on_playlist_removal: false,
+        auto_scan_metadata_enabled: true,
+        auto_rename_files: true,
+        min_confidence_threshold: "MEDIUM",
+        clean_youtube_titles: true,
     });
 
     // YouTube Cookie state
@@ -790,7 +795,110 @@ function Settings() {
                 </div>
 
                 {/* ============================================================
-                    SECTION 7 – YouTube Authentication / Cookies (Optional)
+                    SECTION 7 – Metadata & Enrichment Settings
+                    ============================================================ */}
+                <div className="settings-card">
+                    <div className="card-section-header">
+                        <Sparkles size={20} className="section-icon blue" style={{ color: "#2563eb" }} />
+                        <div>
+                            <h3>Metadata & Enrichment Settings</h3>
+                            <p>Configure automatic library scanning, file renaming, MusicBrainz confidence thresholds, and title parsing.</p>
+                        </div>
+                    </div>
+
+                    {/* Auto Scan Metadata Toggle */}
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <label htmlFor="auto_scan_metadata_enabled" className="setting-label">
+                                Auto Scan & Enrich Metadata
+                            </label>
+                            <p className="setting-desc">
+                                Automatically trigger metadata enrichment using MusicBrainz and Beets after new audio files are downloaded.
+                            </p>
+                        </div>
+                        <label className="toggle-switch">
+                            <input
+                                id="auto_scan_metadata_enabled"
+                                name="auto_scan_metadata_enabled"
+                                type="checkbox"
+                                checked={Boolean(settings.auto_scan_metadata_enabled)}
+                                onChange={handleChange}
+                            />
+                            <span className="slider round"></span>
+                        </label>
+                    </div>
+
+                    {/* Auto Rename Files Toggle */}
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <label htmlFor="auto_rename_files" className="setting-label">
+                                Auto Rename Files & Lyrics
+                            </label>
+                            <p className="setting-desc">
+                                Automatically rename audio files and matching <code>.lrc</code> lyrics files to <code>Artist Name - Music Title.ext</code> upon enrichment.
+                            </p>
+                        </div>
+                        <label className="toggle-switch">
+                            <input
+                                id="auto_rename_files"
+                                name="auto_rename_files"
+                                type="checkbox"
+                                checked={Boolean(settings.auto_rename_files)}
+                                onChange={handleChange}
+                            />
+                            <span className="slider round"></span>
+                        </label>
+                    </div>
+
+                    {/* Clean YouTube Noise Titles Toggle */}
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <label htmlFor="clean_youtube_titles" className="setting-label">
+                                Strip YouTube Noise Tags
+                            </label>
+                            <p className="setting-desc">
+                                Automatically clean video titles by removing tags like <code>(Official Audio)</code>, <code>[Visualizer]</code>, <code>(Official Video)</code>, and remaster badges.
+                            </p>
+                        </div>
+                        <label className="toggle-switch">
+                            <input
+                                id="clean_youtube_titles"
+                                name="clean_youtube_titles"
+                                type="checkbox"
+                                checked={Boolean(settings.clean_youtube_titles)}
+                                onChange={handleChange}
+                            />
+                            <span className="slider round"></span>
+                        </label>
+                    </div>
+
+                    {/* Minimum Confidence Threshold */}
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <label htmlFor="min_confidence_threshold" className="setting-label">
+                                MusicBrainz Match Confidence Threshold
+                            </label>
+                            <p className="setting-desc">
+                                Minimum confidence required to mark metadata as <strong>Enriched</strong> and apply external MusicBrainz album/year data.
+                            </p>
+                        </div>
+                        <div className="setting-control">
+                            <select
+                                id="min_confidence_threshold"
+                                name="min_confidence_threshold"
+                                className="setting-input select-input"
+                                value={settings.min_confidence_threshold || "MEDIUM"}
+                                onChange={handleChange}
+                            >
+                                <option value="MEDIUM">Medium Confidence (Recommended)</option>
+                                <option value="HIGH">Strict High Confidence Only</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ============================================================
+                    SECTION 8 – YouTube Authentication / Cookies (Optional)
                     ============================================================ */}
                 <div className="settings-card">
                     <div className="card-section-header">

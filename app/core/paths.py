@@ -96,14 +96,35 @@ def resolve_file_path(
     """
     Resolve a database file path.
 
-    Absolute paths are returned unchanged.
-    Relative paths are resolved from the
-    download directory.
+    - If path exists on disk as-is, return it.
+    - If path starts with /app/downloads or data/downloads, remap it under get_download_root().
+    - Relative paths are resolved from get_download_root().
     """
+    if not file_path:
+        return get_download_root()
 
     path = Path(file_path)
+    if path.exists():
+        return path
+
+    download_root = get_download_root()
+    str_path = str(file_path).replace("\\", "/")
+
+    # Check if path starts with container prefix /app/downloads
+    if str_path.startswith("/app/downloads/"):
+        rel_part = str_path[len("/app/downloads/"):]
+        candidate = download_root / rel_part
+        if candidate.exists() or not path.is_absolute():
+            return candidate
+
+    # Check if path contains data/downloads
+    if "data/downloads/" in str_path:
+        rel_part = str_path.split("data/downloads/", 1)[1]
+        candidate = download_root / rel_part
+        if candidate.exists() or not path.is_absolute():
+            return candidate
 
     if path.is_absolute():
         return path
 
-    return get_download_root() / path
+    return download_root / path

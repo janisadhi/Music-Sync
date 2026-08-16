@@ -254,6 +254,11 @@ class LyricsService:
 
         song.file_path = str(destination)
 
+        # Keep DownloadedTrack.file_path in sync so the metadata service
+        # can find the file when it runs later.
+        if song.downloaded_track:
+            song.downloaded_track.file_path = str(destination)
+
     # ---------------------------------------------------------
     # Process one song
     # ---------------------------------------------------------

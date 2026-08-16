@@ -10,6 +10,7 @@ from app.api.songs import router as songs_router
 from app.api.sync import router as sync_router
 from app.api.dashboard import router as dashboard_router
 from app.api.settings import router as settings_router
+from app.api.metadata import router as metadata_router
 from app.core.config import settings
 from app.core.runtime import downloader_worker, lyrics_worker, scheduler
 from app.database.session import Base, engine, SessionLocal
@@ -102,6 +103,7 @@ app.include_router(playlists_router)
 app.include_router(sync_router)
 app.include_router(dashboard_router)
 app.include_router(settings_router)
+app.include_router(metadata_router)
 
 
 @app.get("/health")

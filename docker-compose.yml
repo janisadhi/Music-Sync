@@ -34,6 +34,9 @@ services:
     env_file:
       - .env
 
+    environment:
+      - METADATA_SERVICE_URL=${METADATA_SERVICE_URL:-http://metadata:8001}
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,6 +48,24 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./data/downloads:/app/downloads
+
+  metadata:
+    build:
+      context: .
+      dockerfile: metadata_service/Dockerfile
+    container_name: music-sync-metadata
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - ./metadata_service:/app/metadata_service
+      - ./data/downloads:/app/downloads
+      - ./data/beets:/app/data/beets
 
   dashboard:
     build:
@@ -64,3 +85,4 @@ services:
 
     depends_on:
       - app
+      - metadata

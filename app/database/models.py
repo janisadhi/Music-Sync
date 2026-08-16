@@ -287,6 +287,13 @@ class DownloadedTrack(Base):
         nullable=False,
     )
 
+    beets_metadata_edited: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
@@ -302,6 +309,54 @@ class DownloadedTrack(Base):
 
     song: Mapped["Song"] = relationship(
         back_populates="downloaded_track",
+    )
+
+    history_entries: Mapped[list["TrackMetadataHistory"]] = relationship(
+        back_populates="downloaded_track",
+        cascade="all, delete-orphan",
+        order_by="TrackMetadataHistory.created_at.desc()",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Downloaded / Music Library DB – TrackMetadataHistory
+#
+# Records history of metadata changes, Beets autotagging, and file renames.
+# ---------------------------------------------------------------------------
+
+class TrackMetadataHistory(Base):
+    __tablename__ = "track_metadata_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    downloaded_track_id: Mapped[int] = mapped_column(
+        ForeignKey("downloaded_tracks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    previous_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
+    previous_filename: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_filename: Mapped[str | None] = mapped_column(Text, nullable=True)
+    previous_lyrics_filename: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_lyrics_filename: Mapped[str | None] = mapped_column(Text, nullable=True)
+    match_source: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    match_confidence: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    musicbrainz_recording_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    musicbrainz_artist_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="success", nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    downloaded_track: Mapped["DownloadedTrack"] = relationship(
+        back_populates="history_entries",
     )
 
 
@@ -393,6 +448,37 @@ class AppSettings(Base):
         Text,
         nullable=True,
         default=None,
+    )
+
+    # ------------------------------------------------------------------
+    # Metadata & Enrichment Service Settings
+    # ------------------------------------------------------------------
+    auto_scan_metadata_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
+    )
+
+    auto_rename_files: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
+    )
+
+    min_confidence_threshold: Mapped[str] = mapped_column(
+        String(20),
+        default="MEDIUM",
+        server_default="MEDIUM",
+        nullable=False,
+    )
+
+    clean_youtube_titles: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(

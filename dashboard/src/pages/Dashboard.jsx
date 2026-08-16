@@ -13,10 +13,12 @@ import {
     Play,
     RefreshCw,
     Settings as SettingsIcon,
+    Sparkles,
     Square,
     Zap,
 } from "lucide-react";
 import api from "../services/api";
+import { getMetadataStatus } from "../services/metadata";
 import "../styles/dashboard.css";
 
 function formatRelativeTime(dateString) {
@@ -42,6 +44,7 @@ function formatRelativeTime(dateString) {
 function Dashboard() {
     const [data, setData] = useState(null);
     const [settings, setSettings] = useState(null);
+    const [metadataStatus, setMetadataStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
@@ -49,12 +52,16 @@ function Dashboard() {
 
     const fetchDashboard = async () => {
         try {
-            const [dashboardResponse, settingsResponse] = await Promise.all([
+            const [dashboardResponse, settingsResponse, metadataResponse] = await Promise.all([
                 api.get("/dashboard"),
                 api.get("/settings"),
+                getMetadataStatus().catch(() => null),
             ]);
             setData(dashboardResponse.data);
             setSettings(settingsResponse.data);
+            if (metadataResponse) {
+                setMetadataStatus(metadataResponse);
+            }
         } catch (error) {
             console.error("Failed to fetch dashboard:", error);
             setMessage({
@@ -390,6 +397,61 @@ function Dashboard() {
                         </div>
                     </div>
                 </div>
+
+                {/* Metadata & Enrichment Overview Card */}
+                {(() => {
+                    const mMetrics = metadataStatus?.metrics || {
+                        total_files: 0,
+                        raw_files: 0,
+                        enriched_files: 0,
+                        low_confidence_files: 0,
+                        failed_files: 0,
+                        beets_edited_count: 0,
+                    };
+                    const mEnriched = mMetrics.enriched_files || mMetrics.beets_edited_count || 0;
+                    const mPercent = mMetrics.total_files > 0
+                        ? Math.round((mEnriched / mMetrics.total_files) * 100)
+                        : 0;
+
+                    return (
+                        <div className="metric-card">
+                            <div className="metric-header">
+                                <div className="metric-title">
+                                    <Sparkles className="metric-icon purple" style={{ color: "#a855f7" }} size={18} />
+                                    <span>Metadata Enrichment</span>
+                                </div>
+                                <span className="metric-badge purple" style={{ backgroundColor: "#f3e8ff", color: "#6b21a8" }}>
+                                    {mPercent}% Enriched
+                                </span>
+                            </div>
+
+                            <div className="metric-hero">
+                                <span className="hero-number">{mEnriched}</span>
+                                <span className="hero-total">/ {mMetrics.total_files} high confidence</span>
+                            </div>
+
+                            <div className="progress-bar-track">
+                                <div
+                                    className="progress-bar-fill purple"
+                                    style={{ width: `${mPercent}%`, backgroundColor: "#a855f7" }}
+                                />
+                            </div>
+
+                            <div className="metric-subchips">
+                                <span className="chip success">{mEnriched} Enriched</span>
+                                <span className="chip warning" style={{ backgroundColor: "#fef3c7", color: "#b45309" }}>
+                                    {mMetrics.low_confidence_files ?? mMetrics.skipped_files ?? 0} Low Conf
+                                </span>
+                                {mMetrics.raw_files > 0 && (
+                                    <span className="chip muted">{mMetrics.raw_files} Raw</span>
+                                )}
+                                {mMetrics.failed_files > 0 && (
+                                    <span className="chip danger">{mMetrics.failed_files} Failed</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
             </section>
 
             {/* Content Grid: Playlists + Last Sync */}

@@ -10,6 +10,8 @@ import PlaylistDetailPage from "./pages/PlaylistDetailPage";
 import SyncHistory from "./pages/SyncHistory";
 import Settings from "./pages/Settings";
 import SystemHealth from "./pages/SystemHealth";
+import Metadata from "./pages/Metadata";
+import TrackDetail from "./pages/TrackDetail";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 
@@ -29,6 +31,8 @@ function App() {
                         <Route path="/songs" element={<Songs />} />
                         <Route path="/playlists" element={<Playlists />} />
                         <Route path="/playlists/:playlistId/detail" element={<PlaylistDetailPage />} />
+                        <Route path="/metadata" element={<Metadata />} />
+                        <Route path="/metadata/tracks/:id" element={<TrackDetail />} />
                         <Route path="/history" element={<SyncHistory />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/health" element={<SystemHealth />} />

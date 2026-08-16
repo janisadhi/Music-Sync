@@ -16,6 +16,7 @@ import {
     Play,
     RefreshCw,
     RotateCcw,
+    Sparkles,
     Trash2,
     Volume2,
     VolumeX,
@@ -622,6 +623,14 @@ function PlaylistDetailPage() {
                                             </div>
 
                                             <div className="song-status-pills">
+                                                {song.metadata_state && (
+                                                    <span
+                                                        className={`status-pill ${song.metadata_state === "enriched" ? "status-beets" : "status-pending"}`}
+                                                        title={`Metadata state: ${song.metadata_state}`}
+                                                    >
+                                                        <Sparkles size={12} /> {song.metadata_state === "enriched" ? "Enriched" : song.metadata_state}
+                                                    </span>
+                                                )}
                                                 <span className={`status-pill ${song.download_status}`}>
                                                     <Download size={12} /> {song.download_status}
                                                 </span>
@@ -712,6 +721,15 @@ function PlaylistDetailPage() {
                                                 )}
 
                                                 <div className="song-action-bar">
+                                                    {song.downloaded_track_id && (
+                                                        <Link
+                                                            to={`/metadata/tracks/${song.downloaded_track_id}`}
+                                                            className="btn btn-secondary btn-sm"
+                                                            title="Inspect metadata history and change diffs"
+                                                        >
+                                                            <Sparkles size={14} /> Metadata Details
+                                                        </Link>
+                                                    )}
                                                     <button
                                                         className="btn btn-secondary btn-sm"
                                                         onClick={() => handleRetryDownloadSong(song.id)}

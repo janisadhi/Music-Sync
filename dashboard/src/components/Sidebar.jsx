@@ -7,6 +7,7 @@ import {
     LogOut,
     Music,
     Settings,
+    Sparkles,
     User,
 } from "lucide-react";
 import { getUser, logout } from "../services/auth";
@@ -49,6 +50,11 @@ function Sidebar() {
                 <NavLink to="/songs" className={getNavClass}>
                     <Music className="nav-icon" size={18} />
                     <span>Songs Catalog</span>
+                </NavLink>
+
+                <NavLink to="/metadata" className={getNavClass}>
+                    <Sparkles className="nav-icon" size={18} />
+                    <span>Metadata</span>
                 </NavLink>
 
                 <NavLink to="/history" className={getNavClass}>
