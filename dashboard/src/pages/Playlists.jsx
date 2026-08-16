@@ -4,22 +4,30 @@ import {
     AlertCircle,
     CheckCircle2,
     ChevronRight,
+    Disc,
     Edit3,
     ExternalLink,
+    Grid,
+    List,
     ListMusic,
+    Music,
+    Play,
     Plus,
     RefreshCw,
     RotateCcw,
+    Search,
+    Shuffle,
     Trash2,
     X,
 } from "lucide-react";
+import { usePlayer } from "../context/PlayerContext";
 import {
+    createPlaylist,
+    deletePlaylist,
     getPlaylists,
     getPlaylistSongs,
-    createPlaylist,
-    updatePlaylist,
-    deletePlaylist,
     syncPlaylist,
+    updatePlaylist,
 } from "../services/playlists";
 import { retryDownload } from "../services/songs";
 import "../styles/playlists.css";
@@ -29,7 +37,10 @@ function Toggle({ enabled, onChange, disabled = false }) {
         <button
             type="button"
             className={`playlist-toggle ${enabled ? "enabled" : ""}`}
-            onClick={onChange}
+            onClick={(e) => {
+                e.stopPropagation();
+                onChange();
+            }}
             disabled={disabled}
             aria-label={enabled ? "Disable playlist" : "Enable playlist"}
         >
@@ -44,6 +55,35 @@ function StatusBadge({ enabled }) {
             <span className="status-dot" />
             {enabled ? "Enabled" : "Disabled"}
         </span>
+    );
+}
+
+function PlaylistThumbnail({ songs = [] }) {
+    const artworkList = songs.map((s) => s.thumbnail_url).filter(Boolean);
+
+    if (artworkList.length >= 4) {
+        return (
+            <div className="playlist-mosaic-art">
+                <img src={artworkList[0]} alt="" />
+                <img src={artworkList[1]} alt="" />
+                <img src={artworkList[2]} alt="" />
+                <img src={artworkList[3]} alt="" />
+            </div>
+        );
+    }
+
+    if (artworkList.length > 0) {
+        return (
+            <div className="playlist-single-art">
+                <img src={artworkList[0]} alt="" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="playlist-fallback-art">
+            <ListMusic size={36} />
+        </div>
     );
 }
 
@@ -78,8 +118,8 @@ function PlaylistModal({ mode, playlist, onClose, onSubmit, loading }) {
             <div className="playlist-modal">
                 <div className="modal-header">
                     <div>
-                        <h2>{isEdit ? "Edit Playlist" : "Add New Playlist"}</h2>
-                        <p>{isEdit ? "Update configuration for this playlist." : "Add a YouTube Music playlist to synchronize."}</p>
+                        <h2>{isEdit ? "Edit Playlist Configuration" : "Add New Playlist"}</h2>
+                        <p>{isEdit ? "Update settings for this monitored playlist." : "Enter a YouTube Music playlist URL to synchronize tracks."}</p>
                     </div>
                     <button type="button" className="modal-close-btn" onClick={onClose}>
                         <X size={18} />
@@ -88,19 +128,19 @@ function PlaylistModal({ mode, playlist, onClose, onSubmit, loading }) {
 
                 <form className="playlist-form" onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label htmlFor="playlist-name">Playlist Name</label>
+                        <label htmlFor="playlist-name">Playlist Custom Name (Optional)</label>
                         <input
                             id="playlist-name"
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g. Favorite Hits"
+                            placeholder="e.g. Favorite Chill Tracks"
                         />
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="playlist-url">
-                            Playlist URL <span className="required">*</span>
+                            YouTube Music Playlist URL <span className="required">*</span>
                         </label>
                         <input
                             id="playlist-url"
@@ -114,8 +154,8 @@ function PlaylistModal({ mode, playlist, onClose, onSubmit, loading }) {
 
                     <div className="form-toggle-card">
                         <div>
-                            <strong>Enable Playlist</strong>
-                            <p>Active playlists are scanned automatically during synchronization cycles.</p>
+                            <strong>Enable Auto Sync</strong>
+                            <p>Scans automatically during synchronization cycles.</p>
                         </div>
                         <Toggle enabled={enabled} onChange={() => setEnabled(!enabled)} />
                     </div>
@@ -141,12 +181,16 @@ function PlaylistModal({ mode, playlist, onClose, onSubmit, loading }) {
     );
 }
 
-function Playlists() {
+export default function Playlists() {
     const navigate = useNavigate();
+    const { playPlaylist } = usePlayer();
+
     const [playlists, setPlaylists] = useState([]);
+    const [playlistSongsMap, setPlaylistSongsMap] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [songCounts, setSongCounts] = useState({});
+    const [searchQuery, setSearchQuery] = useState("");
+    const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
     const [modal, setModal] = useState(null);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
@@ -157,18 +201,19 @@ function Playlists() {
             setError(null);
             const data = await getPlaylists();
             setPlaylists(data);
-            const counts = {};
+
+            const songsMap = {};
             await Promise.all(
                 data.map(async (pl) => {
                     try {
                         const songs = await getPlaylistSongs(pl.id);
-                        counts[pl.id] = Array.isArray(songs) ? songs.length : songs?.songs?.length || 0;
+                        songsMap[pl.id] = Array.isArray(songs) ? songs : songs?.songs || [];
                     } catch {
-                        counts[pl.id] = 0;
+                        songsMap[pl.id] = [];
                     }
                 })
             );
-            setSongCounts(counts);
+            setPlaylistSongsMap(songsMap);
         } catch (err) {
             setError(err.response?.data?.detail || "Failed to load playlists.");
         } finally {
@@ -197,7 +242,7 @@ function Playlists() {
             setSaving(true);
             await updatePlaylist(modal.playlist.id, data);
             setModal(null);
-            setMessage({ type: "success", text: "Playlist updated successfully." });
+            setMessage({ type: "success", text: "Playlist configuration saved." });
             await fetchPlaylists();
         } finally {
             setSaving(false);
@@ -218,7 +263,7 @@ function Playlists() {
     const handleSync = async (id) => {
         try {
             await syncPlaylist(id);
-            setMessage({ type: "success", text: "Playlist synchronization started." });
+            setMessage({ type: "success", text: "Synchronization triggered." });
         } catch (err) {
             setMessage({ type: "error", text: err.response?.data?.detail || "Sync failed." });
         }
@@ -226,7 +271,7 @@ function Playlists() {
 
     const handleRetryFailed = async (id) => {
         try {
-            const songs = await getPlaylistSongs(id);
+            const songs = playlistSongsMap[id] || [];
             const failed = songs.filter((s) => s.download_status === "failed");
             await Promise.all(failed.map((s) => retryDownload(s.id)));
             setMessage({ type: "success", text: `Retried ${failed.length} failed track(s).` });
@@ -235,6 +280,24 @@ function Playlists() {
             setMessage({ type: "error", text: err.response?.data?.detail || "Retry failed." });
         }
     };
+
+    const handlePlayPlaylistCard = (e, playlistId, shuffleMode = false) => {
+        e.stopPropagation();
+        const songs = playlistSongsMap[playlistId] || [];
+        if (songs.length > 0) {
+            playPlaylist(songs, 0, shuffleMode);
+        } else {
+            alert("No tracks available to play in this playlist.");
+        }
+    };
+
+    // Filter playlists by search query
+    const filteredPlaylists = playlists.filter((pl) => {
+        const name = (pl.name || "").toLowerCase();
+        const ytid = (pl.youtube_playlist_id || "").toLowerCase();
+        const q = searchQuery.toLowerCase();
+        return name.includes(q) || ytid.includes(q);
+    });
 
     if (loading) {
         return (
@@ -250,12 +313,12 @@ function Playlists() {
             <div className="playlists-page">
                 <div className="playlists-header">
                     <div>
-                        <h1>Playlists</h1>
+                        <h1>Monitored Playlists</h1>
                         <p>Manage your synchronized YouTube Music playlists.</p>
                     </div>
                 </div>
                 <div className="playlists-error-card">
-                    <AlertCircle size={40} className="error-icon" />
+                    <AlertCircle size={44} className="error-icon" />
                     <h3>Unable to load playlists</h3>
                     <p>{error}</p>
                     <button className="btn btn-primary" onClick={fetchPlaylists}>
@@ -268,11 +331,15 @@ function Playlists() {
 
     return (
         <div className="playlists-page">
-            <div className="playlists-header">
+            {/* Header Banner */}
+            <header className="playlists-header">
                 <div>
                     <h1>Monitored Playlists</h1>
-                    <p>Manage playlists, trigger manual syncs, and view track statistics.</p>
+                    <p className="subtitle">
+                        Manage playlists, trigger manual syncs, and browse track collections.
+                    </p>
                 </div>
+
                 <div className="playlist-header-actions">
                     <button className="btn btn-secondary" onClick={fetchPlaylists}>
                         <RefreshCw size={15} /> Refresh
@@ -281,8 +348,9 @@ function Playlists() {
                         <Plus size={16} /> Add Playlist
                     </button>
                 </div>
-            </div>
+            </header>
 
+            {/* Alert Message Banner */}
             {message && (
                 <div className={`playlist-alert-banner alert-${message.type}`}>
                     {message.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
@@ -293,92 +361,160 @@ function Playlists() {
                 </div>
             )}
 
-            {playlists.length === 0 ? (
-                <div className="playlists-empty-card">
-                    <div className="empty-icon-avatar">
-                        <ListMusic size={32} />
-                    </div>
-                    <h3>No playlists configured</h3>
-                    <p>Add a YouTube Music playlist to start downloading songs and syncing lyrics.</p>
-                    <button className="btn btn-primary" onClick={() => setModal({ type: "add" })}>
-                        <Plus size={16} /> Add First Playlist
+            {/* Toolbar: Search & View Mode Controls */}
+            <div className="playlists-toolbar">
+                <div className="search-box">
+                    <Search size={16} className="search-icon" />
+                    <input
+                        type="text"
+                        placeholder="Search playlists by name or ID..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                <div className="view-mode-toggle">
+                    <button
+                        className={`layout-btn ${viewMode === "grid" ? "active" : ""}`}
+                        onClick={() => setViewMode("grid")}
+                        title="Grid View"
+                    >
+                        <Grid size={16} />
+                    </button>
+                    <button
+                        className={`layout-btn ${viewMode === "list" ? "active" : ""}`}
+                        onClick={() => setViewMode("list")}
+                        title="List View"
+                    >
+                        <List size={16} />
                     </button>
                 </div>
+            </div>
+
+            {/* Playlists Content */}
+            {filteredPlaylists.length === 0 ? (
+                <div className="playlists-empty-card">
+                    <div className="empty-icon-avatar">
+                        <ListMusic size={36} />
+                    </div>
+                    <h3>{searchQuery ? "No matching playlists found" : "No playlists configured"}</h3>
+                    <p>
+                        {searchQuery
+                            ? "Try adjusting your search query."
+                            : "Add a YouTube Music playlist URL to start synchronizing tracks."}
+                    </p>
+                    {!searchQuery && (
+                        <button className="btn btn-primary" onClick={() => setModal({ type: "add" })}>
+                            <Plus size={16} /> Add First Playlist
+                        </button>
+                    )}
+                </div>
             ) : (
-                <div className="playlists-grid">
-                    {playlists.map((pl) => (
-                        <div
-                            key={pl.id}
-                            className="playlist-item-card"
-                            onClick={() => navigate(`/playlists/${pl.id}/detail`)}
-                        >
-                            <div className="item-card-header">
-                                <div className="playlist-avatar">
-                                    <ListMusic size={20} />
+                <div className={`playlists-container mode-${viewMode}`}>
+                    {filteredPlaylists.map((pl) => {
+                        const songs = playlistSongsMap[pl.id] || [];
+                        const failedCount = songs.filter((s) => s.download_status === "failed").length;
+
+                        return (
+                            <div
+                                key={pl.id}
+                                className="playlist-card-redesigned"
+                                onClick={() => navigate(`/playlists/${pl.id}/detail`)}
+                            >
+                                {/* Artwork Thumbnail Stage */}
+                                <div className="card-artwork-stage">
+                                    <PlaylistThumbnail songs={songs} />
+                                    <button
+                                        className="artwork-play-overlay"
+                                        onClick={(e) => handlePlayPlaylistCard(e, pl.id, false)}
+                                        title="Play Playlist"
+                                    >
+                                        <Play size={24} className="play-icon-offset" />
+                                    </button>
                                 </div>
-                                <div className="playlist-titles">
-                                    <h3 className="playlist-card-title">{pl.name}</h3>
-                                    <span className="playlist-id-badge">
-                                        ID: <code>{pl.youtube_playlist_id}</code>
-                                    </span>
+
+                                {/* Content Details */}
+                                <div className="card-content-stage">
+                                    <div className="card-top-row">
+                                        <h3 className="playlist-title">{pl.name || `Playlist ${pl.id}`}</h3>
+                                        <StatusBadge enabled={pl.enabled} />
+                                    </div>
+
+                                    <div className="card-stats-row">
+                                        <span className="stat-badge">
+                                            <strong>{songs.length}</strong> tracks
+                                        </span>
+
+                                        {failedCount > 0 && (
+                                            <span className="stat-badge failed-badge">
+                                                <strong>{failedCount}</strong> failed
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Action Buttons Toolbar */}
+                                    <div className="card-actions-row" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={(e) => handlePlayPlaylistCard(e, pl.id, false)}
+                                            title="Play playlist"
+                                        >
+                                            <Play size={13} /> Play
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => handleSync(pl.id)}
+                                            title="Trigger sync"
+                                        >
+                                            <RefreshCw size={13} /> Sync
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setModal({ type: "edit", playlist: pl })}
+                                            title="Edit playlist"
+                                        >
+                                            <Edit3 size={13} /> Edit
+                                        </button>
+
+                                        {failedCount > 0 && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => handleRetryFailed(pl.id)}
+                                                title="Retry failed tracks"
+                                            >
+                                                <RotateCcw size={13} /> Retry ({failedCount})
+                                            </button>
+                                        )}
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-danger-soft btn-sm"
+                                            onClick={() => handleDelete(pl.id)}
+                                            title="Delete playlist"
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+
+                                        <a
+                                            href={pl.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="external-link-btn"
+                                            title="Open on YouTube"
+                                        >
+                                            <ExternalLink size={14} />
+                                        </a>
+
+                                        <ChevronRight size={18} className="card-chevron" />
+                                    </div>
                                 </div>
-                                <StatusBadge enabled={pl.enabled} />
                             </div>
-
-                            <div className="item-card-body">
-                                <div className="track-count-badge">
-                                    <strong>{songCounts[pl.id] ?? 0}</strong> tracks
-                                </div>
-                            </div>
-
-                            <div className="item-card-actions" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={() => handleSync(pl.id)}
-                                    title="Trigger instant sync"
-                                >
-                                    <RefreshCw size={14} /> Sync
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={() => setModal({ type: "edit", playlist: pl })}
-                                    title="Edit playlist settings"
-                                >
-                                    <Edit3 size={14} /> Edit
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={() => handleRetryFailed(pl.id)}
-                                    title="Retry failed downloads"
-                                >
-                                    <RotateCcw size={14} /> Retry
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-danger-soft btn-sm"
-                                    onClick={() => handleDelete(pl.id)}
-                                    title="Delete playlist"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-
-                                <a
-                                    href={pl.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="external-youtube-link"
-                                    title="Open on YouTube"
-                                >
-                                    <ExternalLink size={15} />
-                                </a>
-
-                                <ChevronRight size={18} className="card-chevron" />
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -394,5 +530,3 @@ function Playlists() {
         </div>
     );
 }
-
-export default Playlists;
