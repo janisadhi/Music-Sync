@@ -76,9 +76,8 @@ function Settings() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
-    // Scheduler / Downloader action loading flags
+    // Scheduler action loading flag
     const [schedulerLoading, setSchedulerLoading] = useState(false);
-    const [downloaderLoading, setDownloaderLoading] = useState(false);
 
     // Confirmation dialog for the destructive toggle
     const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -274,36 +273,7 @@ function Settings() {
         }
     }
 
-    // Downloader actions
-    async function handleStartDownloader() {
-        try {
-            setDownloaderLoading(true);
-            setMessage("");
-            setError("");
-            const res = await api.post("/sync/downloader/start");
-            setMessage(res.data.message || "Downloader worker started.");
-            await loadStatus();
-        } catch (err) {
-            setError(err.response?.data?.detail || "Failed to start downloader.");
-        } finally {
-            setDownloaderLoading(false);
-        }
-    }
 
-    async function handleStopDownloader() {
-        try {
-            setDownloaderLoading(true);
-            setMessage("");
-            setError("");
-            const res = await api.post("/sync/downloader/stop");
-            setMessage(res.data.message || "Downloader worker stopped.");
-            await loadStatus();
-        } catch (err) {
-            setError(err.response?.data?.detail || "Failed to stop downloader.");
-        } finally {
-            setDownloaderLoading(false);
-        }
-    }
 
     if (loading) {
         return (
@@ -383,35 +353,28 @@ function Settings() {
             <form onSubmit={handleSubmit} className="settings-form-layout">
 
                 {/* ============================================================
-                    SECTION 1 – Services Status & Control
-                    Shows live status and start/stop for Scheduler + Downloader.
-                    Not part of the saved settings form — actions fire immediately.
+                    SECTION 1 – Scheduler & Automation
                     ============================================================ */}
                 <div className="settings-card">
                     <div className="card-section-header">
-                        <Zap size={20} className="section-icon blue" />
+                        <Clock size={20} className="section-icon green" />
                         <div>
-                            <h3>Services</h3>
-                            <p>
-                                Sync and Downloader run concurrently and independently.
-                                The Scheduler periodically triggers Sync; the Downloader
-                                continuously processes the pending download queue.
-                            </p>
+                            <h3>Sync Scheduler</h3>
+                            <p>Control automatic playlist synchronization timing and scheduler state.</p>
                         </div>
                     </div>
 
-                    {/* Scheduler row */}
-                    <div className="service-status-row">
+                    <div className="service-status-row" style={{ marginBottom: "20px" }}>
                         <div className="service-status-left">
                             <span className={`status-beacon-sm ${schedulerRunning ? "running" : "stopped"}`} />
                             <div>
-                                <span className="service-name">Sync Scheduler</span>
+                                <span className="service-name">Scheduler State</span>
                                 <p className="service-desc">
                                     {schedulerRunning
                                         ? syncRunning
-                                            ? "Running — sync cycle in progress"
-                                            : `Running — next sync in ~${settings.sync_interval_seconds}s`
-                                        : "Stopped — Sync will not run automatically"}
+                                            ? "Active — playlist sync cycle in progress"
+                                            : `Active — next sync in ~${settings.sync_interval_seconds}s`
+                                        : "Inactive — playlist sync will not run automatically"}
                                 </p>
                             </div>
                         </div>
@@ -424,7 +387,7 @@ function Settings() {
                                     disabled={schedulerLoading}
                                 >
                                     {schedulerLoading ? <RefreshCw size={13} className="spin-icon" /> : null}
-                                    Stop
+                                    Stop Scheduler
                                 </button>
                             ) : (
                                 <button
@@ -434,65 +397,9 @@ function Settings() {
                                     disabled={schedulerLoading}
                                 >
                                     {schedulerLoading ? <RefreshCw size={13} className="spin-icon" /> : null}
-                                    Start
+                                    Start Scheduler
                                 </button>
                             )}
-                        </div>
-                    </div>
-
-                    {/* Downloader row */}
-                    <div className="service-status-row">
-                        <div className="service-status-left">
-                            <span className={`status-beacon-sm ${downloaderRunning ? "running" : "stopped"}`} />
-                            <div>
-                                <span className="service-name">Downloader Worker</span>
-                                <p className="service-desc">
-                                    {downloaderRunning
-                                        ? downloaderStatus.last_poll_status === null
-                                            ? "Running — first poll in progress"
-                                            : `Running — last poll ${formatRelativeTime(downloaderStatus.last_poll_completed_at)} · ${downloaderStatus.total_downloaded ?? 0} downloaded this session`
-                                        : "Stopped — pending downloads will not be processed"}
-                                    {downloaderStatus.last_poll_error && (
-                                        <span className="service-error"> · Error: {downloaderStatus.last_poll_error}</span>
-                                    )}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="service-actions">
-                            {downloaderRunning ? (
-                                <button
-                                    type="button"
-                                    className="btn btn-danger-soft btn-sm"
-                                    onClick={handleStopDownloader}
-                                    disabled={downloaderLoading}
-                                >
-                                    {downloaderLoading ? <RefreshCw size={13} className="spin-icon" /> : null}
-                                    Stop
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="btn btn-success-soft btn-sm"
-                                    onClick={handleStartDownloader}
-                                    disabled={downloaderLoading}
-                                >
-                                    {downloaderLoading ? <RefreshCw size={13} className="spin-icon" /> : null}
-                                    Start
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* ============================================================
-                    SECTION 2 – Scheduler / Automation
-                    ============================================================ */}
-                <div className="settings-card">
-                    <div className="card-section-header">
-                        <Clock size={20} className="section-icon green" />
-                        <div>
-                            <h3>Scheduler</h3>
-                            <p>Control automatic playlist synchronization timing and startup behaviour.</p>
                         </div>
                     </div>
 
@@ -503,7 +410,6 @@ function Settings() {
                             </label>
                             <p className="setting-desc">
                                 Automatically start the Sync Scheduler when the application launches.
-                                The Downloader worker always starts unconditionally regardless of this setting.
                             </p>
                         </div>
                         <label className="toggle-switch">
