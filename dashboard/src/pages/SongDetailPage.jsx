@@ -243,10 +243,10 @@ export default function SongDetailPage() {
                 </div>
             </div>
 
-            {/* Dedicated Lyrics Card */}
-            <div className="detail-card lyrics-card">
-                <div className="lyrics-header">
-                    <h3><FileText size={18} /> Lyrics</h3>
+            {/* Spotify-style Lyrics Section */}
+            <div className="spotify-lyrics-card">
+                <div className="spotify-lyrics-header">
+                    <h3><FileText size={20} /> Lyrics</h3>
                     {song.lyrics_status === "failed" || song.lyrics_status === "unavailable" ? (
                         <button
                             className="btn btn-secondary btn-sm"
@@ -258,16 +258,7 @@ export default function SongDetailPage() {
                     ) : null}
                 </div>
 
-                <div className="lyrics-body">
-                    {lyricsData?.lyrics ? (
-                        <Lyrics song={song} lyrics={lyricsData.lyrics} currentTime={currentTime} />
-                    ) : (
-                        <div className="lyrics-empty">
-                            <FileText size={40} />
-                            <p>No lyrics available for this track.</p>
-                        </div>
-                    )}
-                </div>
+                <Lyrics song={song} lyrics={lyricsData?.lyrics} currentTime={currentTime} />
             </div>
         </div>
     );
