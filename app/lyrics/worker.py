@@ -63,6 +63,7 @@ class LyricsWorker:
 
         self._lock = Lock()
         self._stop_event = Event()
+        self._wake_event = Event()
         self._thread: Thread | None = None
 
         # Status bookkeeping
@@ -129,6 +130,10 @@ class LyricsWorker:
             )
         return stopped
 
+    def wake(self) -> None:
+        """Wake up the worker immediately if it is sleeping in idle poll."""
+        self._wake_event.set()
+
     @property
     def is_running(self) -> bool:
         with self._lock:
@@ -156,6 +161,7 @@ class LyricsWorker:
         service = self._make_service()
 
         while not self._stop_event.is_set():
+            self._wake_event.clear()
             started_at = datetime.now(timezone.utc)
 
             with self._lock:
@@ -190,7 +196,10 @@ class LyricsWorker:
                 print(f"Lyrics worker: unhandled exception in poll loop: {exc}")
                 sleep_interval = _IDLE_POLL_INTERVAL
 
-            self._stop_event.wait(timeout=sleep_interval)
+            # Interruptible sleep: wake immediately if stop or wake is requested.
+            if not self._stop_event.is_set() and not self._wake_event.is_set():
+                self._wake_event.wait(timeout=sleep_interval)
+                self._wake_event.clear()
 
         with self._lock:
             self.worker_running = False

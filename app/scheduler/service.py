@@ -66,13 +66,36 @@ class MusicSyncScheduler:
     # Sync execution
     # ------------------------------------------------------------------
 
+    def trigger_sync(self) -> dict:
+        """
+        Trigger a non-blocking sync cycle.
+
+        Unified entry point for both scheduled APScheduler triggers and manual API triggers.
+        Returns immediately with status dict {"status": "started" | "already_running"}.
+        """
+        with self.lock:
+            if self.sync_running:
+                print("Sync already running – skipping this trigger.")
+                return {
+                    "status": "already_running",
+                    "message": "Synchronization is already running.",
+                }
+
+        from threading import Thread
+        thread = Thread(target=self.run_sync, daemon=True, name="sync-executor")
+        thread.start()
+
+        return {
+            "status": "started",
+            "message": "Synchronization started.",
+        }
+
     def run_sync(self) -> None:
         """
-        Execute one sync cycle.
+        Execute one sync cycle synchronously in the current thread.
 
         Skips silently if a sync is already running (overlap prevention).
-        Called by APScheduler (max_instances=1, coalesce=True also set) and
-        can be called directly from the API.
+        Called internally by trigger_sync (via Thread) or explicitly in synchronous contexts/tests.
         """
         with self.lock:
             if self.sync_running:
@@ -152,7 +175,7 @@ class MusicSyncScheduler:
             # max_instances=1 + coalesce=True: APScheduler-level guard
             # (in addition to our sync_running flag).
             self.scheduler.add_job(
-                self.run_sync,
+                self.trigger_sync,
                 "interval",
                 seconds=interval,
                 id="music-sync",
@@ -207,7 +230,7 @@ class MusicSyncScheduler:
                     pass
 
                 self.scheduler.add_job(
-                    self.run_sync,
+                    self.trigger_sync,
                     "interval",
                     seconds=seconds,
                     id="music-sync",

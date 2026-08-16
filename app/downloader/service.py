@@ -214,6 +214,22 @@ class SongDownloader:
                 # ----------------------------------------------------------
                 self._upsert_downloaded_track(song, info, opus_path)
 
+                # ----------------------------------------------------------
+                # Trigger downstream pipeline stages (non-blocking)
+                # ----------------------------------------------------------
+                try:
+                    from app.core.runtime import lyrics_worker
+                    lyrics_worker.wake()
+                except Exception:
+                    pass
+
+                if getattr(app_settings, "auto_scan_metadata_enabled", True):
+                    try:
+                        from app.core.events import trigger_metadata_scan_async
+                        trigger_metadata_scan_async()
+                    except Exception:
+                        pass
+
                 print(f"Downloaded: {song.title} ({song.youtube_video_id})")
                 print(f"File: {opus_path}")
 

@@ -129,6 +129,22 @@ class SyncService:
 
         elapsed = time.time() - start_time
 
+        # ----------------------------------------------------------
+        # Trigger Downloader Worker & Metadata Scan (non-blocking)
+        # ----------------------------------------------------------
+        try:
+            from app.core.runtime import downloader_worker
+            downloader_worker.wake()
+        except Exception:
+            pass
+
+        if getattr(app_settings, "auto_scan_metadata_enabled", True):
+            try:
+                from app.core.events import trigger_metadata_scan_async
+                trigger_metadata_scan_async()
+            except Exception:
+                pass
+
         print()
         print("=" * 60)
         print("Sync Statistics")

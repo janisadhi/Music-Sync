@@ -60,6 +60,7 @@ class DownloaderWorker:
 
         self._lock = Lock()
         self._stop_event = Event()
+        self._wake_event = Event()
         self._thread: Thread | None = None
 
         # Status bookkeeping (mirrors the Scheduler pattern)
@@ -126,6 +127,10 @@ class DownloaderWorker:
             )
         return stopped
 
+    def wake(self) -> None:
+        """Wake up the worker immediately if it is sleeping in idle poll."""
+        self._wake_event.set()
+
     @property
     def is_running(self) -> bool:
         with self._lock:
@@ -153,6 +158,7 @@ class DownloaderWorker:
         downloader = self._make_downloader()
 
         while not self._stop_event.is_set():
+            self._wake_event.clear()
             started_at = datetime.now(timezone.utc)
 
             with self._lock:
@@ -189,8 +195,10 @@ class DownloaderWorker:
                 # Back off on errors to avoid log-spam from a persistent issue.
                 sleep_interval = _IDLE_POLL_INTERVAL
 
-            # Interruptible sleep: wake immediately if stop is requested.
-            self._stop_event.wait(timeout=sleep_interval)
+            # Interruptible sleep: wake immediately if stop or wake is requested.
+            if not self._stop_event.is_set() and not self._wake_event.is_set():
+                self._wake_event.wait(timeout=sleep_interval)
+                self._wake_event.clear()
 
         with self._lock:
             self.worker_running = False

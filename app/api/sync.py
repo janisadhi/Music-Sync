@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.runtime import downloader_worker, lyrics_worker, scheduler
@@ -92,21 +92,8 @@ def stop_lyrics_worker():
 
 
 @router.post("")
-def trigger_sync(background_tasks: BackgroundTasks):
-    if scheduler.sync_running:
-        return {
-            "status": "already_running",
-            "message": "Synchronization is already running.",
-        }
-
-    background_tasks.add_task(
-        scheduler.run_sync
-    )
-
-    return {
-        "status": "started",
-        "message": "Synchronization started.",
-    }
+def trigger_sync():
+    return scheduler.trigger_sync()
 
 
 @router.get("/history")
