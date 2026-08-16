@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
     ArrowLeft,
-    Calendar,
+    ChevronDown,
     Disc,
     FileText,
     ListMusic,
-    Minimize2,
     Music,
     Pause,
     Play,
@@ -16,7 +15,6 @@ import {
     SkipBack,
     SkipForward,
     Tag,
-    User,
     Volume2,
     VolumeX,
     X,
@@ -32,6 +30,12 @@ function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+}
+
+function parseYear(yearStr) {
+    if (!yearStr) return null;
+    const match = String(yearStr).match(/\b(19|20)\d{2}\b/);
+    return match ? match[0] : null;
 }
 
 export default function NowPlaying() {
@@ -59,10 +63,10 @@ export default function NowPlaying() {
     const [showQueue, setShowQueue] = useState(false);
     const [lyricsData, setLyricsData] = useState(null);
     const [palette, setPalette] = useState({
-        dominant: "rgb(30, 41, 59)",
+        dominant: "rgb(24, 32, 47)",
         secondary: "rgb(15, 23, 42)",
         accent: "rgb(59, 130, 246)",
-        dark: "rgba(15, 23, 42, 0.95)",
+        dark: "rgba(9, 13, 22, 0.96)",
         glow: "rgba(59, 130, 246, 0.35)",
     });
 
@@ -70,8 +74,9 @@ export default function NowPlaying() {
     const title = currentSong?.title || currentSong?.raw_title || "Unknown Track";
     const artist = currentSong?.artist || "Unknown Artist";
     const album = currentSong?.album || "Unknown Album";
+    const releaseYear = parseYear(currentSong?.release_year);
 
-    // Request HTML5 native browser fullscreen mode (like pressing F11)
+    // Request HTML5 native browser fullscreen mode (F11)
     useEffect(() => {
         const elem = document.documentElement;
         if (elem.requestFullscreen) {
@@ -168,108 +173,127 @@ export default function NowPlaying() {
                 <div className="ambient-glass-tint" />
             </div>
 
-            {/* Exit / Back Navigation Link */}
+            {/* Top Navigation Bar */}
             <header className="now-playing-top-bar">
                 <button
-                    className="glass-icon-btn exit-btn"
+                    className="top-bar-btn"
                     onClick={handleExit}
                     title="Exit Full Screen Player"
                 >
-                    <Minimize2 size={18} />
+                    <ChevronDown size={22} />
                     <span>Exit Full Screen</span>
                 </button>
+                <div className="top-bar-title">Playing from Library</div>
+                <div className="top-bar-placeholder" />
             </header>
 
-            {/* Main Full-Screen Layout Wrapper (Transforms to 2-panel when lyrics open) */}
-            <main className={`now-playing-content ${showLyrics ? "lyrics-open" : ""}`}>
-                {/* Left Panel: Artwork, Title, Artist, & Player Controls */}
-                <div className="left-music-panel">
-                    <div className="artwork-stage">
-                        <div className="glass-art-card">
+            {/* Main Full-Screen Layout Viewport */}
+            <main className={`now-playing-main ${showLyrics ? "lyrics-mode" : "centered-mode"}`}>
+                {/* Left Music Stage */}
+                <div className="music-stage-col">
+                    <div className="artwork-wrap">
+                        <div className="spotify-art-card">
                             {artwork ? (
-                                <img src={artwork} alt={title} className="fullscreen-art" />
+                                <img src={artwork} alt={title} className="art-img" />
                             ) : (
-                                <div className="fullscreen-art-fallback">
-                                    <Music size={100} />
+                                <div className="art-fallback">
+                                    <Music size={90} />
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="song-meta-stage">
-                        <h1 className="song-title">{title}</h1>
-                        <p className="song-artist">{artist}</p>
+                    <div className="track-meta-wrap">
+                        <h1 className="track-title">{title}</h1>
+                        <p className="track-artist">{artist}</p>
 
-                        <div className="song-sub-tags">
-                            {album && (
-                                <span className="meta-tag">
-                                    <Disc size={13} /> {album}
-                                </span>
-                            )}
-                            {currentSong?.release_year && (
-                                <span className="meta-tag">
-                                    <Calendar size={13} /> {currentSong.release_year}
-                                </span>
-                            )}
-                            {currentSong?.genre && (
-                                <span className="meta-tag">
-                                    <Tag size={13} /> {currentSong.genre}
-                                </span>
-                            )}
-                        </div>
+                        {(album || releaseYear || currentSong?.genre) && (
+                            <div className="track-pills">
+                                {album && (
+                                    <span className="meta-pill">
+                                        <Disc size={13} /> {album}
+                                    </span>
+                                )}
+                                {releaseYear && (
+                                    <span className="meta-pill">{releaseYear}</span>
+                                )}
+                                {currentSong?.genre && (
+                                    <span className="meta-pill">
+                                        <Tag size={13} /> {currentSong.genre}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Floating Liquid Glass Control Panel */}
-                    <div className="glass-controls-panel">
-                        {/* Time & Progress Bar */}
-                        <div className="progress-section">
-                            <span className="time-display">{formatTime(currentTime)}</span>
+                    {/* Spotify Control Bar Surface */}
+                    <div className="spotify-control-surface">
+                        {/* Progress Bar & Timestamps */}
+                        <div className="progress-bar-row">
+                            <span className="timestamp">{formatTime(currentTime)}</span>
                             <input
                                 type="range"
-                                className="glass-progress-slider"
+                                className="progress-slider"
                                 min={0}
                                 max={duration || 100}
                                 value={currentTime || 0}
                                 onChange={(e) => seek(parseFloat(e.target.value))}
                             />
-                            <span className="time-display">
+                            <span className="timestamp">
                                 -{formatTime(Math.max(0, (duration || 0) - (currentTime || 0)))}
                             </span>
                         </div>
 
-                        {/* Main Buttons Row */}
-                        <div className="controls-row">
-                            <div className="controls-group-left">
+                        {/* Controls Toolbar Grid */}
+                        <div className="controls-toolbar">
+                            {/* Left: Volume Group */}
+                            <div className="toolbar-group volume-group">
                                 <button
-                                    className={`glass-btn ${shuffle ? "active" : ""}`}
+                                    className="control-icon-btn"
+                                    onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
+                                    title={volume === 0 ? "Unmute" : "Mute"}
+                                >
+                                    {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                </button>
+                                <input
+                                    type="range"
+                                    className="volume-slider"
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={volume}
+                                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                />
+                            </div>
+
+                            {/* Center: Playback Group */}
+                            <div className="toolbar-group playback-group">
+                                <button
+                                    className={`control-icon-btn ${shuffle ? "active" : ""}`}
                                     onClick={toggleShuffle}
                                     title="Shuffle"
                                 >
                                     <Shuffle size={18} />
                                 </button>
-
-                                <button className="glass-btn" onClick={previous} title="Previous">
+                                <button className="control-icon-btn" onClick={previous} title="Previous">
                                     <SkipBack size={20} />
                                 </button>
-
                                 <button
-                                    className="glass-btn main-play-btn"
+                                    className="main-play-circle"
                                     onClick={togglePlay}
                                     title={isPlaying ? "Pause" : "Play"}
                                 >
                                     {isPlaying ? (
-                                        <Pause size={26} />
+                                        <Pause size={24} />
                                     ) : (
-                                        <Play size={26} className="play-offset" />
+                                        <Play size={24} className="play-icon-offset" />
                                     )}
                                 </button>
-
-                                <button className="glass-btn" onClick={next} title="Next">
+                                <button className="control-icon-btn" onClick={next} title="Next">
                                     <SkipForward size={20} />
                                 </button>
-
                                 <button
-                                    className={`glass-btn ${repeat !== "off" ? "active" : ""}`}
+                                    className={`control-icon-btn ${repeat !== "off" ? "active" : ""}`}
                                     onClick={toggleRepeat}
                                     title={`Repeat: ${repeat}`}
                                 >
@@ -277,28 +301,10 @@ export default function NowPlaying() {
                                 </button>
                             </div>
 
-                            <div className="controls-group-right">
-                                <div className="volume-control-wrap">
-                                    <button
-                                        className="glass-btn icon-only"
-                                        onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
-                                        title={volume === 0 ? "Unmute" : "Mute"}
-                                    >
-                                        {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                                    </button>
-                                    <input
-                                        type="range"
-                                        className="glass-volume-slider"
-                                        min={0}
-                                        max={1}
-                                        step={0.01}
-                                        value={volume}
-                                        onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                    />
-                                </div>
-
+                            {/* Right: Actions Group */}
+                            <div className="toolbar-group actions-group">
                                 <button
-                                    className={`glass-btn icon-only ${showQueue ? "active" : ""}`}
+                                    className={`control-icon-btn ${showQueue ? "active" : ""}`}
                                     onClick={() => setShowQueue(!showQueue)}
                                     title="Queue"
                                 >
@@ -307,11 +313,11 @@ export default function NowPlaying() {
 
                                 {hasLyrics && (
                                     <button
-                                        className={`glass-btn lyrics-toggle-btn ${showLyrics ? "active" : ""}`}
+                                        className={`lyrics-action-pill ${showLyrics ? "active" : ""}`}
                                         onClick={() => setShowLyrics(!showLyrics)}
-                                        title="Toggle Synced Lyrics"
+                                        title="Toggle Lyrics"
                                     >
-                                        <FileText size={16} />
+                                        <FileText size={15} />
                                         <span>Lyrics</span>
                                     </button>
                                 )}
@@ -320,14 +326,14 @@ export default function NowPlaying() {
                     </div>
                 </div>
 
-                {/* Right Panel: Animated Liquid Glass Lyrics Panel */}
+                {/* Right Lyrics Stage (Separated Column in Grid) */}
                 {showLyrics && (
-                    <div className="right-lyrics-panel">
-                        <div className="lyrics-glass-card">
-                            <div className="lyrics-card-header">
+                    <div className="lyrics-stage-col">
+                        <div className="spotify-lyrics-card">
+                            <div className="lyrics-header-row">
                                 <h3><FileText size={20} /> Lyrics</h3>
                                 <button
-                                    className="glass-icon-btn close-lyrics-btn"
+                                    className="close-lyrics-btn"
                                     onClick={() => setShowLyrics(false)}
                                     title="Close Lyrics"
                                 >
@@ -350,10 +356,7 @@ export default function NowPlaying() {
                 <div className="fullscreen-queue-drawer">
                     <div className="queue-drawer-header">
                         <h3>Up Next ({queue.length})</h3>
-                        <button
-                            className="glass-icon-btn"
-                            onClick={() => setShowQueue(false)}
-                        >
+                        <button className="close-lyrics-btn" onClick={() => setShowQueue(false)}>
                             <X size={16} />
                         </button>
                     </div>

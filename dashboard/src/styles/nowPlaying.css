@@ -1,5 +1,5 @@
 /* ==============================================================================
-   Spotify-Inspired Liquid Glass Full-Screen Music Player Styles
+   Spotify-Grade Liquid Glass Full-Screen Music Player Styles
    ============================================================================== */
 
 .now-playing-fullscreen {
@@ -31,10 +31,10 @@
     width: 130%;
     height: 130%;
     object-fit: cover;
-    filter: blur(110px) brightness(0.5) saturate(1.8);
+    filter: blur(110px) brightness(0.45) saturate(1.8);
     transform: scale(1.15);
     transition: opacity 1.5s ease;
-    opacity: 0.4;
+    opacity: 0.45;
 }
 
 .ambient-gradient-overlay {
@@ -52,118 +52,136 @@
 .ambient-glass-tint {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(9, 13, 22, 0.35) 0%, rgba(9, 13, 22, 0.88) 100%);
+    background: linear-gradient(180deg, rgba(9, 13, 22, 0.3) 0%, rgba(9, 13, 22, 0.88) 100%);
     backdrop-filter: blur(24px);
 }
 
-/* Top Navigation Exit Bar */
+/* Top Navigation Bar */
 .now-playing-top-bar {
     position: relative;
     z-index: 10;
-    padding: 28px 48px 0;
+    padding: 24px 48px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
 }
 
-.exit-btn {
-    display: flex;
+.top-bar-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 30px;
     color: #ffffff;
-    padding: 10px 22px;
-    font-size: 14px;
+    padding: 8px 18px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
-.exit-btn:hover {
+.top-bar-btn:hover {
     background: rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.35);
     transform: translateY(-2px);
 }
 
-/* Main Layout Content Stage */
-.now-playing-content {
+.top-bar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.top-bar-placeholder {
+    width: 140px;
+}
+
+/* Main Layout Viewport Architecture */
+.now-playing-main {
     position: relative;
     z-index: 10;
     width: 100%;
-    height: calc(100vh - 80px);
+    height: calc(100vh - 90px);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px 80px 48px;
-    gap: 64px;
+    padding: 10px 48px 40px;
     box-sizing: border-box;
     transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Left Music Stage */
-.left-music-panel {
+/* Centered Mode (Default No Lyrics View) */
+.now-playing-main.centered-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.now-playing-main.centered-mode .music-stage-col {
+    max-width: 640px;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 28px;
+    gap: 24px;
+}
+
+/* Lyrics Mode (Split 2-Column Grid View) */
+.now-playing-main.lyrics-mode {
+    display: grid;
+    grid-template-columns: 440px 1fr;
+    gap: 48px;
+    max-width: 1360px;
     width: 100%;
-    max-width: 540px;
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    margin: 0 auto;
+    align-items: center;
 }
 
-/* 2-Panel Spatial Transformation when Lyrics are Open */
-.now-playing-content.lyrics-open {
-    justify-content: space-between;
-    padding: 20px 60px 48px;
-}
-
-.now-playing-content.lyrics-open .left-music-panel {
-    max-width: 440px;
+.now-playing-main.lyrics-mode .music-stage-col {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
     align-items: flex-start;
     text-align: left;
+    gap: 20px;
 }
 
-/* Artwork Stage */
-.artwork-stage {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-}
-
-.glass-art-card {
-    width: 380px;
-    height: 380px;
-    border-radius: 24px;
+/* Artwork & Meta Styling */
+.spotify-art-card {
+    width: 340px;
+    height: 340px;
+    border-radius: 20px;
     overflow: hidden;
     position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow:
-        0 24px 60px rgba(0, 0, 0, 0.6),
+        0 24px 60px rgba(0, 0, 0, 0.65),
         0 0 50px var(--glow-color, rgba(59, 130, 246, 0.35));
     transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     background: rgba(255, 255, 255, 0.05);
 }
 
-.now-playing-content.lyrics-open .glass-art-card {
-    width: 300px;
-    height: 300px;
-    border-radius: 20px;
+.now-playing-main.lyrics-mode .spotify-art-card {
+    width: 260px;
+    height: 260px;
+    border-radius: 16px;
 }
 
-.fullscreen-art {
+.art-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
 
-.fullscreen-art-fallback {
+.art-fallback {
     width: 100%;
     height: 100%;
     display: flex;
@@ -173,16 +191,15 @@
     color: rgba(255, 255, 255, 0.4);
 }
 
-/* Song Meta Information */
-.song-meta-stage {
+.track-meta-wrap {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
 }
 
-.song-meta-stage .song-title {
-    font-size: 32px;
+.track-meta-wrap .track-title {
+    font-size: 28px;
     font-weight: 800;
     color: #ffffff;
     margin: 0;
@@ -193,8 +210,8 @@
     text-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
 }
 
-.song-meta-stage .song-artist {
-    font-size: 20px;
+.track-meta-wrap .track-artist {
+    font-size: 18px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.75);
     margin: 0;
@@ -203,64 +220,66 @@
     text-overflow: ellipsis;
 }
 
-.song-sub-tags {
+.track-pills {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
     margin-top: 4px;
 }
 
-.now-playing-content.lyrics-open .song-sub-tags {
-    justify-content: flex-start;
+.now-playing-main.centered-mode .track-pills {
+    justify-content: center;
 }
 
-.meta-tag {
+.meta-pill {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     font-size: 12px;
+    font-weight: 500;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 4px 12px;
-    border-radius: 20px;
+    padding: 3px 10px;
+    border-radius: 16px;
     color: rgba(255, 255, 255, 0.85);
 }
 
-/* Floating Liquid Glass Control Panel */
-.glass-controls-panel {
+/* Spotify Control Surface */
+.spotify-control-surface {
     width: 100%;
-    background: rgba(18, 24, 38, 0.6);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(18, 24, 38, 0.55);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 24px;
-    padding: 20px 28px;
+    padding: 20px 24px;
     box-shadow:
         0 20px 50px rgba(0, 0, 0, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     box-sizing: border-box;
 }
 
-.progress-section {
+.progress-bar-row {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    width: 100%;
 }
 
-.time-display {
+.timestamp {
     font-size: 12px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.65);
     font-variant-numeric: tabular-nums;
-    min-width: 40px;
+    min-width: 38px;
 }
 
-.glass-progress-slider {
+.progress-slider {
     flex: 1;
     height: 4px;
     appearance: none;
@@ -271,36 +290,74 @@
     cursor: pointer;
 }
 
-.glass-progress-slider::-webkit-slider-thumb {
+.progress-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: #ffffff;
-    box-shadow: 0 0 12px var(--accent-color, #3b82f6);
+    box-shadow: 0 0 10px var(--accent-color, #3b82f6);
     cursor: pointer;
 }
 
-/* Flex button container with zero misalignment */
-.controls-row {
+.controls-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    gap: 12px;
+    gap: 8px;
 }
 
-.controls-group-left, .controls-group-right {
+.toolbar-group {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     height: 42px;
 }
 
-.glass-btn {
-    height: 42px;
-    min-width: 42px;
+.volume-group {
+    flex: 1;
+    max-width: 130px;
+}
+
+.volume-slider {
+    width: 70px;
+    height: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.playback-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.actions-group {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.control-icon-btn {
+    width: 38px;
+    height: 38px;
     box-sizing: border-box;
     border: 1px solid transparent;
     background: rgba(255, 255, 255, 0.08);
@@ -315,101 +372,84 @@
     padding: 0;
 }
 
-.glass-btn:hover {
+.control-icon-btn:hover {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.16);
     border-color: rgba(255, 255, 255, 0.2);
 }
 
-.glass-btn.active {
+.control-icon-btn.active {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.35);
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.25);
 }
 
-.glass-btn.main-play-btn {
-    width: 52px;
-    height: 52px;
-    min-width: 52px;
+.main-play-circle {
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: #ffffff;
     color: #0f172a;
     border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
     box-shadow: 0 6px 20px rgba(255, 255, 255, 0.35);
+    transition: all 0.2s ease;
 }
 
-.glass-btn.main-play-btn:hover {
+.main-play-circle:hover {
     transform: scale(1.06);
     background: #ffffff;
 }
 
-.play-offset {
-    margin-left: 3px;
+.play-icon-offset {
+    margin-left: 2px;
 }
 
-.volume-control-wrap {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.glass-volume-slider {
-    width: 70px;
-    height: 4px;
-    appearance: none;
-    -webkit-appearance: none;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-}
-
-.glass-volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #ffffff;
-}
-
-.lyrics-toggle-btn {
-    height: 42px;
-    min-width: 100px;
-    border-radius: 22px;
-    padding: 0 16px;
+.lyrics-action-pill {
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 20px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    gap: 6px;
     font-size: 13px;
     font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    transition: all 0.2s ease;
     box-sizing: border-box;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
 }
 
-.lyrics-toggle-btn.active {
+.lyrics-action-pill:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.lyrics-action-pill.active {
     background: #ffffff;
     color: #0f172a;
     border-color: #ffffff;
     box-shadow: 0 4px 16px rgba(255, 255, 255, 0.4);
 }
 
-/* Right Panel: Spotify-Style Liquid Glass Lyrics Stage */
-.right-lyrics-panel {
-    flex: 1;
+/* Spotify Lyrics Card (Right Stage Grid Column) */
+.lyrics-stage-col {
+    width: 100%;
     height: 100%;
-    max-height: 640px;
-    min-width: 520px;
-    animation: slideInLyrics 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 580px;
+    animation: fadeInLyrics 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes slideInLyrics {
+@keyframes fadeInLyrics {
     from {
         opacity: 0;
-        transform: translateX(40px);
+        transform: translateX(30px);
     }
     to {
         opacity: 1;
@@ -417,14 +457,14 @@
     }
 }
 
-.lyrics-glass-card {
+.spotify-lyrics-card {
     height: 100%;
     background: rgba(18, 24, 38, 0.55);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 28px;
-    padding: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 24px;
+    padding: 28px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
     display: flex;
     flex-direction: column;
@@ -432,22 +472,41 @@
     box-sizing: border-box;
 }
 
-.lyrics-card-header {
+.lyrics-header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 14px;
+    padding-bottom: 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.lyrics-card-header h3 {
-    font-size: 20px;
+.lyrics-header-row h3 {
+    font-size: 18px;
     font-weight: 800;
     color: #ffffff;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+}
+
+.close-lyrics-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.close-lyrics-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
 }
 
 /* Glass Queue Drawer */
@@ -586,15 +645,14 @@
     color: rgba(255, 255, 255, 0.4);
 }
 
-@media (max-width: 1200px) {
-    .now-playing-content.lyrics-open {
-        flex-direction: column;
+@media (max-width: 1100px) {
+    .now-playing-main.lyrics-mode {
+        grid-template-columns: 1fr;
         overflow-y: auto;
         padding: 20px;
     }
-    .right-lyrics-panel {
+    .lyrics-stage-col {
         width: 100%;
-        min-width: 0;
         max-height: 400px;
     }
 }
