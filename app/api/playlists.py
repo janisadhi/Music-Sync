@@ -242,13 +242,15 @@ def get_playlist_songs(
             detail="Playlist not found",
         )
 
-    return db.scalars(
+    songs = db.scalars(
         select(Song)
         .where(
             Song.playlist_id == playlist_id
         )
         .order_by(Song.position)
     ).all()
+    from app.api.songs import _to_song_response
+    return [_to_song_response(s) for s in songs]
 
 
 @router.post(

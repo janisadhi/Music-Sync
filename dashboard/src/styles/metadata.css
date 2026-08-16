@@ -1,0 +1,321 @@
+/* ==============================================================================
+   Metadata Page & Beets Provenance Badges Styles
+   ============================================================================== */
+
+.metadata-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.metadata-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.metadata-header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.metadata-header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 6px 0 0;
+}
+
+.metadata-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-scan {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    transition: all 0.2s ease;
+}
+
+.btn-scan:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.btn-scan:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-force-scan {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background-color: #ffffff;
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-force-scan:hover:not(:disabled) {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.metadata-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.metric-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+
+.metric-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.metric-icon-box.total {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+.metric-icon-box.raw {
+    background-color: #fff7ed;
+    color: #ea580c;
+}
+
+.metric-icon-box.beets {
+    background-color: #f0fdf4;
+    color: #16a34a;
+}
+
+.metric-icon-box.failed {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.metric-icon-box.low-confidence {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.metric-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.metric-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* Metadata Table Card */
+.metadata-table-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.metadata-table-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.metadata-table-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.metadata-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.metadata-select {
+    padding: 6px 12px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--text-primary);
+    background-color: #ffffff;
+    outline: none;
+}
+
+.metadata-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.metadata-table th {
+    background-color: #f8fafc;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.metadata-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.metadata-table tr:last-child td {
+    border-bottom: none;
+}
+
+.metadata-table tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Status Badges & Pills */
+.status-pill.status-beets,
+.status-pill.beets,
+.badge-beets {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    letter-spacing: 0.02em;
+}
+
+.status-state-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-state-pill.enriched {
+    background-color: #f0fdf4;
+    color: #15803d;
+}
+
+.status-state-pill.raw {
+    background-color: #fff7ed;
+    color: #c2410c;
+}
+
+.status-state-pill.processing {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}
+
+.status-state-pill.failed {
+    background-color: #fef2f2;
+    color: #b91c1c;
+}
+
+.status-state-pill.low_confidence {
+    background-color: #fef3c7;
+    color: #b45309;
+}
+
+.status-state-pill.skipped {
+    background-color: #f1f5f9;
+    color: #64748b;
+}
+
+.btn-enrich-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border: 1px solid var(--border-light);
+    background-color: #ffffff;
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-enrich-action:hover:not(:disabled) {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+    color: #2563eb;
+}
+
+.btn-enrich-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

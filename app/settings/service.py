@@ -25,6 +25,10 @@ class SettingsService:
             playlist_watch_limit=None,
             delete_local_file_on_playlist_removal=False,
             youtube_cookies=None,
+            auto_scan_metadata_enabled=True,
+            auto_rename_files=True,
+            min_confidence_threshold="MEDIUM",
+            clean_youtube_titles=True,
         )
 
     def get(self) -> AppSettings:
@@ -54,6 +58,10 @@ class SettingsService:
         playlist_watch_limit: int | None = ...,  # type: ignore[assignment]
         delete_local_file_on_playlist_removal: bool | None = None,
         youtube_cookies: str | None = ...,  # type: ignore[assignment]
+        auto_scan_metadata_enabled: bool | None = None,
+        auto_rename_files: bool | None = None,
+        min_confidence_threshold: str | None = None,
+        clean_youtube_titles: bool | None = None,
     ) -> AppSettings:
 
         with SessionLocal() as session:
@@ -98,6 +106,18 @@ class SettingsService:
 
             if youtube_cookies is not ...:
                 app_settings.youtube_cookies = youtube_cookies
+
+            if auto_scan_metadata_enabled is not None:
+                app_settings.auto_scan_metadata_enabled = auto_scan_metadata_enabled
+
+            if auto_rename_files is not None:
+                app_settings.auto_rename_files = auto_rename_files
+
+            if min_confidence_threshold is not None:
+                app_settings.min_confidence_threshold = min_confidence_threshold
+
+            if clean_youtube_titles is not None:
+                app_settings.clean_youtube_titles = clean_youtube_titles
 
             session.commit()
             session.refresh(app_settings)

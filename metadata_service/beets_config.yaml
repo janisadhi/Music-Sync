@@ -1,0 +1,20 @@
+directory: /app/downloads
+library: /app/data/beets/library.db
+
+import:
+  write: yes
+  copy: no
+  move: no
+  resume: no
+  quiet: yes
+  autotag: yes
+  timid: no
+  singletons: yes
+
+plugins:
+  - fetchart
+  - embedart
+  - ftintitle
+
+musicbrainz:
+  searchlimit: 5

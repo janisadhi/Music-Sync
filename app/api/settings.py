@@ -27,6 +27,10 @@ class SettingsResponse(BaseModel):
     playlist_watch_limit: int | None = None
     delete_local_file_on_playlist_removal: bool = False
     has_youtube_cookies: bool = False
+    auto_scan_metadata_enabled: bool = True
+    auto_rename_files: bool = True
+    min_confidence_threshold: str = "MEDIUM"
+    clean_youtube_titles: bool = True
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -42,6 +46,10 @@ class SettingsUpdateRequest(BaseModel):
     delete_local_file_on_playlist_removal: bool | None = None
     # None = leave unchanged, "" / empty string = clear cookies, str = update cookies
     youtube_cookies: str | None = None
+    auto_scan_metadata_enabled: bool | None = None
+    auto_rename_files: bool | None = None
+    min_confidence_threshold: Literal["HIGH", "MEDIUM"] | None = None
+    clean_youtube_titles: bool | None = None
 
     @model_validator(mode="after")
     def validate_watch_settings(self):
@@ -82,6 +90,10 @@ def _build_settings_response(settings_obj) -> SettingsResponse:
         playlist_watch_limit=settings_obj.playlist_watch_limit,
         delete_local_file_on_playlist_removal=settings_obj.delete_local_file_on_playlist_removal,
         has_youtube_cookies=has_cookies,
+        auto_scan_metadata_enabled=getattr(settings_obj, "auto_scan_metadata_enabled", True),
+        auto_rename_files=getattr(settings_obj, "auto_rename_files", True),
+        min_confidence_threshold=getattr(settings_obj, "min_confidence_threshold", "MEDIUM"),
+        clean_youtube_titles=getattr(settings_obj, "clean_youtube_titles", True),
     )
 
 
@@ -136,6 +148,18 @@ def update_settings(request: SettingsUpdateRequest):
             # If empty string passed, set to None in DB to clear cookies.
             cookie_val = request.youtube_cookies.strip() if request.youtube_cookies.strip() else None
             update_kwargs["youtube_cookies"] = cookie_val
+
+        if request.auto_scan_metadata_enabled is not None:
+            update_kwargs["auto_scan_metadata_enabled"] = request.auto_scan_metadata_enabled
+
+        if request.auto_rename_files is not None:
+            update_kwargs["auto_rename_files"] = request.auto_rename_files
+
+        if request.min_confidence_threshold is not None:
+            update_kwargs["min_confidence_threshold"] = request.min_confidence_threshold
+
+        if request.clean_youtube_titles is not None:
+            update_kwargs["clean_youtube_titles"] = request.clean_youtube_titles
 
         updated = settings_service.update(**update_kwargs)
         return _build_settings_response(updated)

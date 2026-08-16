@@ -77,35 +77,53 @@ def _extract_artist_fallback(title: str) -> str | None:
 
 
 def _to_song_response(song: Song) -> SongResponse:
+    title = song.title
+    raw_title = song.title
     artist = None
     album = None
     thumbnail_url = None
     duration_seconds = None
+    beets_metadata_edited = False
+    metadata_state = None
+    downloaded_track_id = None
+    file_path = song.file_path
 
     if song.downloaded_track:
-        artist = song.downloaded_track.artist
+        downloaded_track_id = song.downloaded_track.id
+        if song.downloaded_track.title:
+            title = song.downloaded_track.title
+        if song.downloaded_track.artist:
+            artist = song.downloaded_track.artist
         album = song.downloaded_track.album
         thumbnail_url = song.downloaded_track.thumbnail_url
         duration_seconds = song.downloaded_track.duration_seconds
+        beets_metadata_edited = song.downloaded_track.beets_metadata_edited
+        metadata_state = song.downloaded_track.metadata_state
+        if song.downloaded_track.file_path:
+            file_path = song.downloaded_track.file_path
 
     if not artist:
-        artist = _extract_artist_fallback(song.title)
+        artist = _extract_artist_fallback(raw_title)
 
     return SongResponse(
         id=song.id,
         playlist_id=song.playlist_id,
         youtube_video_id=song.youtube_video_id,
-        title=song.title,
+        title=title,
+        raw_title=raw_title,
         position=song.position,
         download_status=song.download_status,
         lyrics_status=song.lyrics_status,
-        file_path=song.file_path,
+        file_path=file_path,
         lyrics_path=song.lyrics_path,
         error_message=song.error_message,
         artist=artist,
         album=album,
         thumbnail_url=thumbnail_url,
         duration_seconds=duration_seconds,
+        beets_metadata_edited=beets_metadata_edited,
+        metadata_state=metadata_state,
+        downloaded_track_id=downloaded_track_id,
         created_at=song.created_at,
         updated_at=song.updated_at,
     )
@@ -408,6 +426,12 @@ def retry_lyrics(
             song.file_path = str(
                 destination
             )
+
+            # Keep DownloadedTrack.file_path in sync
+            if song.downloaded_track:
+                song.downloaded_track.file_path = str(
+                    destination
+                )
 
         except Exception as exc:
             raise HTTPException(

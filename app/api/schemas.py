@@ -51,6 +51,10 @@ class SongResponse(BaseModel):
     album: str | None = None
     thumbnail_url: str | None = None
     duration_seconds: int | None = None
+    beets_metadata_edited: bool = False
+    metadata_state: str | None = None
+    downloaded_track_id: int | None = None
+    raw_title: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -80,6 +84,7 @@ class DownloadedTrackResponse(BaseModel):
     artwork_path: str | None
     artwork_embedded: bool
     metadata_state: str
+    beets_metadata_edited: bool = False
     created_at: datetime
     updated_at: datetime
 
