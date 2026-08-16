@@ -1,6 +1,6 @@
 .song-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 12px;
     padding: 12px;
     display: flex;
@@ -8,32 +8,27 @@
     gap: 12px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
 }
 
 .song-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+    background: var(--bg-card-hover, #f8fafc);
+    border-color: #cbd5e1;
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
 .song-card.active-card {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.08);
+    border-color: var(--primary-blue, #3b82f6);
+    background: rgba(59, 130, 246, 0.06);
 }
 
 /* Card sizes */
-.card-size-large {
-    width: 100%;
-}
-
-.card-size-medium {
+.card-size-large, .card-size-medium, .card-size-small {
     width: 100%;
 }
 
 .card-size-small {
-    width: 100%;
     padding: 8px;
     gap: 8px;
 }
@@ -45,8 +40,8 @@
     border-radius: 8px;
     overflow: hidden;
     position: relative;
-    background: #0f172a;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: #f1f5f9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .song-card-art {
@@ -63,18 +58,18 @@
 .song-card-art-fallback {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #1e293b, #0f172a);
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #475569;
+    color: #64748b;
 }
 
 /* Hover play button overlay */
 .song-card-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(15, 23, 42, 0.35);
     backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
@@ -88,17 +83,17 @@
 }
 
 .song-card-play-btn {
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
-    background: #3b82f6;
+    background: var(--primary-blue, #3b82f6);
     color: #ffffff;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
     transform: scale(0.9);
     transition: all 0.2s ease;
 }
@@ -108,8 +103,8 @@
 }
 
 .song-card-play-btn:hover {
-    background: #2563eb;
-    transform: scale(1.1) !important;
+    background: var(--primary-blue-hover, #2563eb);
+    transform: scale(1.08) !important;
 }
 
 /* Playing badge */
@@ -117,9 +112,9 @@
     position: absolute;
     top: 8px;
     left: 8px;
-    background: rgba(15, 23, 42, 0.85);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
-    color: #3b82f6;
+    color: var(--primary-blue, #3b82f6);
     font-size: 11px;
     font-weight: 600;
     padding: 3px 8px;
@@ -127,15 +122,15 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .badge-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #3b82f6;
-    box-shadow: 0 0 8px #3b82f6;
+    background: var(--primary-blue, #3b82f6);
+    box-shadow: 0 0 6px var(--primary-blue, #3b82f6);
     animation: pulse-dot 1.5s infinite;
 }
 
@@ -161,7 +156,7 @@
 .song-card-title {
     font-size: 14px;
     font-weight: 600;
-    color: #f8fafc;
+    color: var(--text-primary, #0f172a);
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
@@ -171,7 +166,7 @@
 }
 
 .song-card-title:hover {
-    color: #3b82f6;
+    color: var(--primary-blue, #3b82f6);
 }
 
 .song-card-meta {
@@ -182,7 +177,7 @@
 
 .song-card-artist {
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--text-secondary, #475569);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -190,7 +185,7 @@
 
 .song-card-album {
     font-size: 11px;
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -206,15 +201,16 @@
 
 .extra-tag {
     font-size: 10px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #cbd5e1;
+    background: #f1f5f9;
+    color: #475569;
     padding: 2px 6px;
     border-radius: 4px;
+    border: 1px solid #e2e8f0;
 }
 
 .extra-duration {
     font-size: 10px;
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
     margin-left: auto;
 }
 
@@ -226,7 +222,7 @@
 .song-card-menu-btn {
     background: transparent;
     border: none;
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
     cursor: pointer;
     padding: 4px;
     border-radius: 4px;
@@ -237,18 +233,18 @@
 }
 
 .song-card-menu-btn:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary, #0f172a);
+    background: #f1f5f9;
 }
 
 .song-card-menu-dropdown {
     position: absolute;
     top: 100%;
     left: 0;
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-lg, 0 10px 25px rgba(0, 0, 0, 0.1));
     z-index: 100;
     min-width: 150px;
     padding: 4px;
@@ -268,7 +264,7 @@
     gap: 8px;
     padding: 8px 12px;
     font-size: 12px;
-    color: #cbd5e1;
+    color: var(--text-primary, #0f172a);
     background: transparent;
     border: none;
     border-radius: 6px;
@@ -281,11 +277,10 @@
 
 .song-card-menu-dropdown button:hover,
 .song-card-menu-dropdown a:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    background: #f1f5f9;
 }
 
 .song-card-menu-dropdown .menu-danger:hover {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    background: var(--danger-soft, #fef2f2);
+    color: var(--danger-rose, #ef4444);
 }

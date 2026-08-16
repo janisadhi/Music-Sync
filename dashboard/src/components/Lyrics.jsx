@@ -4,7 +4,7 @@ import { getSongLyrics } from "../services/songs";
 import { parseLRC } from "../utils/lrcParser";
 import "../styles/songs.css";
 
-function Lyrics({ song, currentTime = 0 }) {
+function Lyrics({ song, currentTime = 0, lyrics: rawLyricsProp }) {
     const [lyrics, setLyrics] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -13,6 +13,15 @@ function Lyrics({ song, currentTime = 0 }) {
     const activeLineRef = useRef(null);
 
     useEffect(() => {
+        if (rawLyricsProp) {
+            if (typeof rawLyricsProp === "string") {
+                setLyrics(parseLRC(rawLyricsProp));
+            } else if (Array.isArray(rawLyricsProp)) {
+                setLyrics(rawLyricsProp);
+            }
+            return;
+        }
+
         if (!song) {
             setLyrics([]);
             return;
@@ -40,7 +49,7 @@ function Lyrics({ song, currentTime = 0 }) {
         };
 
         fetchLyrics();
-    }, [song]);
+    }, [song, rawLyricsProp]);
 
     // Calculate active line index based on playback time
     let activeIndex = -1;

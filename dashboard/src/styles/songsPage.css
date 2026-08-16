@@ -16,14 +16,15 @@
 
 .header-title-block h1 {
     font-size: 28px;
-    font-weight: 700;
-    color: #f8fafc;
+    font-weight: 800;
+    color: var(--text-primary, #0f172a);
     margin: 0 0 4px 0;
+    letter-spacing: -0.02em;
 }
 
 .header-title-block .subtitle {
     font-size: 14px;
-    color: #94a3b8;
+    color: var(--text-secondary, #475569);
     margin: 0;
 }
 
@@ -38,7 +39,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border-light, #e2e8f0);
     padding-bottom: 12px;
 }
 
@@ -48,7 +49,7 @@
     gap: 8px;
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--text-secondary, #475569);
     padding: 8px 16px;
     border-radius: 8px;
     font-size: 14px;
@@ -58,13 +59,14 @@
 }
 
 .tab-btn:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary, #0f172a);
+    background: var(--bg-card-hover, #f1f5f9);
 }
 
 .tab-btn.active {
-    color: #ffffff;
-    background: rgba(59, 130, 246, 0.15);
+    color: var(--primary-blue, #3b82f6);
+    background: var(--primary-blue-soft, #eff6ff);
+    font-weight: 600;
 }
 
 /* Toolbar */
@@ -80,24 +82,25 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 8px;
     padding: 8px 14px;
     flex: 1;
     min-width: 240px;
     max-width: 400px;
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
 }
 
 .search-icon {
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
 }
 
 .search-box input {
     background: transparent;
     border: none;
     outline: none;
-    color: #f8fafc;
+    color: var(--text-primary, #0f172a);
     font-size: 14px;
     width: 100%;
 }
@@ -109,14 +112,15 @@
 }
 
 .filter-select {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 8px;
-    color: #f8fafc;
+    color: var(--text-primary, #0f172a);
     padding: 8px 12px;
     font-size: 13px;
     outline: none;
     cursor: pointer;
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
 }
 
 /* Grid Layouts */
@@ -141,23 +145,25 @@
 .list-layout {
     display: flex;
     flex-direction: column;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 12px;
     overflow: hidden;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
 }
 
 .list-header {
     display: flex;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border-light, #e2e8f0);
     font-size: 12px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
     gap: 16px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    background: #f8fafc;
 }
 
 .compact-list-layout {
@@ -174,8 +180,8 @@
 }
 
 .artist-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 12px;
     padding: 16px;
     display: flex;
@@ -185,11 +191,13 @@
     gap: 10px;
     text-decoration: none;
     transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
 }
 
 .artist-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: translateY(-4px);
+    background: var(--bg-card-hover, #f8fafc);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
 .artist-avatar {
@@ -197,12 +205,12 @@
     height: 96px;
     border-radius: 50%;
     overflow: hidden;
-    background: #1e293b;
+    background: #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #64748b;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .artist-avatar img {
@@ -214,12 +222,12 @@
 .artist-name {
     font-size: 14px;
     font-weight: 600;
-    color: #f8fafc;
+    color: var(--text-primary, #0f172a);
 }
 
 .artist-count {
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
 }
 
 /* Albums Grid */
@@ -230,8 +238,8 @@
 }
 
 .album-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 12px;
     padding: 14px;
     display: flex;
@@ -239,11 +247,13 @@
     gap: 8px;
     text-decoration: none;
     transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
 }
 
 .album-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: translateY(-4px);
+    background: var(--bg-card-hover, #f8fafc);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
 .album-art-wrap {
@@ -251,11 +261,11 @@
     aspect-ratio: 1 / 1;
     border-radius: 8px;
     overflow: hidden;
-    background: #1e293b;
+    background: #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #475569;
+    color: #64748b;
 }
 
 .album-art-wrap img {
@@ -267,7 +277,7 @@
 .album-title {
     font-size: 14px;
     font-weight: 600;
-    color: #f8fafc;
+    color: var(--text-primary, #0f172a);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -275,7 +285,7 @@
 
 .album-artist {
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--text-secondary, #475569);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -283,7 +293,7 @@
 
 .album-footer {
     font-size: 11px;
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
 }
 
 /* Genres Grid */
@@ -294,8 +304,8 @@
 }
 
 .genre-card {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05));
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 12px;
     padding: 16px;
     display: flex;
@@ -303,15 +313,17 @@
     gap: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
 }
 
 .genre-card:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
+    background: var(--primary-blue-soft, #eff6ff);
+    border-color: rgba(59, 130, 246, 0.3);
     transform: translateY(-2px);
 }
 
 .genre-icon {
-    color: #3b82f6;
+    color: var(--primary-blue, #3b82f6);
 }
 
 .genre-info {
@@ -322,12 +334,12 @@
 .genre-title {
     font-size: 15px;
     font-weight: 600;
-    color: #f8fafc;
+    color: var(--text-primary, #0f172a);
 }
 
 .genre-count {
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--text-secondary, #475569);
 }
 
 /* States */
@@ -337,12 +349,12 @@
     align-items: center;
     justify-content: center;
     padding: 60px 0;
-    color: #64748b;
+    color: var(--text-muted, #94a3b8);
     gap: 12px;
     text-align: center;
 }
 
 .library-empty-state h3 {
-    color: #f8fafc;
+    color: var(--text-primary, #0f172a);
     margin: 0;
 }

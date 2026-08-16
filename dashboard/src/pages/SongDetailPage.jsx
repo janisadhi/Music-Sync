@@ -307,7 +307,7 @@ export default function SongDetailPage() {
 
                     <div className="lyrics-body">
                         {lyricsData?.lyrics ? (
-                            <Lyrics lyrics={lyricsData.lyrics} currentTime={currentTime} />
+                            <Lyrics song={song} lyrics={lyricsData.lyrics} currentTime={currentTime} />
                         ) : (
                             <div className="lyrics-empty">
                                 <FileText size={40} />
