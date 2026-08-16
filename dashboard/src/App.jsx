@@ -18,6 +18,7 @@ import ChangePassword from "./pages/ChangePassword";
 import SongDetailPage from "./pages/SongDetailPage";
 import AlbumDetailPage from "./pages/AlbumDetailPage";
 import ArtistDetailPage from "./pages/ArtistDetailPage";
+import NowPlaying from "./pages/NowPlaying";
 
 function App() {
     return (
@@ -30,6 +31,7 @@ function App() {
                     {/* Protected Routes (requires token + forced password change check) */}
                     <Route element={<ProtectedRoute />}>
                         <Route path="/change-password" element={<ChangePassword />} />
+                        <Route path="/now-playing" element={<NowPlaying />} />
 
                         <Route element={<DashboardLayout />}>
                             <Route path="/" element={<Dashboard />} />

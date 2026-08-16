@@ -214,7 +214,7 @@ export default function MiniPlayer() {
                             <ListMusic size={18} />
                         </button>
 
-                        <Link to={`/songs/${currentSong.id}/detail`} className="mini-btn icon-only" title="Full Screen Detail">
+                        <Link to="/now-playing" className="mini-btn icon-only" title="Full Screen Player">
                             <Maximize2 size={18} />
                         </Link>
 

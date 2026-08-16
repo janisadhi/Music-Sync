@@ -6,6 +6,7 @@ import {
     Disc,
     FileText,
     ListMusic,
+    Maximize2,
     Music,
     Pause,
     Play,
@@ -146,11 +147,17 @@ export default function SongDetailPage() {
                     <ArrowLeft size={18} /> Back
                 </button>
 
-                {song.downloaded_track_id && (
-                    <Link to={`/metadata/tracks/${song.downloaded_track_id}`} className="btn btn-secondary btn-sm">
-                        <Sparkles size={14} /> View Track Metadata Details
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Link to="/now-playing" className="btn btn-secondary btn-sm">
+                        <Maximize2 size={14} /> Full Screen Player
                     </Link>
-                )}
+
+                    {song.downloaded_track_id && (
+                        <Link to={`/metadata/tracks/${song.downloaded_track_id}`} className="btn btn-secondary btn-sm">
+                            <Sparkles size={14} /> View Track Metadata Details
+                        </Link>
+                    )}
+                </div>
             </div>
 
             {/* Hero Section */}
