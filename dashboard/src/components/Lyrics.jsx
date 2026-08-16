@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Music } from "lucide-react";
+import { FileText, RefreshCw } from "lucide-react";
 import { getSongLyrics } from "../services/songs";
 import { parseLRC } from "../utils/lrcParser";
 import "../styles/songs.css";
 
-function Lyrics({ song, currentTime = 0 }) {
+export default function Lyrics({ song, currentTime = 0, lyrics: rawLyricsProp }) {
     const [lyrics, setLyrics] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -13,6 +13,15 @@ function Lyrics({ song, currentTime = 0 }) {
     const activeLineRef = useRef(null);
 
     useEffect(() => {
+        if (rawLyricsProp) {
+            if (typeof rawLyricsProp === "string") {
+                setLyrics(parseLRC(rawLyricsProp));
+            } else if (Array.isArray(rawLyricsProp)) {
+                setLyrics(rawLyricsProp);
+            }
+            return;
+        }
+
         if (!song) {
             setLyrics([]);
             return;
@@ -40,7 +49,7 @@ function Lyrics({ song, currentTime = 0 }) {
         };
 
         fetchLyrics();
-    }, [song]);
+    }, [song, rawLyricsProp]);
 
     // Calculate active line index based on playback time
     let activeIndex = -1;
@@ -69,92 +78,38 @@ function Lyrics({ song, currentTime = 0 }) {
         }
     }, [activeIndex]);
 
-    if (!song) {
-        return (
-            <section className="lyrics-panel">
-                <div className="lyrics-heading">
-                    <div className="heading-title">
-                        <FileText size={18} className="lyrics-icon-primary" />
-                        <h3>Lyrics</h3>
-                    </div>
-                </div>
-                <div className="lyrics-message">Select a song to view lyrics.</div>
-            </section>
-        );
-    }
-
     if (loading) {
         return (
-            <section className="lyrics-panel">
-                <div className="lyrics-heading">
-                    <div className="heading-title">
-                        <FileText size={18} className="lyrics-icon-primary" />
-                        <h3>Lyrics</h3>
-                    </div>
-                </div>
-                <div className="lyrics-message">Loading synced lyrics...</div>
-            </section>
+            <div className="lyrics-empty-state">
+                <RefreshCw size={24} className="spin-icon" />
+                <p>Loading synced lyrics...</p>
+            </div>
         );
     }
 
-    if (error) {
+    if (error || lyrics.length === 0) {
         return (
-            <section className="lyrics-panel">
-                <div className="lyrics-heading">
-                    <div className="heading-title">
-                        <FileText size={18} className="lyrics-icon-primary" />
-                        <h3>Lyrics</h3>
-                    </div>
-                </div>
-                <div className="lyrics-message lyrics-unavailable">{error}</div>
-            </section>
-        );
-    }
-
-    if (lyrics.length === 0) {
-        return (
-            <section className="lyrics-panel">
-                <div className="lyrics-heading">
-                    <div className="heading-title">
-                        <FileText size={18} className="lyrics-icon-primary" />
-                        <h3>Lyrics</h3>
-                    </div>
-                </div>
-                <div className="lyrics-message lyrics-unavailable">
-                    No timestamped lyrics available for this song.
-                </div>
-            </section>
+            <div className="lyrics-empty-state">
+                <FileText size={32} />
+                <p>{error || "No timestamped lyrics available for this song."}</p>
+            </div>
         );
     }
 
     return (
-        <section className="lyrics-panel">
-            <div className="lyrics-heading">
-                <div className="heading-title">
-                    <FileText size={18} className="lyrics-icon-primary" />
-                    <div>
-                        <h3>Synced Lyrics</h3>
-                        <span className="subtitle">Real-time synchronized scrolling</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="lyrics-content" ref={containerRef}>
-                {lyrics.map((line, index) => {
-                    const isActive = index === activeIndex;
-                    return (
-                        <p
-                            key={`${line.time}-${index}`}
-                            ref={isActive ? activeLineRef : null}
-                            className={isActive ? "lyric-line active" : "lyric-line"}
-                        >
-                            {line.text}
-                        </p>
-                    );
-                })}
-            </div>
-        </section>
+        <div className="spotify-lyrics-viewport" ref={containerRef}>
+            {lyrics.map((line, index) => {
+                const isActive = index === activeIndex;
+                return (
+                    <p
+                        key={`${line.time}-${index}`}
+                        ref={isActive ? activeLineRef : null}
+                        className={`spotify-lyric-line ${isActive ? "active" : ""}`}
+                    >
+                        {line.text}
+                    </p>
+                );
+            })}
+        </div>
     );
 }
-
-export default Lyrics;

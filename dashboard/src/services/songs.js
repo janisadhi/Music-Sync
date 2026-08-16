@@ -5,10 +5,25 @@ export const getSongs = async (params = {}) => {
     return response.data;
 };
 
+export const getSong = async (songId) => {
+    const response = await api.get(`/songs/${songId}`);
+    return response.data;
+};
+
 export const getArtists = async () => {
     const response = await api.get("/songs/artists");
     return response.data;
-};;
+};
+
+export const getAlbums = async () => {
+    const response = await api.get("/songs/albums");
+    return response.data;
+};
+
+export const getGenres = async () => {
+    const response = await api.get("/songs/genres");
+    return response.data;
+};
 
 export const getSongLyrics = async (songId) => {
     const response = await api.get(
