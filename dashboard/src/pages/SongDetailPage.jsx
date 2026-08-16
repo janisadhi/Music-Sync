@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
     ArrowLeft,
@@ -60,6 +60,7 @@ export default function SongDetailPage() {
     } = usePlayer();
 
     const isThisSongCurrent = currentSong?.id === Number(songId);
+    const initialCurrentSongIdRef = useRef(currentSong?.id);
 
     const loadSongDetails = async () => {
         try {
@@ -80,8 +81,24 @@ export default function SongDetailPage() {
     };
 
     useEffect(() => {
+        initialCurrentSongIdRef.current = currentSong?.id;
         loadSongDetails();
     }, [songId]);
+
+    // Handle track transitions while on detail view (e.g. Next/Prev clicked or track finished)
+    useEffect(() => {
+        if (!currentSong) return;
+
+        if (currentSong.id === Number(songId)) {
+            initialCurrentSongIdRef.current = currentSong.id;
+            return;
+        }
+
+        if (currentSong.id !== initialCurrentSongIdRef.current) {
+            initialCurrentSongIdRef.current = currentSong.id;
+            navigate(`/songs/${currentSong.id}/detail`, { replace: true });
+        }
+    }, [currentSong, songId, navigate]);
 
     const handleRetryLyrics = async () => {
         try {
