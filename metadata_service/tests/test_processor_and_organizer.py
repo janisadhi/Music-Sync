@@ -86,3 +86,76 @@ def test_filename_collision_handling(tmp_path):
     # Colliding target should result in "Mac DeMarco - My Kind of Woman (1).opus"
     expected_collision_audio = tmp_path / "Mac DeMarco - My Kind of Woman (1).opus"
     assert expected_collision_audio.exists()
+
+
+def test_low_confidence_track_not_renamed_in_processor(tmp_path):
+    from metadata_service.processor import MetadataProcessor
+    from metadata_service.matcher import MatchResult
+
+    audio_path = tmp_path / "Uncertain_Artist - Unknown_Song.opus"
+    audio_path.write_bytes(b"dummy audio")
+
+    class MockTrack:
+        id = 99
+        song_id = 999
+        title = "Uncertain_Artist - Unknown_Song"
+        artist = None
+        album = None
+        album_artist = None
+        genre = None
+        track_number = None
+        release_year = None
+        duration_seconds = 180
+        artwork_embedded = False
+        file_path = str(audio_path)
+        metadata_state = "raw"
+        beets_metadata_edited = False
+
+    class MockSession:
+        def get(self, model, key):
+            return None
+        def query(self, model):
+            class Query:
+                def filter(self, *args):
+                    return self
+                def first(self):
+                    return None
+            return Query()
+        def commit(self):
+            pass
+        def rollback(self):
+            pass
+        def add(self, obj):
+            pass
+
+    processor = MetadataProcessor()
+    # Mock matcher to return LOW confidence match
+    processor.matcher.evaluate = lambda target, candidates, fallback_metadata: MatchResult(
+        score=0.2,
+        confidence="LOW",
+        source="fallback",
+        title="Uncertain Title",
+        artist="Uncertain Artist",
+        album=None,
+        release_year=None,
+        reason="Low score",
+        recording_id=None,
+        artist_id=None,
+    )
+    # Mock musicbrainz search to return empty list
+    processor.musicbrainz.search_recordings = lambda title, artist: []
+    # Mock tag writer
+    processor.tag_writer.write_tags = lambda path, tags: False
+
+    track = MockTrack()
+    session = MockSession()
+
+    res = processor.enrich_single_track(session, track)
+
+    assert res is True
+    assert track.metadata_state == "low_confidence"
+    assert track.beets_metadata_edited is False
+    # Verify original file on disk was NOT renamed
+    assert audio_path.exists()
+    assert track.file_path == str(audio_path)
+

@@ -272,49 +272,49 @@ class MetadataProcessor:
                 fallback_metadata=fallback_dict,
             )
 
-            # 4. Apply resolved metadata based on confidence
-            track.title = match_result.title
-            if match_result.artist and match_result.artist != "Unknown Artist":
-                track.artist = match_result.artist
-                track.album_artist = match_result.album_artist or match_result.artist
-            elif resolved_artist:
-                track.artist = resolved_artist
-                track.album_artist = resolved_artist
-
-            # Only assign album if MusicBrainz match meets configured confidence threshold
+            # 4. Determine if match confidence meets configured threshold
             allowed_confidences = ("HIGH",) if min_confidence == "HIGH" else ("HIGH", "MEDIUM")
-            if match_result.confidence in allowed_confidences and match_result.album:
-                track.album = match_result.album
-                track.release_year = match_result.release_year
-            else:
-                track.album = None  # Leave album null if no confident match exists
+            is_enriched = match_result.confidence in allowed_confidences
 
-            resolved_tags = {
-                "title": track.title,
-                "artist": track.artist,
-                "album": track.album,
-                "album_artist": track.album_artist,
-                "genre": track.genre,
-                "track_number": track.track_number,
-                "release_year": track.release_year,
-            }
+            if is_enriched:
+                track.title = match_result.title
+                if match_result.artist and match_result.artist != "Unknown Artist":
+                    track.artist = match_result.artist
+                    track.album_artist = match_result.album_artist or match_result.artist
+                elif resolved_artist:
+                    track.artist = resolved_artist
+                    track.album_artist = resolved_artist
 
-            # 5. Embed audio tags & post-write verification
-            tag_success = self.tag_writer.write_tags(resolved_path, resolved_tags)
-            if tag_success:
-                self.tag_writer.verify_written_tags(resolved_path, resolved_tags)
+                if match_result.album:
+                    track.album = match_result.album
+                    track.release_year = match_result.release_year
+                else:
+                    track.album = None
 
-            # 6. Lockstep Audio & Lyrics File Renaming (respects auto_rename setting)
-            rename_res = self.organizer.rename_track_and_lyrics(
-                session=session,
-                downloaded_track=track,
-                new_artist=track.artist,
-                new_title=track.title,
-                auto_rename=auto_rename,
-            )
+                resolved_tags = {
+                    "title": track.title,
+                    "artist": track.artist,
+                    "album": track.album,
+                    "album_artist": track.album_artist,
+                    "genre": track.genre,
+                    "track_number": track.track_number,
+                    "release_year": track.release_year,
+                }
 
-            # 7. Update Metadata State based on configured min_confidence
-            if match_result.confidence in allowed_confidences:
+                # 5. Embed audio tags & post-write verification
+                tag_success = self.tag_writer.write_tags(resolved_path, resolved_tags)
+                if tag_success:
+                    self.tag_writer.verify_written_tags(resolved_path, resolved_tags)
+
+                # 6. Lockstep Audio & Lyrics File Renaming ONLY IF ENRICHED
+                rename_res = self.organizer.rename_track_and_lyrics(
+                    session=session,
+                    downloaded_track=track,
+                    new_artist=track.artist,
+                    new_title=track.title,
+                    auto_rename=auto_rename,
+                )
+
                 track.metadata_state = "enriched"
                 track.beets_metadata_edited = True
             else:
