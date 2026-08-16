@@ -17,7 +17,6 @@ import {
     Tag,
     Volume2,
     VolumeX,
-    X,
 } from "lucide-react";
 import Lyrics from "../components/Lyrics";
 import { usePlayer } from "../context/PlayerContext";
@@ -226,7 +225,7 @@ export default function NowPlaying() {
                         )}
                     </div>
 
-                    {/* Spotify Control Bar Surface */}
+                    {/* Clean Control Bar Surface */}
                     <div className="spotify-control-surface">
                         {/* Progress Bar & Timestamps */}
                         <div className="progress-bar-row">
@@ -313,12 +312,11 @@ export default function NowPlaying() {
 
                                 {hasLyrics && (
                                     <button
-                                        className={`lyrics-action-pill ${showLyrics ? "active" : ""}`}
+                                        className={`control-icon-btn ${showLyrics ? "active" : ""}`}
                                         onClick={() => setShowLyrics(!showLyrics)}
                                         title="Toggle Lyrics"
                                     >
-                                        <FileText size={15} />
-                                        <span>Lyrics</span>
+                                        <FileText size={18} />
                                     </button>
                                 )}
                             </div>
@@ -326,27 +324,14 @@ export default function NowPlaying() {
                     </div>
                 </div>
 
-                {/* Right Lyrics Stage (Separated Column in Grid) */}
+                {/* Right Lyrics Stage (Frameless side-by-side lyrics view) */}
                 {showLyrics && (
-                    <div className="lyrics-stage-col">
-                        <div className="spotify-lyrics-card">
-                            <div className="lyrics-header-row">
-                                <h3><FileText size={20} /> Lyrics</h3>
-                                <button
-                                    className="close-lyrics-btn"
-                                    onClick={() => setShowLyrics(false)}
-                                    title="Close Lyrics"
-                                >
-                                    <X size={18} />
-                                </button>
-                            </div>
-
-                            <Lyrics
-                                song={currentSong}
-                                lyrics={lyricsData?.lyrics}
-                                currentTime={currentTime}
-                            />
-                        </div>
+                    <div className="frameless-lyrics-column">
+                        <Lyrics
+                            song={currentSong}
+                            lyrics={lyricsData?.lyrics}
+                            currentTime={currentTime}
+                        />
                     </div>
                 )}
             </main>
