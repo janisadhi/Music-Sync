@@ -15,6 +15,7 @@ import {
     Shuffle,
     SkipBack,
     SkipForward,
+    Sparkles,
     Tag,
     User,
     Volume2,
