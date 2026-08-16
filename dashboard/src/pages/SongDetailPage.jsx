@@ -82,6 +82,13 @@ export default function SongDetailPage() {
         loadSongDetails();
     }, [songId]);
 
+    // Auto-update page route when active playing song changes via Next/Prev controls
+    useEffect(() => {
+        if (currentSong && currentSong.id !== Number(songId)) {
+            navigate(`/songs/${currentSong.id}/detail`, { replace: true });
+        }
+    }, [currentSong, songId, navigate]);
+
     const handleRetryLyrics = async () => {
         try {
             setRetryingLyrics(true);
@@ -123,9 +130,17 @@ export default function SongDetailPage() {
     return (
         <div className="song-detail-container">
             {/* Top Navigation */}
-            <button className="back-btn" onClick={() => navigate(-1)}>
-                <ArrowLeft size={18} /> Back
-            </button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                <button className="back-btn" onClick={() => navigate(-1)}>
+                    <ArrowLeft size={18} /> Back
+                </button>
+
+                {song.downloaded_track_id && (
+                    <Link to={`/metadata/tracks/${song.downloaded_track_id}`} className="btn btn-secondary btn-sm">
+                        <Sparkles size={14} /> View Track Metadata Details
+                    </Link>
+                )}
+            </div>
 
             {/* Hero Section */}
             <div className="song-detail-hero">
@@ -217,104 +232,30 @@ export default function SongDetailPage() {
                 </div>
             </div>
 
-            {/* Grid Layout: Left Details Table & Right Lyrics */}
-            <div className="song-detail-grid">
-                {/* Metadata Details Card */}
-                <div className="detail-card">
-                    <h3>Metadata & Track Information</h3>
-                    <table className="meta-table">
-                        <tbody>
-                            <tr>
-                                <td>Title</td>
-                                <td>{title}</td>
-                            </tr>
-                            <tr>
-                                <td>Artist</td>
-                                <td>{artist}</td>
-                            </tr>
-                            <tr>
-                                <td>Album</td>
-                                <td>{album}</td>
-                            </tr>
-                            {song.album_artist && (
-                                <tr>
-                                    <td>Album Artist</td>
-                                    <td>{song.album_artist}</td>
-                                </tr>
-                            )}
-                            {song.release_year && (
-                                <tr>
-                                    <td>Release Year</td>
-                                    <td>{song.release_year}</td>
-                                </tr>
-                            )}
-                            {song.genre && (
-                                <tr>
-                                    <td>Genre</td>
-                                    <td>{song.genre}</td>
-                                </tr>
-                            )}
-                            {song.track_number && (
-                                <tr>
-                                    <td>Track Number</td>
-                                    <td>{song.track_number}</td>
-                                </tr>
-                            )}
-                            <tr>
-                                <td>Duration</td>
-                                <td>{formatTime(song.duration_seconds)}</td>
-                            </tr>
-                            <tr>
-                                <td>Download Status</td>
-                                <td>
-                                    <span className={`status-pill pill-${song.download_status}`}>
-                                        {song.download_status}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Metadata State</td>
-                                <td>
-                                    <span className={`status-pill pill-${song.metadata_state || "raw"}`}>
-                                        {song.metadata_state || "raw"}
-                                    </span>
-                                </td>
-                            </tr>
-                            {song.file_path && (
-                                <tr>
-                                    <td>File Path</td>
-                                    <td className="path-cell">{song.file_path}</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+            {/* Dedicated Lyrics Card */}
+            <div className="detail-card lyrics-card">
+                <div className="lyrics-header">
+                    <h3><FileText size={18} /> Lyrics</h3>
+                    {song.lyrics_status === "failed" || song.lyrics_status === "unavailable" ? (
+                        <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={handleRetryLyrics}
+                            disabled={retryingLyrics}
+                        >
+                            {retryingLyrics ? <RefreshCw size={14} className="spin-icon" /> : <RefreshCw size={14} />} Retry Fetch
+                        </button>
+                    ) : null}
                 </div>
 
-                {/* Dedicated Lyrics Card */}
-                <div className="detail-card lyrics-card">
-                    <div className="lyrics-header">
-                        <h3><FileText size={18} /> Lyrics</h3>
-                        {song.lyrics_status === "failed" || song.lyrics_status === "unavailable" ? (
-                            <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={handleRetryLyrics}
-                                disabled={retryingLyrics}
-                            >
-                                {retryingLyrics ? <RefreshCw size={14} className="spin-icon" /> : <RefreshCw size={14} />} Retry Fetch
-                            </button>
-                        ) : null}
-                    </div>
-
-                    <div className="lyrics-body">
-                        {lyricsData?.lyrics ? (
-                            <Lyrics song={song} lyrics={lyricsData.lyrics} currentTime={currentTime} />
-                        ) : (
-                            <div className="lyrics-empty">
-                                <FileText size={40} />
-                                <p>No lyrics available for this track.</p>
-                            </div>
-                        )}
-                    </div>
+                <div className="lyrics-body">
+                    {lyricsData?.lyrics ? (
+                        <Lyrics song={song} lyrics={lyricsData.lyrics} currentTime={currentTime} />
+                    ) : (
+                        <div className="lyrics-empty">
+                            <FileText size={40} />
+                            <p>No lyrics available for this track.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

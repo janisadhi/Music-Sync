@@ -297,13 +297,17 @@
     gap: 8px;
 }
 
+.lyrics-card {
+    width: 100%;
+}
+
 .lyrics-body {
     background: #f8fafc;
     border: 1px solid var(--border-light, #e2e8f0);
     border-radius: 12px;
-    padding: 20px;
-    min-height: 280px;
-    max-height: 400px;
+    padding: 24px;
+    min-height: 320px;
+    max-height: 500px;
     overflow-y: auto;
 }
 
