@@ -83,13 +83,6 @@ export default function SongDetailPage() {
         loadSongDetails();
     }, [songId]);
 
-    // Auto-update page route when active playing song changes via Next/Prev controls
-    useEffect(() => {
-        if (currentSong && currentSong.id !== Number(songId)) {
-            navigate(`/songs/${currentSong.id}/detail`, { replace: true });
-        }
-    }, [currentSong, songId, navigate]);
-
     const handleRetryLyrics = async () => {
         try {
             setRetryingLyrics(true);
