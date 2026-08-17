@@ -56,9 +56,20 @@ app = FastAPI(
 )
 
 
+import time
+
+METADATA_START_TIME = time.time()
+
+
 @app.get("/health", tags=["Health"])
 def health_check():
-    return {"status": "ok", "service": settings.service_name}
+    uptime_sec = int(time.time() - METADATA_START_TIME)
+    return {
+        "status": "ok",
+        "service": settings.service_name,
+        "uptime_seconds": uptime_sec,
+    }
+
 
 
 @app.post("/scan", response_model=ScanJobStatus, status_code=status.HTTP_202_ACCEPTED, tags=["Metadata"])

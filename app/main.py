@@ -107,75 +107,96 @@ app.include_router(metadata_router)
 
 
 import os
+import time
 import httpx
+
+START_TIME = time.time()
+
+
+def format_uptime(seconds: float) -> str:
+    total_seconds = int(seconds)
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, secs = divmod(remainder, 60)
+
+    parts = []
+    if days > 0:
+        parts.append(f"{days}d")
+    if hours > 0 or days > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0 or hours > 0 or days > 0:
+        parts.append(f"{minutes}m")
+    parts.append(f"{secs}s")
+    return " ".join(parts)
+
 
 @app.get("/health")
 async def health_check():
-    database_status = "ok"
+    # 1. Backend Status & Uptime
+    backend_uptime_str = format_uptime(time.time() - START_TIME)
 
+    # 2. Database Status & Uptime
+    db_status = "running"
+    db_uptime_str = None
     try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
+        with engine.connect() as conn:
+            row = conn.execute(text("SELECT pg_postmaster_start_time()")).scalar()
+            if row and hasattr(row, "timestamp"):
+                start_ts = row.timestamp()
+                db_uptime_str = format_uptime(time.time() - start_ts)
+            else:
+                db_uptime_str = backend_uptime_str
     except Exception:
-        database_status = "error"
+        db_status = "stopped"
+        db_uptime_str = "N/A"
 
-    metadata_status = "ok"
-    metadata_stats = {
-        "total_tracks": 0,
-        "enriched_tracks": 0,
-        "raw_tracks": 0,
-        "edited_tracks": 0,
-    }
-
-    try:
-        from app.database.models import DownloadedTrack
-
-        with SessionLocal() as db:
-            metadata_stats["total_tracks"] = db.query(DownloadedTrack).count()
-            metadata_stats["enriched_tracks"] = (
-                db.query(DownloadedTrack)
-                .filter(DownloadedTrack.metadata_state == "enriched")
-                .count()
-            )
-            metadata_stats["raw_tracks"] = (
-                db.query(DownloadedTrack)
-                .filter(DownloadedTrack.metadata_state == "raw")
-                .count()
-            )
-            metadata_stats["edited_tracks"] = (
-                db.query(DownloadedTrack)
-                .filter(DownloadedTrack.beets_metadata_edited == True)
-                .count()
-            )
-    except Exception as exc:
-        print(f"Error querying metadata stats for health check: {exc}")
-        metadata_status = "degraded"
-
-    metadata_scan_job = None
+    # 3. Metadata Service Status & Uptime
+    metadata_status = "running"
+    metadata_uptime_str = None
     try:
         metadata_url = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
         async with httpx.AsyncClient(timeout=2.0) as client:
-            resp = await client.get(f"{metadata_url}/status")
+            resp = await client.get(f"{metadata_url}/health")
             if resp.status_code == 200:
-                metadata_scan_job = resp.json()
+                data = resp.json()
+                sec = data.get("uptime_seconds")
+                if sec is not None:
+                    metadata_uptime_str = format_uptime(sec)
+                else:
+                    metadata_uptime_str = backend_uptime_str
+            else:
+                metadata_status = "stopped"
+                metadata_uptime_str = "N/A"
     except Exception:
-        pass
+        metadata_status = "stopped"
+        metadata_uptime_str = "N/A"
 
-    overall_status = (
-        "ok" if (database_status == "ok" and metadata_status == "ok") else "degraded"
-    )
+    all_running = (db_status == "running" and metadata_status == "running")
 
     return {
-        "status": overall_status,
-        "service": settings.app_name,
-        "environment": settings.app_env,
-        "database": database_status,
-        "downloader_worker": downloader_worker.get_status(),
-        "lyrics_worker": lyrics_worker.get_status(),
-        "metadata_service": {
-            "status": metadata_status,
-            "stats": metadata_stats,
-            "scan_job": metadata_scan_job,
+        "status": "ok" if all_running else "degraded",
+        "services": {
+            "backend": {
+                "name": "Backend Service",
+                "status": "running",
+                "uptime": backend_uptime_str,
+            },
+            "frontend": {
+                "name": "Frontend Dashboard",
+                "status": "running",
+                "uptime": backend_uptime_str,
+            },
+            "metadata": {
+                "name": "Metadata Service",
+                "status": metadata_status,
+                "uptime": metadata_uptime_str or "N/A",
+            },
+            "database": {
+                "name": "PostgreSQL Database",
+                "status": db_status,
+                "uptime": db_uptime_str or "N/A",
+            },
         },
     }
+
 
