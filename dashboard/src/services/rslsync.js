@@ -27,7 +27,23 @@ export async function getResilioTransfers() {
     return response.data;
 }
 
-export async function getResilioErrors() {
-    const response = await api.get("/api/rslsync/errors");
+export async function generateShareInfo(folderId = "music-downloads", permission = "read_write") {
+    const response = await api.post("/api/rslsync/shares/generate", {
+        folder_id: folderId,
+        permission: permission,
+    });
     return response.data;
 }
+
+export async function getPairingStatus(folderId = "music-downloads") {
+    const response = await api.get("/api/rslsync/pairing-status", {
+        params: { folder_id: folderId },
+    });
+    return response.data;
+}
+
+export async function revokePeer(peerId) {
+    const response = await api.delete(`/api/rslsync/peers/${peerId}`);
+    return response.data;
+}
+

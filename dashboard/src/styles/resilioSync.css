@@ -298,3 +298,248 @@
     color: var(--primary-blue, #3b82f6);
     font-weight: 700;
 }
+
+/* ==============================================================================
+   Add Device Modal & Wizard
+   ============================================================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-light, #e2e8f0);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-close-modal:hover {
+    background: #f1f5f9;
+    color: var(--text-primary, #0f172a);
+}
+
+.modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Wizard Steps Indicator */
+.wizard-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    padding: 10px 16px;
+    border-radius: 12px;
+}
+
+.wizard-step-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted, #94a3b8);
+}
+
+.wizard-step-item.active {
+    color: #3b82f6;
+}
+
+.wizard-step-item.completed {
+    color: #10b981;
+}
+
+.step-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+}
+
+.wizard-step-item.active .step-num {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.wizard-step-item.completed .step-num {
+    background: #10b981;
+    color: #ffffff;
+}
+
+/* Step Content Form Controls */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+}
+
+.form-select {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-light, #cbd5e1);
+    background: #ffffff;
+    font-size: 14px;
+    color: var(--text-primary, #0f172a);
+    width: 100%;
+}
+
+/* QR Display Container */
+.qr-code-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+}
+
+.qr-code-img {
+    width: 200px;
+    height: 200px;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+}
+
+.qr-instructions {
+    font-size: 13px;
+    color: var(--text-secondary, #475569);
+    text-align: center;
+    margin: 0;
+}
+
+/* Secret Code Box */
+.secret-code-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 12px;
+    width: 100%;
+}
+
+.secret-code-text {
+    flex: 1;
+    font-family: monospace;
+    font-size: 12px;
+    color: #0f172a;
+    word-break: break-all;
+}
+
+.btn-copy {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-copy:hover {
+    background: #2563eb;
+}
+
+/* Waiting Beacon */
+.waiting-beacon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+/* Revoke Peer Button */
+.btn-revoke-peer {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.btn-revoke-peer:hover {
+    background: #fef2f2;
+}
+

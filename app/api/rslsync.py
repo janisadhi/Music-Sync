@@ -5,7 +5,10 @@ from app.rslsync.schemas import (
     ResilioDashboardOverview,
     ResilioErrorItem,
     ResilioFolder,
+    ResilioPairingStatus,
     ResilioPeer,
+    ResilioShareInfo,
+    ResilioShareRequest,
     ResilioStatusResponse,
     ResilioTransfer,
 )
@@ -45,6 +48,28 @@ async def get_resilio_peers():
     return await resilio_service.get_peers()
 
 
+@router.delete("/peers/{peer_id}")
+async def revoke_resilio_peer(peer_id: str):
+    """Disconnects and revokes a paired mobile device / peer."""
+    success = await resilio_service.revoke_peer(peer_id)
+    return {"status": "success" if success else "failed", "peer_id": peer_id}
+
+
+@router.post("/shares/generate", response_model=ResilioShareInfo)
+async def generate_resilio_share(req: ResilioShareRequest):
+    """Generates pairing key secret, share URL, and SVG QR Code for mobile pairing."""
+    return await resilio_service.generate_share_info(
+        folder_id=req.folder_id,
+        permission=req.permission,
+    )
+
+
+@router.get("/pairing-status", response_model=ResilioPairingStatus)
+async def get_pairing_status(folder_id: str = Query("music-downloads")):
+    """Polls real-time pairing detection status when a mobile device connects."""
+    return await resilio_service.check_pairing_status(folder_id=folder_id)
+
+
 @router.get("/transfers", response_model=list[ResilioTransfer])
 async def get_resilio_transfers():
     """Returns active file transfers and download/upload progress."""
@@ -55,3 +80,4 @@ async def get_resilio_transfers():
 async def get_resilio_errors():
     """Returns current Resilio Sync error log items."""
     return await resilio_service.get_errors()
+

@@ -68,3 +68,32 @@ class ResilioDashboardOverview(BaseModel):
     peers: list[ResilioPeer] = []
     transfers: list[ResilioTransfer] = []
     errors: list[ResilioErrorItem] = []
+
+
+class ResilioShareRequest(BaseModel):
+    folder_id: str = "music-downloads"
+    permission: str = "read_write"  # "read_write" | "read_only"
+
+
+class ResilioShareInfo(BaseModel):
+    folder_id: str
+    folder_name: str
+    folder_path: str
+    permission: str
+    secret_key: str
+    share_url: str
+    qr_code_svg: str
+    expires_at: str | None = None
+
+
+class ResilioPairingStatus(BaseModel):
+    folder_id: str
+    pairing_active: bool = True
+    detected: bool = False
+    status: str = "waiting"  # "waiting" | "detected" | "connecting" | "connected" | "syncing"
+    device_name: str | None = None
+    device_id: str | None = None
+    connection_type: str | None = None
+    sync_progress_pct: float = 0.0
+    error_message: str | None = None
+
