@@ -106,21 +106,97 @@ app.include_router(settings_router)
 app.include_router(metadata_router)
 
 
-@app.get("/health")
-def health_check():
-    database_status = "ok"
+import os
+import time
+import httpx
 
+START_TIME = time.time()
+
+
+def format_uptime(seconds: float) -> str:
+    total_seconds = int(seconds)
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, secs = divmod(remainder, 60)
+
+    parts = []
+    if days > 0:
+        parts.append(f"{days}d")
+    if hours > 0 or days > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0 or hours > 0 or days > 0:
+        parts.append(f"{minutes}m")
+    parts.append(f"{secs}s")
+    return " ".join(parts)
+
+
+@app.get("/health")
+async def health_check():
+    # 1. Backend Status & Uptime
+    backend_uptime_str = format_uptime(time.time() - START_TIME)
+
+    # 2. Database Status & Uptime
+    db_status = "running"
+    db_uptime_str = None
     try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
+        with engine.connect() as conn:
+            row = conn.execute(text("SELECT pg_postmaster_start_time()")).scalar()
+            if row and hasattr(row, "timestamp"):
+                start_ts = row.timestamp()
+                db_uptime_str = format_uptime(time.time() - start_ts)
+            else:
+                db_uptime_str = backend_uptime_str
     except Exception:
-        database_status = "error"
+        db_status = "stopped"
+        db_uptime_str = "N/A"
+
+    # 3. Metadata Service Status & Uptime
+    metadata_status = "running"
+    metadata_uptime_str = None
+    try:
+        metadata_url = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(f"{metadata_url}/health")
+            if resp.status_code == 200:
+                data = resp.json()
+                sec = data.get("uptime_seconds")
+                if sec is not None:
+                    metadata_uptime_str = format_uptime(sec)
+                else:
+                    metadata_uptime_str = backend_uptime_str
+            else:
+                metadata_status = "stopped"
+                metadata_uptime_str = "N/A"
+    except Exception:
+        metadata_status = "stopped"
+        metadata_uptime_str = "N/A"
+
+    all_running = (db_status == "running" and metadata_status == "running")
 
     return {
-        "status": "ok" if database_status == "ok" else "degraded",
-        "service": settings.app_name,
-        "environment": settings.app_env,
-        "database": database_status,
-        "downloader_worker": downloader_worker.get_status(),
-        "lyrics_worker": lyrics_worker.get_status(),
+        "status": "ok" if all_running else "degraded",
+        "services": {
+            "backend": {
+                "name": "Backend Service",
+                "status": "running",
+                "uptime": backend_uptime_str,
+            },
+            "frontend": {
+                "name": "Frontend Dashboard",
+                "status": "running",
+                "uptime": backend_uptime_str,
+            },
+            "metadata": {
+                "name": "Metadata Service",
+                "status": metadata_status,
+                "uptime": metadata_uptime_str or "N/A",
+            },
+            "database": {
+                "name": "PostgreSQL Database",
+                "status": db_status,
+                "uptime": db_uptime_str or "N/A",
+            },
+        },
     }
+
+

@@ -1,9 +1,25 @@
 import { useEffect, useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Cpu, Database, RefreshCw, Server, ShieldCheck } from "lucide-react";
+import {
+    Activity,
+    AlertTriangle,
+    Clock,
+    Database,
+    Layout,
+    RefreshCw,
+    Server,
+    Sparkles,
+} from "lucide-react";
 import api from "../services/api";
-import "../styles/dashboard.css";
+import "../styles/systemHealth.css";
 
-function SystemHealth() {
+const SERVICE_ICONS = {
+    backend: Server,
+    frontend: Layout,
+    metadata: Sparkles,
+    database: Database,
+};
+
+export default function SystemHealth() {
     const [health, setHealth] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -16,7 +32,7 @@ function SystemHealth() {
             setHealth(response.data);
         } catch (err) {
             console.error("Failed to fetch health:", err);
-            setError("Unable to connect to service backend.");
+            setError("Unable to connect to backend service.");
         } finally {
             setLoading(false);
         }
@@ -24,115 +40,87 @@ function SystemHealth() {
 
     useEffect(() => {
         fetchHealth();
-        const timer = setInterval(fetchHealth, 10000);
+        const timer = setInterval(fetchHealth, 5000);
         return () => clearInterval(timer);
     }, []);
 
-    return (
-        <div className="dashboard-container">
-            <header className="dashboard-header">
-                <div className="header-info">
-                    <h1>System Health & Status</h1>
-                    <p className="subtitle">Real-time status metrics for backend services, database connections, and environment.</p>
+    if (loading && !health) {
+        return (
+            <div className="health-page-container">
+                <div className="health-loading">
+                    <RefreshCw className="spin-icon" size={32} />
+                    <p>Checking service health & uptime...</p>
                 </div>
-                <div className="header-actions">
+            </div>
+        );
+    }
+
+    if (error && !health) {
+        return (
+            <div className="health-page-container">
+                <div className="health-error-card">
+                    <AlertTriangle size={40} style={{ color: "#ef4444" }} />
+                    <h3>Health Check Failed</h3>
+                    <p>{error}</p>
+                    <button className="btn btn-primary" onClick={fetchHealth}>
+                        <RefreshCw size={16} /> Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const services = health?.services || {};
+
+    return (
+        <div className="health-page-container">
+            {/* Header */}
+            <header className="health-header">
+                <div>
+                    <h1>System Health & Status</h1>
+                    <p className="subtitle">
+                        Service status and uptime for Backend, Frontend, Metadata Service, and Database.
+                    </p>
+                </div>
+
+                <div className="health-header-actions">
                     <button className="btn btn-secondary" onClick={fetchHealth}>
                         <RefreshCw size={15} /> Refresh
                     </button>
                 </div>
             </header>
 
-            {error && (
-                <div className="dashboard-alert alert-error">
-                    <AlertTriangle size={18} />
-                    <span>{error}</span>
-                </div>
-            )}
+            {/* 4 Service Status Cards Grid */}
+            <div className="clean-services-grid">
+                {Object.entries(services).map(([key, service]) => {
+                    const IconComponent = SERVICE_ICONS[key] || Activity;
+                    const isRunning = service.status === "running";
 
-            {loading ? (
-                <div className="dashboard-loading">
-                    <RefreshCw className="spin-icon" size={32} />
-                    <p>Checking system health...</p>
-                </div>
-            ) : health ? (
-                <div className="stats-overview-grid">
-                    {/* Service Health Card */}
-                    <div className="metric-card">
-                        <div className="metric-header">
-                            <div className="metric-title">
-                                <Server className="metric-icon blue" size={18} />
-                                <span>FastAPI Backend</span>
+                    return (
+                        <div key={key} className={`simple-service-card ${isRunning ? "running" : "stopped"}`}>
+                            <div className="card-top">
+                                <div className={`icon-bubble ${key}`}>
+                                    <IconComponent size={22} />
+                                </div>
+                                <span className={`status-pill ${isRunning ? "running" : "stopped"}`}>
+                                    <span className="status-dot" />
+                                    {isRunning ? "Running" : "Stopped"}
+                                </span>
                             </div>
-                            <span className={`metric-badge ${health.status === "ok" ? "green" : "red"}`}>
-                                {health.status === "ok" ? "ONLINE" : "DEGRADED"}
-                            </span>
-                        </div>
 
-                        <div className="metric-hero">
-                            <span className="hero-number">{health.service || "music-sync"}</span>
-                        </div>
-
-                        <div className="metric-subchips">
-                            <span className="chip muted">Version: 1.0.0</span>
-                            <span className="chip muted">Env: {health.environment || "production"}</span>
-                        </div>
-                    </div>
-
-                    {/* PostgreSQL Database Health Card */}
-                    <div className="metric-card">
-                        <div className="metric-header">
-                            <div className="metric-title">
-                                <Database className="metric-icon green" size={18} />
-                                <span>PostgreSQL DB</span>
+                            <div className="card-middle">
+                                <h2>{service.name}</h2>
                             </div>
-                            <span className={`metric-badge ${health.database === "ok" ? "green" : "red"}`}>
-                                {health.database === "ok" ? "CONNECTED" : "DISCONNECTED"}
-                            </span>
-                        </div>
 
-                        <div className="metric-hero">
-                            <span className="hero-number">{health.database === "ok" ? "Healthy" : "Error"}</span>
-                        </div>
-
-                        <div className="metric-subchips">
-                            <span className="chip warning">PostgreSQL 17</span>
-                            <span className="chip muted">Port 5432</span>
-                        </div>
-                    </div>
-
-                    {/* Environment Info Card */}
-                    <div className="metric-card">
-                        <div className="metric-header">
-                            <div className="metric-title">
-                                <ShieldCheck className="metric-icon purple" size={18} />
-                                <span>Security & Environment</span>
-                            </div>
-                            <span className="metric-badge blue">ACTIVE</span>
-                        </div>
-
-                        <div className="config-grid">
-                            <div className="config-item">
-                                <span className="config-label">Service</span>
-                                <span className="config-val">{health.service}</span>
-                            </div>
-                            <div className="config-item">
-                                <span className="config-label">Environment</span>
-                                <span className="config-val">{health.environment}</span>
-                            </div>
-                            <div className="config-item">
-                                <span className="config-label">CORS</span>
-                                <span className="config-val">Enabled</span>
-                            </div>
-                            <div className="config-item">
-                                <span className="config-label">Status</span>
-                                <span className="config-val">{health.status}</span>
+                            <div className="card-bottom">
+                                <Clock size={16} className="clock-icon" />
+                                <span className="uptime-label">Uptime:</span>
+                                <span className="uptime-val">{service.uptime || "N/A"}</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-            ) : null}
+                    );
+                })}
+            </div>
         </div>
     );
 }
-
-export default SystemHealth;

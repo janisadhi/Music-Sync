@@ -1,0 +1,175 @@
+/* ==============================================================================
+   System Health - Minimal Service Status & Uptime UI
+   ============================================================================== */
+
+.health-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.health-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.health-header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 6px 0;
+    color: var(--text-primary, #0f172a);
+    letter-spacing: -0.02em;
+}
+
+.health-header .subtitle {
+    font-size: 14px;
+    color: var(--text-muted, #64748b);
+    margin: 0;
+}
+
+.health-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 4 Service Cards Grid */
+.clean-services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+}
+
+.simple-service-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.simple-service-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md, 0 6px 18px rgba(0, 0, 0, 0.06));
+}
+
+.simple-service-card.running {
+    border-top: 4px solid #10b981;
+}
+
+.simple-service-card.stopped {
+    border-top: 4px solid #ef4444;
+}
+
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.icon-bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-bubble.backend { background: #eff6ff; color: #3b82f6; }
+.icon-bubble.frontend { background: #fdf4ff; color: #d946ef; }
+.icon-bubble.metadata { background: #faf5ff; color: #8b5cf6; }
+.icon-bubble.database { background: #ecfdf5; color: #10b981; }
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: capitalize;
+}
+
+.status-pill.running {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.status-pill.stopped {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.status-pill.running .status-dot {
+    background: #10b981;
+    box-shadow: 0 0 6px #10b981;
+}
+
+.status-pill.stopped .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444;
+}
+
+.card-middle h2 {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0;
+    color: var(--text-primary, #0f172a);
+}
+
+.card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-muted, #64748b);
+    padding-top: 14px;
+    border-top: 1px solid var(--border-light, #f1f5f9);
+}
+
+.clock-icon {
+    color: var(--text-muted, #94a3b8);
+}
+
+.uptime-label {
+    font-weight: 500;
+}
+
+.uptime-val {
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    margin-left: auto;
+}
+
+/* Loading & Error */
+.health-loading, .health-error-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
+    border-radius: 16px;
+    text-align: center;
+    gap: 16px;
+    color: var(--text-muted, #64748b);
+}
