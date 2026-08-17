@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
     Activity,
     History,
