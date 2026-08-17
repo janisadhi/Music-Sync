@@ -18,16 +18,8 @@ import {
     Zap,
 } from "lucide-react";
 import api from "../services/api";
-import { getUser } from "../services/auth";
 import { getMetadataStatus } from "../services/metadata";
 import "../styles/dashboard.css";
-
-function getTimeGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-}
 
 function formatRelativeTime(dateString) {
     if (!dateString) return "Never";
@@ -180,15 +172,15 @@ export default function Dashboard() {
 
     return (
         <div className="dashboard-container">
-            {/* Welcoming Hero Header Banner */}
+            {/* Header Banner */}
             <header className="hero-header-banner">
                 <div className="banner-text">
                     <span className="greeting-badge">
                         <span className="live-dot" /> System Online · Auto-refreshes 5s
                     </span>
-                    <h1>{greeting}, {username}! 👋</h1>
+                    <h1>Dashboard</h1>
                     <p className="subtitle">
-                        Here is the real-time status of your synchronized YouTube Music library and automation workers.
+                        Real-time overview of your synchronized YouTube Music library, metadata, and background workers.
                     </p>
                 </div>
 
