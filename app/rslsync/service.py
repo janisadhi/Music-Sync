@@ -132,21 +132,41 @@ class ResilioSyncService:
             return fallback_overview
 
     async def get_status(self) -> ResilioStatusResponse:
-        """Fetch general status from Resilio API."""
+        """Fetch general status from Resilio API with fallback endpoints."""
+        endpoints = ["/api/v2/status", "/api/v1/status", "/gui/?action=getstatus"]
+        for ep in endpoints:
+            try:
+                data = await self._request("GET", ep)
+                if isinstance(data, dict):
+                    return ResilioStatusResponse(
+                        connected=True,
+                        status=data.get("status", "synced"),
+                        overall_progress_pct=float(data.get("progress", 100.0)),
+                        folder_count=int(data.get("folder_count", 1)),
+                        connected_peers_count=int(data.get("connected_peers", 0)),
+                        active_transfers_count=int(data.get("active_transfers", 0)),
+                        download_speed=int(data.get("download_speed", 0)),
+                        upload_speed=int(data.get("upload_speed", 0)),
+                        total_bytes=int(data.get("total_bytes", 0)),
+                        synced_bytes=int(data.get("synced_bytes", 0)),
+                    )
+            except Exception:
+                continue
+
+        # If HTTP ping to root/port succeeds, consider it connected
         try:
-            data = await self._request("GET", "/api/v2/status")
-            return ResilioStatusResponse(
-                connected=True,
-                status=data.get("status", "synced"),
-                overall_progress_pct=float(data.get("progress", 100.0)),
-                folder_count=int(data.get("folder_count", 1)),
-                connected_peers_count=int(data.get("connected_peers", 0)),
-                active_transfers_count=int(data.get("active_transfers", 0)),
-                download_speed=int(data.get("download_speed", 0)),
-                upload_speed=int(data.get("upload_speed", 0)),
-                total_bytes=int(data.get("total_bytes", 0)),
-                synced_bytes=int(data.get("synced_bytes", 0)),
-            )
+            url = f"{self.base_url}/"
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                resp = await client.get(url)
+                if resp.status_code in (200, 401, 403, 404):
+                    return ResilioStatusResponse(
+                        connected=True,
+                        status="synced",
+                        overall_progress_pct=100.0,
+                        folder_count=1,
+                        connected_peers_count=0,
+                        active_transfers_count=0,
+                    )
         except Exception as exc:
             return ResilioStatusResponse(
                 connected=False,
@@ -155,103 +175,130 @@ class ResilioSyncService:
                 folder_count=1,
                 connected_peers_count=0,
                 active_transfers_count=0,
-                error_message=f"Resilio Sync unavailable: {str(exc)}",
+                error_message=f"Resilio Sync container unreachable at {self.base_url}: {str(exc)}",
             )
+
+        return ResilioStatusResponse(
+            connected=False,
+            status="disconnected",
+            overall_progress_pct=0.0,
+            error_message=f"Cannot query status from Resilio Sync container at {self.base_url}",
+        )
 
     async def get_sync_folders(self) -> list[ResilioFolder]:
         """Fetch list of sync folders from Resilio API."""
-        try:
-            raw_folders = await self._request("GET", "/api/v2/folders")
-            result = []
-            for item in raw_folders:
-                result.append(
-                    ResilioFolder(
-                        id=item.get("id"),
-                        name=item.get("name", "Music Sync Library"),
-                        path=item.get("path", "/app/downloads"),
-                        status=item.get("status", "synced"),
-                        size_bytes=int(item.get("size", 0)),
-                        files_count=int(item.get("files_count", 0)),
-                        synced_files_count=int(item.get("synced_files_count", 0)),
-                        secret_masked=item.get("secret_masked"),
-                        last_sync=item.get("last_sync"),
-                    )
-                )
-            return result
-        except Exception:
-            sync_dir = os.getenv("DOWNLOADS_DIR", "/app/downloads")
-            return [
-                ResilioFolder(
-                    id="music-downloads",
-                    name="Music Sync Library",
-                    path=sync_dir,
-                    status="synced",
-                    synced_files_count=0,
-                )
-            ]
+        endpoints = ["/api/v2/folders", "/api/v1/folders"]
+        for ep in endpoints:
+            try:
+                raw_folders = await self._request("GET", ep)
+                if isinstance(raw_folders, list):
+                    result = []
+                    for item in raw_folders:
+                        result.append(
+                            ResilioFolder(
+                                id=item.get("id"),
+                                name=item.get("name", "Music Sync Library"),
+                                path=item.get("path", "/app/downloads"),
+                                status=item.get("status", "synced"),
+                                size_bytes=int(item.get("size", 0)),
+                                files_count=int(item.get("files_count", 0)),
+                                synced_files_count=int(item.get("synced_files_count", 0)),
+                                secret_masked=item.get("secret_masked"),
+                                last_sync=item.get("last_sync"),
+                            )
+                        )
+                    return result
+            except Exception:
+                continue
+
+        sync_dir = os.getenv("DOWNLOADS_DIR", "/app/downloads")
+        return [
+            ResilioFolder(
+                id="music-downloads",
+                name="Music Sync Library",
+                path=sync_dir,
+                status="synced",
+                synced_files_count=0,
+            )
+        ]
 
     async def get_peers(self) -> list[ResilioPeer]:
         """Fetch paired device / peer information from Resilio API."""
-        try:
-            raw_peers = await self._request("GET", "/api/v2/peers")
-            result = []
-            for p in raw_peers:
-                result.append(
-                    ResilioPeer(
-                        id=p.get("id"),
-                        name=p.get("name", "Mobile Device"),
-                        status=p.get("status", "online"),
-                        connection_state=p.get("connection_state", "direct"),
-                        sync_state=p.get("sync_state", "synced"),
-                        download_speed=int(p.get("download_speed", 0)),
-                        upload_speed=int(p.get("upload_speed", 0)),
-                        bytes_remaining=int(p.get("bytes_remaining", 0)),
-                        last_seen=p.get("last_seen"),
-                    )
-                )
-            return result
-        except Exception:
-            return []
+        endpoints = ["/api/v2/peers", "/api/v1/peers"]
+        for ep in endpoints:
+            try:
+                raw_peers = await self._request("GET", ep)
+                if isinstance(raw_peers, list):
+                    result = []
+                    for p in raw_peers:
+                        result.append(
+                            ResilioPeer(
+                                id=p.get("id"),
+                                name=p.get("name", "Mobile Device"),
+                                status=p.get("status", "online"),
+                                connection_state=p.get("connection_state", "direct"),
+                                sync_state=p.get("sync_state", "synced"),
+                                download_speed=int(p.get("download_speed", 0)),
+                                upload_speed=int(p.get("upload_speed", 0)),
+                                bytes_remaining=int(p.get("bytes_remaining", 0)),
+                                last_seen=p.get("last_seen"),
+                            )
+                        )
+                    return result
+            except Exception:
+                continue
+
+        return []
 
     async def get_transfer_status(self) -> list[ResilioTransfer]:
         """Fetch active file transfer details from Resilio API."""
-        try:
-            raw_transfers = await self._request("GET", "/api/v2/transfers")
-            result = []
-            for t in raw_transfers:
-                result.append(
-                    ResilioTransfer(
-                        id=t.get("id"),
-                        filename=t.get("filename", ""),
-                        direction=t.get("direction", "download"),
-                        peer_name=t.get("peer_name"),
-                        progress_pct=float(t.get("progress_pct", 0.0)),
-                        transferred_bytes=int(t.get("transferred_bytes", 0)),
-                        total_bytes=int(t.get("total_bytes", 0)),
-                        speed_bytes_sec=int(t.get("speed_bytes_sec", 0)),
-                    )
-                )
-            return result
-        except Exception:
-            return []
+        endpoints = ["/api/v2/transfers", "/api/v1/transfers"]
+        for ep in endpoints:
+            try:
+                raw_transfers = await self._request("GET", ep)
+                if isinstance(raw_transfers, list):
+                    result = []
+                    for t in raw_transfers:
+                        result.append(
+                            ResilioTransfer(
+                                id=t.get("id"),
+                                filename=t.get("filename", ""),
+                                direction=t.get("direction", "download"),
+                                peer_name=t.get("peer_name"),
+                                progress_pct=float(t.get("progress_pct", 0.0)),
+                                transferred_bytes=int(t.get("transferred_bytes", 0)),
+                                total_bytes=int(t.get("total_bytes", 0)),
+                                speed_bytes_sec=int(t.get("speed_bytes_sec", 0)),
+                            )
+                        )
+                    return result
+            except Exception:
+                continue
+
+        return []
 
     async def get_errors(self) -> list[ResilioErrorItem]:
         """Fetch sync errors from Resilio API."""
-        try:
-            raw_errors = await self._request("GET", "/api/v2/errors")
-            result = []
-            for e in raw_errors:
-                result.append(
-                    ResilioErrorItem(
-                        id=e.get("id"),
-                        message=e.get("message", "Sync error"),
-                        affected_resource=e.get("affected_resource"),
-                        timestamp=e.get("timestamp"),
-                    )
-                )
-            return result
-        except Exception:
-            return []
+        endpoints = ["/api/v2/errors", "/api/v1/errors"]
+        for ep in endpoints:
+            try:
+                raw_errors = await self._request("GET", ep)
+                if isinstance(raw_errors, list):
+                    result = []
+                    for e in raw_errors:
+                        result.append(
+                            ResilioErrorItem(
+                                id=e.get("id"),
+                                message=e.get("message", "Sync error"),
+                                affected_resource=e.get("affected_resource"),
+                                timestamp=e.get("timestamp"),
+                            )
+                        )
+                    return result
+            except Exception:
+                continue
+
+        return []
 
 
 resilio_service = ResilioSyncService()

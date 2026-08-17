@@ -82,6 +82,6 @@ async def test_resilio_service_graceful_fallback_on_disconnection():
         assert isinstance(overview, ResilioDashboardOverview)
         assert overview.status.connected is False
         assert overview.status.status == "disconnected"
-        assert "unavailable" in overview.status.error_message.lower()
+        assert ("unreachable" in overview.status.error_message.lower() or "unavailable" in overview.status.error_message.lower())
         assert len(overview.errors) > 0
         assert "Cannot connect" in overview.errors[0].message
