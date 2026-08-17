@@ -97,6 +97,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.api.rslsync import router as rslsync_router
+from app.rslsync.service import resilio_service
+
 app.include_router(auth_router)
 app.include_router(songs_router)
 app.include_router(playlists_router)
@@ -104,6 +107,7 @@ app.include_router(sync_router)
 app.include_router(dashboard_router)
 app.include_router(settings_router)
 app.include_router(metadata_router)
+app.include_router(rslsync_router)
 
 
 import os
@@ -171,6 +175,21 @@ async def health_check():
         metadata_status = "stopped"
         metadata_uptime_str = "N/A"
 
+    # 4. Resilio Sync Service Status & Uptime
+    rslsync_status = "running"
+    rslsync_uptime_str = None
+    try:
+        rsl_overview = await resilio_service.get_overview()
+        if rsl_overview.status.connected:
+            rslsync_status = "running"
+            rslsync_uptime_str = backend_uptime_str
+        else:
+            rslsync_status = "stopped"
+            rslsync_uptime_str = "N/A"
+    except Exception:
+        rslsync_status = "stopped"
+        rslsync_uptime_str = "N/A"
+
     all_running = (db_status == "running" and metadata_status == "running")
 
     return {
@@ -196,7 +215,13 @@ async def health_check():
                 "status": db_status,
                 "uptime": db_uptime_str or "N/A",
             },
+            "rslsync": {
+                "name": "Resilio Sync",
+                "status": rslsync_status,
+                "uptime": rslsync_uptime_str or "N/A",
+            },
         },
     }
+
 
 

@@ -7,6 +7,7 @@ import {
     LogOut,
     Music,
     Settings,
+    Share2,
     Sparkles,
     User,
 } from "lucide-react";
@@ -91,6 +92,16 @@ export default function Sidebar() {
                     >
                         <History className="nav-icon" size={18} />
                         <span>Sync History</span>
+                    </NavLink>
+
+                    <NavLink
+                        to="/rslsync"
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <Share2 className="nav-icon" size={18} />
+                        <span>Resilio Sync</span>
                     </NavLink>
 
                     <NavLink
