@@ -41,7 +41,7 @@ class ResilioSyncService:
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
-        async with httpx.AsyncClient(timeout=3.0, auth=auth, headers=headers) as client:
+        async with httpx.AsyncClient(timeout=3.0, auth=auth, headers=headers, follow_redirects=True) as client:
             resp = await client.request(method=method, url=url, params=params)
             resp.raise_for_status()
             return resp.json()
@@ -153,12 +153,12 @@ class ResilioSyncService:
             except Exception:
                 continue
 
-        # If HTTP ping to root/port succeeds, consider it connected
+        # If HTTP ping to root/port succeeds (any status code < 500 including 200, 301, 302, 401), consider it connected
         try:
             url = f"{self.base_url}/"
-            async with httpx.AsyncClient(timeout=2.0) as client:
+            async with httpx.AsyncClient(timeout=3.0, follow_redirects=True) as client:
                 resp = await client.get(url)
-                if resp.status_code in (200, 401, 403, 404):
+                if resp.status_code < 500:
                     return ResilioStatusResponse(
                         connected=True,
                         status="synced",
