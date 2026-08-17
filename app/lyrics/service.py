@@ -35,7 +35,11 @@ from sqlalchemy import select
 from app.database.models import Song
 from app.database.session import SessionLocal
 from app.settings.service import SettingsService
-from app.core.paths import get_download_root, get_playlist_no_lyrics_root
+from app.core.paths import (
+    get_download_root,
+    get_playlist_no_lyrics_root,
+    resolve_file_path,
+)
 
 
 @dataclass
@@ -246,6 +250,16 @@ class LyricsService:
         if not source.exists():
             raise FileNotFoundError(f"Song file does not exist: {source}")
 
+        # Clean up existing lyrics file if tracked
+        if song.lyrics_path:
+            try:
+                old_lrc = resolve_file_path(song.lyrics_path)
+                if old_lrc.exists():
+                    old_lrc.unlink()
+                    print(f"Removed previous lyrics file before moving: {old_lrc}")
+            except Exception as exc:
+                print(f"Warning: Failed to clean up old lyrics file: {exc}")
+
         no_lyrics_root = get_playlist_no_lyrics_root(song.playlist.name)
         destination = no_lyrics_root / source.name
 
@@ -300,16 +314,27 @@ class LyricsService:
         # ---------------------------------------------------------
 
         if result.status == "available":
-            lyrics_path = self._lyrics_path(song)
-            lyrics_path.parent.mkdir(parents=True, exist_ok=True)
-            lyrics_path.write_text(result.lyrics or "", encoding="utf-8")
+            new_lyrics_path = self._lyrics_path(song)
 
-            song.lyrics_path = str(lyrics_path)
+            # If song already had a lyrics_path in DB that differs from new_lyrics_path, remove the old file from disk
+            if song.lyrics_path and str(song.lyrics_path) != str(new_lyrics_path):
+                try:
+                    old_path = resolve_file_path(song.lyrics_path)
+                    if old_path.exists() and old_path.resolve() != new_lyrics_path.resolve():
+                        old_path.unlink()
+                        print(f"Cleaned up previous lyrics file: {old_path}")
+                except Exception as exc:
+                    print(f"Warning: Failed to remove old lyrics file ({song.lyrics_path}): {exc}")
+
+            new_lyrics_path.parent.mkdir(parents=True, exist_ok=True)
+            new_lyrics_path.write_text(result.lyrics or "", encoding="utf-8")
+
+            song.lyrics_path = str(new_lyrics_path)
             song.lyrics_status = "downloaded"
             song.error_message = None
 
             print(f"Lyrics downloaded: {song.title}")
-            print(f"LRC: {lyrics_path}")
+            print(f"LRC: {new_lyrics_path}")
             return True
 
         # ---------------------------------------------------------
@@ -317,6 +342,17 @@ class LyricsService:
         # ---------------------------------------------------------
 
         if result.status == "unavailable":
+            # If song already had valid lyrics file, preserve it!
+            if song.lyrics_path:
+                try:
+                    existing_lrc = resolve_file_path(song.lyrics_path)
+                    if existing_lrc.exists():
+                        print(f"Preserving existing valid lyrics for: {song.title}")
+                        song.lyrics_status = "downloaded"
+                        return True
+                except Exception:
+                    pass
+
             try:
                 self._move_to_no_lyrics(song)
                 song.lyrics_path = None
@@ -324,6 +360,7 @@ class LyricsService:
                 song.error_message = result.error
                 print(f"No synced lyrics: {song.title}")
                 return False
+
 
             except Exception as exc:
                 # Keep pending so the next cycle can retry.
