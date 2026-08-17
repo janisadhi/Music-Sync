@@ -8,7 +8,12 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.schemas import LyricsResponse, SongResponse
+from app.api.schemas import (
+    BatchRetryRequest,
+    BatchRetryResponse,
+    LyricsResponse,
+    SongResponse,
+)
 from app.database.models import Song
 from app.core.paths import (
     get_download_root as _get_download_root,
@@ -378,7 +383,124 @@ def get_song_lyrics(
 
 
 # ---------------------------------------------------------
-# Retry download
+# Batch Retry download & lyrics
+# ---------------------------------------------------------
+
+
+@router.post(
+    "/retry-download",
+    response_model=BatchRetryResponse,
+)
+def batch_retry_download(
+    request: BatchRetryRequest,
+    db: Session = Depends(get_db),
+):
+    if not request.song_ids:
+        return BatchRetryResponse(queued=0, skipped=0, total=0)
+
+    songs = db.scalars(
+        select(Song).where(Song.id.in_(request.song_ids))
+    ).all()
+
+    found_ids = {s.id for s in songs}
+    queued_count = 0
+    skipped_count = len(request.song_ids) - len(found_ids)
+
+    for song in songs:
+        if song.download_status == "pending":
+            skipped_count += 1
+            continue
+
+        song.download_status = "pending"
+        song.download_retry_count = 0
+        song.next_download_attempt = None
+        song.error_message = None
+        queued_count += 1
+
+    db.commit()
+
+    if queued_count > 0:
+        try:
+            from app.core.runtime import downloader_worker
+
+            downloader_worker.wake()
+        except Exception:
+            pass
+
+    return BatchRetryResponse(
+        queued=queued_count,
+        skipped=skipped_count,
+        total=len(request.song_ids),
+    )
+
+
+@router.post(
+    "/retry-lyrics",
+    response_model=BatchRetryResponse,
+)
+def batch_retry_lyrics(
+    request: BatchRetryRequest,
+    db: Session = Depends(get_db),
+):
+    if not request.song_ids:
+        return BatchRetryResponse(queued=0, skipped=0, total=0)
+
+    songs = db.scalars(
+        select(Song).where(Song.id.in_(request.song_ids))
+    ).all()
+
+    found_ids = {s.id for s in songs}
+    queued_count = 0
+    skipped_count = len(request.song_ids) - len(found_ids)
+
+    for song in songs:
+        if song.lyrics_status == "pending":
+            skipped_count += 1
+            continue
+
+        if song.download_status != "downloaded":
+            skipped_count += 1
+            continue
+
+        if song.file_path:
+            try:
+                current_path = resolve_file_path(song.file_path)
+                if current_path.exists():
+                    no_lyrics_root = get_playlist_no_lyrics_root(song)
+                    music_root = get_playlist_music_root(song)
+                    if current_path.parent == no_lyrics_root:
+                        destination = music_root / current_path.name
+                        shutil.copy2(current_path, destination)
+                        current_path.unlink()
+                        song.file_path = str(destination)
+                        if song.downloaded_track:
+                            song.downloaded_track.file_path = str(destination)
+            except Exception:
+                pass
+
+        song.lyrics_status = "pending"
+        song.error_message = None
+        queued_count += 1
+
+    db.commit()
+
+    if queued_count > 0:
+        try:
+            from app.core.runtime import lyrics_worker
+
+            lyrics_worker.wake()
+        except Exception:
+            pass
+
+    return BatchRetryResponse(
+        queued=queued_count,
+        skipped=skipped_count,
+        total=len(request.song_ids),
+    )
+
+
+# ---------------------------------------------------------
+# Single Retry download
 # ---------------------------------------------------------
 
 

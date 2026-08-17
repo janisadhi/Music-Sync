@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
+    CheckSquare,
     MoreVertical,
     Music,
     Pause,
     Play,
     Plus,
     RefreshCw,
+    Square,
     Trash2,
 } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
+import { useSongSelection } from "../context/SongSelectionContext";
 import "../styles/songCard.css";
 
 function formatDuration(seconds) {
@@ -21,12 +24,14 @@ function formatDuration(seconds) {
 
 export default function SongCard({ song, queue = [], cardSize = "medium", onDelete, onRetry }) {
     const { currentSong, isPlaying, playSong, togglePlay, addToQueue } = usePlayer();
+    const { isSelected, toggleSelectSong } = useSongSelection();
     const [showMenu, setShowMenu] = useState(false);
 
     if (!song) return null;
 
     const isCurrent = currentSong?.id === song.id;
     const isThisPlaying = isCurrent && isPlaying;
+    const selected = isSelected(song.id);
 
     const title = song.title || song.raw_title || "Unknown Track";
     const artist = song.artist || "Unknown Artist";
@@ -44,8 +49,14 @@ export default function SongCard({ song, queue = [], cardSize = "medium", onDele
         }
     };
 
+    const handleCheckboxClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSelectSong(song.id);
+    };
+
     return (
-        <div className={`song-card card-size-${cardSize} ${isCurrent ? "active-card" : ""}`}>
+        <div className={`song-card card-size-${cardSize} ${isCurrent ? "active-card" : ""} ${selected ? "selected-card" : ""}`}>
             {/* Square 1:1 Album Artwork Container */}
             <div className="song-card-art-wrap">
                 {artwork ? (
@@ -55,6 +66,16 @@ export default function SongCard({ song, queue = [], cardSize = "medium", onDele
                         <Music size={cardSize === "large" ? 48 : cardSize === "small" ? 24 : 36} />
                     </div>
                 )}
+
+                {/* Selection Checkbox Overlay */}
+                <button
+                    type="button"
+                    className={`song-card-checkbox ${selected ? "selected" : ""}`}
+                    onClick={handleCheckboxClick}
+                    title={selected ? "Deselect track" : "Select track"}
+                >
+                    {selected ? <CheckSquare size={16} /> : <Square size={16} />}
+                </button>
 
                 {/* Hover Play Button Overlay */}
                 <div className="song-card-overlay">
@@ -82,7 +103,7 @@ export default function SongCard({ song, queue = [], cardSize = "medium", onDele
                     <Link to={`/songs/${song.id}/detail`} className="song-card-title" title={title}>
                         {title}
                     </Link>
-                    
+
                     <div className="song-card-menu-container">
                         <button
                             type="button"

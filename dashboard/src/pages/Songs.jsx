@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+    AlertCircle,
+    CheckCircle2,
     Disc,
     ListMusic,
     Music,
@@ -10,8 +12,10 @@ import {
     Shuffle,
     Tag,
     User,
+    X,
 } from "lucide-react";
 import LayoutControls, { LAYOUT_MODES } from "../components/LayoutControls";
+import SelectionActionBar from "../components/SelectionActionBar";
 import SongCard from "../components/SongCard";
 import SongRow from "../components/SongRow";
 import { usePlayer } from "../context/PlayerContext";
@@ -35,6 +39,7 @@ export default function Songs() {
     const [downloadStatusFilter, setDownloadStatusFilter] = useState("all");
     const [lyricsStatusFilter, setLyricsStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState("title"); // "title" | "artist" | "album" | "duration"
+    const [notification, setNotification] = useState(null);
 
     const handleLayoutChange = (mode) => {
         setLayoutMode(mode);
@@ -50,12 +55,13 @@ export default function Songs() {
                 getAlbums().catch(() => []),
                 getGenres().catch(() => []),
             ]);
-            setSongs(songsData);
-            setArtists(artistsData);
-            setAlbums(albumsData);
-            setGenres(genresData);
+
+            setSongs(Array.isArray(songsData) ? songsData : []);
+            setArtists(Array.isArray(artistsData) ? artistsData : []);
+            setAlbums(Array.isArray(albumsData) ? albumsData : []);
+            setGenres(Array.isArray(genresData) ? genresData : []);
         } catch (err) {
-            console.error("Failed to load music library:", err);
+            console.error("Failed to load music library data:", err);
         } finally {
             setLoading(false);
         }
@@ -66,7 +72,7 @@ export default function Songs() {
     }, []);
 
     const handleDeleteSong = async (songId) => {
-        if (!window.confirm("Are you sure you want to delete this song?")) return;
+        if (!window.confirm("Delete this song?")) return;
         try {
             await deleteSong(songId);
             setSongs((prev) => prev.filter((s) => s.id !== songId));
@@ -84,52 +90,44 @@ export default function Songs() {
         }
     };
 
-    // Filter & Sort songs
+    // Filter logic
     const filteredSongs = songs.filter((song) => {
         const title = (song.title || song.raw_title || "").toLowerCase();
         const artist = (song.artist || "").toLowerCase();
         const album = (song.album || "").toLowerCase();
         const query = searchQuery.toLowerCase();
 
-        const matchesSearch = title.includes(query) || artist.includes(query) || album.includes(query);
-        const matchesDownloadStatus = downloadStatusFilter === "all" || song.download_status === downloadStatusFilter;
-        const matchesLyricsStatus = lyricsStatusFilter === "all" || song.lyrics_status === lyricsStatusFilter;
+        const matchesQuery = title.includes(query) || artist.includes(query) || album.includes(query);
 
-        return matchesSearch && matchesDownloadStatus && matchesLyricsStatus;
+        const matchesDownloadStatus =
+            downloadStatusFilter === "all" || song.download_status === downloadStatusFilter;
+
+        const matchesLyricsStatus =
+            lyricsStatusFilter === "all" || song.lyrics_status === lyricsStatusFilter;
+
+        return matchesQuery && matchesDownloadStatus && matchesLyricsStatus;
     });
 
+    // Sorting logic
     const sortedSongs = [...filteredSongs].sort((a, b) => {
-        if (sortBy === "artist") {
-            return (a.artist || "").localeCompare(b.artist || "");
-        }
-        if (sortBy === "album") {
-            return (a.album || "").localeCompare(b.album || "");
-        }
-        if (sortBy === "duration") {
-            return (b.duration_seconds || 0) - (a.duration_seconds || 0);
-        }
+        if (sortBy === "artist") return (a.artist || "").localeCompare(b.artist || "");
+        if (sortBy === "album") return (a.album || "").localeCompare(b.album || "");
+        if (sortBy === "duration") return (b.duration_seconds || 0) - (a.duration_seconds || 0);
         return (a.title || a.raw_title || "").localeCompare(b.title || b.raw_title || "");
     });
 
     return (
         <div className="songs-page-container">
-            {/* Hero Header */}
+            {/* Header Banner */}
             <header className="songs-header">
-                <div className="header-title-block">
+                <div className="header-info">
                     <h1>Music Library</h1>
                     <p className="subtitle">
-                        Browse, search, and listen to your Beets-enriched music collection.
+                        Browse, search, and manage your synchronized track collection with Beets metadata.
                     </p>
                 </div>
 
                 <div className="header-actions">
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => playPlaylist(sortedSongs, 0, false)}
-                        disabled={sortedSongs.length === 0}
-                    >
-                        <Play size={16} /> Play All ({sortedSongs.length})
-                    </button>
                     <button
                         className="btn btn-secondary"
                         onClick={() => playPlaylist(sortedSongs, 0, true)}
@@ -137,11 +135,29 @@ export default function Songs() {
                     >
                         <Shuffle size={16} /> Shuffle All
                     </button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => playPlaylist(sortedSongs, 0, false)}
+                        disabled={sortedSongs.length === 0}
+                    >
+                        <Play size={16} /> Play All ({sortedSongs.length})
+                    </button>
                 </div>
             </header>
 
-            {/* Hierarchical Sub-Navigation Tabs */}
-            <nav className="hierarchy-tabs">
+            {/* Notification Banner */}
+            {notification && (
+                <div className={`playlist-alert-banner alert-${notification.type}`}>
+                    {notification.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+                    <span>{notification.text}</span>
+                    <button onClick={() => setNotification(null)} className="alert-close">
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
+            {/* Navigation Tabs */}
+            <nav className="songs-tabs">
                 <button
                     className={`tab-btn ${activeTab === "songs" ? "active" : ""}`}
                     onClick={() => setActiveTab("songs")}
@@ -168,151 +184,140 @@ export default function Songs() {
                 </button>
             </nav>
 
-            {/* Toolbar: Search, Status Filters & Layout Controls */}
-            {activeTab === "songs" && (
-                <div className="songs-toolbar">
-                    <div className="search-box">
-                        <Search size={16} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Search title, artist, or album..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="toolbar-filters">
-                        <select
-                            className="filter-select"
-                            value={downloadStatusFilter}
-                            onChange={(e) => setDownloadStatusFilter(e.target.value)}
-                        >
-                            <option value="all">Song Status: All</option>
-                            <option value="downloaded">Song: Downloaded</option>
-                            <option value="pending">Song: Pending</option>
-                            <option value="failed">Song: Failed</option>
-                            <option value="unavailable">Song: Unavailable</option>
-                        </select>
-
-                        <select
-                            className="filter-select"
-                            value={lyricsStatusFilter}
-                            onChange={(e) => setLyricsStatusFilter(e.target.value)}
-                        >
-                            <option value="all">Lyrics Status: All</option>
-                            <option value="downloaded">Lyrics: Downloaded</option>
-                            <option value="pending">Lyrics: Pending</option>
-                            <option value="failed">Lyrics: Failed</option>
-                            <option value="unavailable">Lyrics: Unavailable</option>
-                        </select>
-                    </div>
-
-                    <LayoutControls activeLayout={layoutMode} onChangeLayout={handleLayoutChange} />
+            {/* Toolbar: Search, Filters & View Mode Toggles */}
+            <div className="songs-toolbar">
+                <div className="search-box">
+                    <Search size={16} className="search-icon" />
+                    <input
+                        type="text"
+                        placeholder="Search by title, artist, album..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
-            )}
+
+                <div className="toolbar-filters">
+                    <select
+                        className="filter-select"
+                        value={downloadStatusFilter}
+                        onChange={(e) => setDownloadStatusFilter(e.target.value)}
+                        title="Filter by Song Download Status"
+                    >
+                        <option value="all">Song Status: All</option>
+                        <option value="downloaded">Song Status: Downloaded</option>
+                        <option value="pending">Song Status: Pending</option>
+                        <option value="failed">Song Status: Failed</option>
+                        <option value="unavailable">Song Status: Unavailable</option>
+                    </select>
+
+                    <select
+                        className="filter-select"
+                        value={lyricsStatusFilter}
+                        onChange={(e) => setLyricsStatusFilter(e.target.value)}
+                        title="Filter by Lyrics Download Status"
+                    >
+                        <option value="all">Lyrics Status: All</option>
+                        <option value="downloaded">Lyrics Status: Downloaded</option>
+                        <option value="pending">Lyrics Status: Pending</option>
+                        <option value="failed">Lyrics Status: Failed</option>
+                        <option value="unavailable">Lyrics Status: Unavailable</option>
+                    </select>
+
+                    <select
+                        className="filter-select"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        title="Sort Library"
+                    >
+                        <option value="title">Sort by Title</option>
+                        <option value="artist">Sort by Artist</option>
+                        <option value="album">Sort by Album</option>
+                        <option value="duration">Sort by Duration</option>
+                    </select>
+                </div>
+
+                {activeTab === "songs" && (
+                    <LayoutControls currentMode={layoutMode} onModeChange={handleLayoutChange} />
+                )}
+            </div>
 
             {/* Main Content Area */}
             {loading ? (
-                <div className="library-loading">
-                    <RefreshCw size={28} className="spin-icon" />
-                    <p>Loading your music library...</p>
+                <div className="songs-loading">
+                    <RefreshCw size={32} className="spin-icon" />
+                    <p>Loading music library...</p>
                 </div>
             ) : (
                 <>
                     {/* SONGS TAB */}
                     {activeTab === "songs" && (
-                        sortedSongs.length === 0 ? (
-                            <div className="library-empty-state">
-                                <Music size={48} />
-                                <h3>No songs found</h3>
-                                <p>Try adjusting your search query or artist filters.</p>
-                            </div>
-                        ) : (
-                            <div className={`songs-layout-wrapper mode-${layoutMode}`}>
-                                {layoutMode === LAYOUT_MODES.LARGE_GRID && (
-                                    <div className="grid-layout grid-large">
-                                        {sortedSongs.map((song) => (
-                                            <SongCard
-                                                key={song.id}
-                                                song={song}
-                                                queue={sortedSongs}
-                                                cardSize="large"
-                                                onDelete={handleDeleteSong}
-                                                onRetry={handleRetrySong}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {layoutMode === LAYOUT_MODES.MEDIUM_GRID && (
-                                    <div className="grid-layout grid-medium">
-                                        {sortedSongs.map((song) => (
-                                            <SongCard
-                                                key={song.id}
-                                                song={song}
-                                                queue={sortedSongs}
-                                                cardSize="medium"
-                                                onDelete={handleDeleteSong}
-                                                onRetry={handleRetrySong}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {layoutMode === LAYOUT_MODES.SMALL_GRID && (
-                                    <div className="grid-layout grid-small">
-                                        {sortedSongs.map((song) => (
-                                            <SongCard
-                                                key={song.id}
-                                                song={song}
-                                                queue={sortedSongs}
-                                                cardSize="small"
-                                                onDelete={handleDeleteSong}
-                                                onRetry={handleRetrySong}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {layoutMode === LAYOUT_MODES.LIST && (
-                                    <div className="list-layout">
-                                        <div className="list-header">
-                                            <span style={{ width: "32px" }}>#</span>
-                                            <span style={{ flex: 2 }}>Title & Artist</span>
-                                            <span style={{ flex: 1.5 }}>Album</span>
-                                            <span style={{ width: "120px" }}>Genre</span>
-                                            <span style={{ width: "60px", textAlign: "right" }}>Duration</span>
-                                            <span style={{ width: "32px" }}></span>
+                        <>
+                            {sortedSongs.length === 0 ? (
+                                <div className="songs-empty">
+                                    <ListMusic size={48} />
+                                    <h3>No tracks found</h3>
+                                    <p>Try clearing filters or adding YouTube Music playlists to synchronize.</p>
+                                </div>
+                            ) : (
+                                <div className={`songs-layout-view mode-${layoutMode}`}>
+                                    {layoutMode === LAYOUT_MODES.LIST ? (
+                                        <div className="songs-list-container">
+                                            {sortedSongs.map((song, idx) => (
+                                                <SongRow
+                                                    key={song.id}
+                                                    song={song}
+                                                    queue={sortedSongs}
+                                                    trackIndex={idx}
+                                                    onDelete={handleDeleteSong}
+                                                    onRetry={handleRetrySong}
+                                                />
+                                            ))}
                                         </div>
-                                        {sortedSongs.map((song, idx) => (
-                                            <SongRow
-                                                key={song.id}
-                                                song={song}
-                                                queue={sortedSongs}
-                                                trackIndex={idx}
-                                                onDelete={handleDeleteSong}
-                                                onRetry={handleRetrySong}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
+                                    ) : layoutMode === LAYOUT_MODES.COMPACT_LIST ? (
+                                        <div className="songs-compact-container">
+                                            {sortedSongs.map((song) => (
+                                                <SongRow
+                                                    key={song.id}
+                                                    song={song}
+                                                    queue={sortedSongs}
+                                                    isCompact
+                                                    onDelete={handleDeleteSong}
+                                                    onRetry={handleRetrySong}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="songs-grid-container">
+                                            {sortedSongs.map((song) => (
+                                                <SongCard
+                                                    key={song.id}
+                                                    song={song}
+                                                    queue={sortedSongs}
+                                                    cardSize={
+                                                        layoutMode === LAYOUT_MODES.LARGE_GRID
+                                                            ? "large"
+                                                            : layoutMode === LAYOUT_MODES.SMALL_GRID
+                                                            ? "small"
+                                                            : "medium"
+                                                    }
+                                                    onDelete={handleDeleteSong}
+                                                    onRetry={handleRetrySong}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-                                {layoutMode === LAYOUT_MODES.COMPACT && (
-                                    <div className="compact-list-layout">
-                                        {sortedSongs.map((song) => (
-                                            <SongRow
-                                                key={song.id}
-                                                song={song}
-                                                queue={sortedSongs}
-                                                isCompact={true}
-                                                onDelete={handleDeleteSong}
-                                                onRetry={handleRetrySong}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )
+                            {/* Floating Contextual Action Bar */}
+                            <SelectionActionBar
+                                visibleSongs={sortedSongs}
+                                onNotification={(notif) => {
+                                    setNotification(notif);
+                                    loadData();
+                                }}
+                            />
+                        </>
                     )}
 
                     {/* ARTISTS TAB */}

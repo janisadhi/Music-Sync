@@ -102,3 +102,18 @@ class LyricsResponse(BaseModel):
     title: str
     lyrics_status: str
     lyrics: str | None
+
+
+# ---------------------------------------------------------------------------
+# Batch Retry Operations
+# ---------------------------------------------------------------------------
+
+class BatchRetryRequest(BaseModel):
+    song_ids: list[int]
+
+
+class BatchRetryResponse(BaseModel):
+    queued: int
+    skipped: int
+    total: int
+
