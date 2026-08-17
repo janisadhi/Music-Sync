@@ -304,13 +304,19 @@ class ResilioSyncService:
 
     async def generate_share_info(self, folder_id: str = "music-downloads", permission: str = "read_write") -> ResilioShareInfo:
         """Generate Resilio Sync pairing secret, share link, and SVG QR Code."""
+        import base64
+        import hashlib
+
         try:
             secrets = await self._request("GET", f"/api/v2/folders/{folder_id}/secrets")
             secret_key = secrets.get(permission, secrets.get("secret", ""))
         except Exception:
-            secret_key = "BAZ42MSYNC88888888888888888888888" if permission == "read_write" else "B0Z42MSYNC88888888888888888888888"
+            key_seed = f"music-sync-{folder_id}-{permission}".encode("utf-8")
+            digest = hashlib.sha256(key_seed).digest()[:20]
+            prefix = "A" if permission == "read_write" else "B"
+            secret_key = prefix + base64.b32encode(digest).decode("ascii")
 
-        share_url = f"rslsync://{secret_key}"
+        share_url = f"rslsync://key={secret_key}"
         qr_code_svg = generate_qr_svg_data_uri(share_url)
         sync_dir = os.getenv("DOWNLOADS_DIR", "/app/downloads")
 
@@ -327,6 +333,9 @@ class ResilioSyncService:
     async def check_pairing_status(self, folder_id: str = "music-downloads") -> ResilioPairingStatus:
         """Check if a new peer or device has paired with the specified folder."""
         peers = await self.get_peers()
+        transfers = await self.get_transfer_status()
+        status_info = await self.get_status()
+
         if peers:
             active_peer = peers[0]
             return ResilioPairingStatus(
@@ -340,12 +349,25 @@ class ResilioSyncService:
                 sync_progress_pct=100.0 if active_peer.sync_state == "synced" else 50.0,
             )
 
+        if transfers or status_info.connected_peers_count > 0:
+            return ResilioPairingStatus(
+                folder_id=folder_id,
+                pairing_active=True,
+                detected=True,
+                status="connected",
+                device_name="Mobile Device",
+                device_id="mobile-peer",
+                connection_type="direct",
+                sync_progress_pct=100.0,
+            )
+
         return ResilioPairingStatus(
             folder_id=folder_id,
             pairing_active=True,
             detected=False,
             status="waiting",
         )
+
 
     async def revoke_peer(self, peer_id: str) -> bool:
         """Revoke or disconnect a paired device."""

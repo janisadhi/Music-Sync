@@ -518,8 +518,20 @@ export default function ResilioSync() {
 
                                     <div className="waiting-beacon">
                                         <RefreshCw className="spin-icon" size={16} />
-                                        <span>Waiting for mobile device to connect...</span>
+                                        <span>Waiting for mobile device connection...</span>
                                     </div>
+
+                                    <button
+                                        className="btn btn-primary"
+                                        style={{ width: "100%" }}
+                                        onClick={() => {
+                                            setPairedDeviceName(peers[0]?.name || "Mobile Device");
+                                            setWizardStep(3);
+                                            fetchOverview(true);
+                                        }}
+                                    >
+                                        I Have Scanned QR Code / Paired Device →
+                                    </button>
 
                                     <button
                                         className="btn btn-secondary"
