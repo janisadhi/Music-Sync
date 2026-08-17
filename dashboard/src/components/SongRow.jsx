@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
+    CheckSquare,
     MoreVertical,
     Music,
     Pause,
     Play,
     Plus,
     RefreshCw,
+    Square,
     Trash2,
 } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
+import { useSongSelection } from "../context/SongSelectionContext";
 import "../styles/songRow.css";
 
 function formatDuration(seconds) {
@@ -21,12 +24,14 @@ function formatDuration(seconds) {
 
 export default function SongRow({ song, queue = [], trackIndex = null, isCompact = false, onDelete, onRetry }) {
     const { currentSong, isPlaying, playSong, togglePlay, addToQueue } = usePlayer();
+    const { isSelected, toggleSelectSong } = useSongSelection();
     const [showMenu, setShowMenu] = useState(false);
 
     if (!song) return null;
 
     const isCurrent = currentSong?.id === song.id;
     const isThisPlaying = isCurrent && isPlaying;
+    const selected = isSelected(song.id);
 
     const title = song.title || song.raw_title || "Unknown Track";
     const artist = song.artist || "Unknown Artist";
@@ -44,10 +49,25 @@ export default function SongRow({ song, queue = [], trackIndex = null, isCompact
         }
     };
 
+    const handleCheckboxClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSelectSong(song.id);
+    };
+
     if (isCompact) {
         return (
-            <div className={`song-row compact-row ${isCurrent ? "active-row" : ""}`}>
+            <div className={`song-row compact-row ${isCurrent ? "active-row" : ""} ${selected ? "selected-row" : ""}`}>
                 <div className="compact-left">
+                    <button
+                        type="button"
+                        className={`song-row-checkbox ${selected ? "selected" : ""}`}
+                        onClick={handleCheckboxClick}
+                        title={selected ? "Deselect track" : "Select track"}
+                    >
+                        {selected ? <CheckSquare size={14} /> : <Square size={14} />}
+                    </button>
+
                     <button className="row-play-btn" onClick={handlePlayClick}>
                         {isThisPlaying ? <Pause size={14} /> : <Play size={14} className="play-icon-offset" />}
                     </button>
@@ -66,7 +86,18 @@ export default function SongRow({ song, queue = [], trackIndex = null, isCompact
     }
 
     return (
-        <div className={`song-row standard-row ${isCurrent ? "active-row" : ""}`}>
+        <div className={`song-row standard-row ${isCurrent ? "active-row" : ""} ${selected ? "selected-row" : ""}`}>
+            <div className="row-col-select">
+                <button
+                    type="button"
+                    className={`song-row-checkbox ${selected ? "selected" : ""}`}
+                    onClick={handleCheckboxClick}
+                    title={selected ? "Deselect track" : "Select track"}
+                >
+                    {selected ? <CheckSquare size={14} /> : <Square size={14} />}
+                </button>
+            </div>
+
             <div className="row-col-index">
                 {trackIndex !== null ? (
                     <span className="index-num">{trackIndex + 1}</span>

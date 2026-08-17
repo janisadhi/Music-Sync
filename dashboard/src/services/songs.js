@@ -45,11 +45,21 @@ export const retryDownload = async (songId) => {
     return response.data;
 };
 
+export const batchRetryDownload = async (songIds) => {
+    const response = await api.post("/songs/retry-download", { song_ids: songIds });
+    return response.data;
+};
+
 export const retryLyrics = async (songId) => {
     const response = await api.post(
         `/songs/${songId}/retry-lyrics`
     );
 
+    return response.data;
+};
+
+export const batchRetryLyrics = async (songIds) => {
+    const response = await api.post("/songs/retry-lyrics", { song_ids: songIds });
     return response.data;
 };
 

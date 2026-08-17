@@ -16,10 +16,21 @@
     background: var(--primary-blue-soft, #eff6ff);
 }
 
+.song-row.selected-row {
+    background: #f0f7ff;
+}
+
 /* Standard row layout */
 .standard-row {
-    gap: 16px;
+    gap: 12px;
     border-bottom: 1px solid var(--border-light, #e2e8f0);
+}
+
+.row-col-select {
+    width: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .row-col-index {

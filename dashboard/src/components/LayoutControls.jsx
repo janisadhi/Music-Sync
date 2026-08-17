@@ -9,13 +9,21 @@ export const LAYOUT_MODES = {
     COMPACT: "compact",
 };
 
-export default function LayoutControls({ activeLayout, onChangeLayout }) {
+export default function LayoutControls({
+    activeLayout,
+    onChangeLayout,
+    currentMode,
+    onModeChange,
+}) {
+    const selectedMode = activeLayout || currentMode || LAYOUT_MODES.MEDIUM_GRID;
+    const handleChange = onChangeLayout || onModeChange || (() => {});
+
     return (
         <div className="layout-controls-bar">
             <button
                 type="button"
-                className={`layout-btn ${activeLayout === LAYOUT_MODES.LARGE_GRID ? "active" : ""}`}
-                onClick={() => onChangeLayout(LAYOUT_MODES.LARGE_GRID)}
+                className={`layout-btn ${selectedMode === LAYOUT_MODES.LARGE_GRID ? "active" : ""}`}
+                onClick={() => handleChange(LAYOUT_MODES.LARGE_GRID)}
                 title="Large Grid"
             >
                 <Grid2X2 size={16} />
@@ -23,8 +31,8 @@ export default function LayoutControls({ activeLayout, onChangeLayout }) {
             </button>
             <button
                 type="button"
-                className={`layout-btn ${activeLayout === LAYOUT_MODES.MEDIUM_GRID ? "active" : ""}`}
-                onClick={() => onChangeLayout(LAYOUT_MODES.MEDIUM_GRID)}
+                className={`layout-btn ${selectedMode === LAYOUT_MODES.MEDIUM_GRID ? "active" : ""}`}
+                onClick={() => handleChange(LAYOUT_MODES.MEDIUM_GRID)}
                 title="Medium Grid"
             >
                 <LayoutGrid size={16} />
@@ -32,8 +40,8 @@ export default function LayoutControls({ activeLayout, onChangeLayout }) {
             </button>
             <button
                 type="button"
-                className={`layout-btn ${activeLayout === LAYOUT_MODES.SMALL_GRID ? "active" : ""}`}
-                onClick={() => onChangeLayout(LAYOUT_MODES.SMALL_GRID)}
+                className={`layout-btn ${selectedMode === LAYOUT_MODES.SMALL_GRID ? "active" : ""}`}
+                onClick={() => handleChange(LAYOUT_MODES.SMALL_GRID)}
                 title="Small Grid"
             >
                 <Grid3X3 size={16} />
@@ -41,8 +49,8 @@ export default function LayoutControls({ activeLayout, onChangeLayout }) {
             </button>
             <button
                 type="button"
-                className={`layout-btn ${activeLayout === LAYOUT_MODES.LIST ? "active" : ""}`}
-                onClick={() => onChangeLayout(LAYOUT_MODES.LIST)}
+                className={`layout-btn ${selectedMode === LAYOUT_MODES.LIST ? "active" : ""}`}
+                onClick={() => handleChange(LAYOUT_MODES.LIST)}
                 title="List View"
             >
                 <List size={16} />
@@ -50,8 +58,8 @@ export default function LayoutControls({ activeLayout, onChangeLayout }) {
             </button>
             <button
                 type="button"
-                className={`layout-btn ${activeLayout === LAYOUT_MODES.COMPACT ? "active" : ""}`}
-                onClick={() => onChangeLayout(LAYOUT_MODES.COMPACT)}
+                className={`layout-btn ${selectedMode === LAYOUT_MODES.COMPACT ? "active" : ""}`}
+                onClick={() => handleChange(LAYOUT_MODES.COMPACT)}
                 title="Compact List View"
             >
                 <Menu size={16} />

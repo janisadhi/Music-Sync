@@ -20,6 +20,7 @@ import {
     Zap,
 } from "lucide-react";
 import LayoutControls, { LAYOUT_MODES } from "../components/LayoutControls";
+import SelectionActionBar from "../components/SelectionActionBar";
 import SongCard from "../components/SongCard";
 import SongRow from "../components/SongRow";
 import { usePlayer } from "../context/PlayerContext";
@@ -209,6 +210,17 @@ export default function PlaylistDetailPage() {
                 </div>
             </div>
 
+            {/* Notification Banner */}
+            {message && (
+                <div className={`playlist-alert-banner alert-${message.type}`} style={{ margin: "16px 0" }}>
+                    {message.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+                    <span>{message.text}</span>
+                    <button onClick={() => setMessage(null)} className="alert-close">
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
             {/* Playlist Track Toolbar */}
             <div className="songs-toolbar">
                 <div className="toolbar-filters">
@@ -225,92 +237,112 @@ export default function PlaylistDetailPage() {
                     </select>
                 </div>
 
-                <LayoutControls activeLayout={layoutMode} onChangeLayout={handleLayoutChange} />
+                <LayoutControls currentMode={layoutMode} onModeChange={handleLayoutChange} />
             </div>
 
-            {/* Playlist Track Content */}
-            <div className={`songs-layout-wrapper mode-${layoutMode}`}>
-                {layoutMode === LAYOUT_MODES.LARGE_GRID && (
-                    <div className="grid-layout grid-large">
-                        {sortedSongs.map((song) => (
-                            <SongCard
-                                key={song.id}
-                                song={song}
-                                queue={sortedSongs}
-                                cardSize="large"
-                                onDelete={handleDeleteSong}
-                                onRetry={handleRetrySong}
-                            />
-                        ))}
+            {/* Song Grid / List View */}
+            <div className="playlist-songs-viewport">
+                {sortedSongs.length === 0 ? (
+                    <div className="songs-empty-card">
+                        <ListMusic size={40} />
+                        <h3>No tracks in this playlist</h3>
+                        <p>Trigger a sync to discover tracks from YouTube Music.</p>
                     </div>
-                )}
+                ) : (
+                    <>
+                        {layoutMode === LAYOUT_MODES.LARGE_GRID && (
+                            <div className="grid-layout grid-large">
+                                {sortedSongs.map((song) => (
+                                    <SongCard
+                                        key={song.id}
+                                        song={song}
+                                        queue={sortedSongs}
+                                        cardSize="large"
+                                        onDelete={handleDeleteSong}
+                                        onRetry={handleRetrySong}
+                                    />
+                                ))}
+                            </div>
+                        )}
 
-                {layoutMode === LAYOUT_MODES.MEDIUM_GRID && (
-                    <div className="grid-layout grid-medium">
-                        {sortedSongs.map((song) => (
-                            <SongCard
-                                key={song.id}
-                                song={song}
-                                queue={sortedSongs}
-                                cardSize="medium"
-                                onDelete={handleDeleteSong}
-                                onRetry={handleRetrySong}
-                            />
-                        ))}
-                    </div>
-                )}
+                        {layoutMode === LAYOUT_MODES.MEDIUM_GRID && (
+                            <div className="grid-layout grid-medium">
+                                {sortedSongs.map((song) => (
+                                    <SongCard
+                                        key={song.id}
+                                        song={song}
+                                        queue={sortedSongs}
+                                        cardSize="medium"
+                                        onDelete={handleDeleteSong}
+                                        onRetry={handleRetrySong}
+                                    />
+                                ))}
+                            </div>
+                        )}
 
-                {layoutMode === LAYOUT_MODES.SMALL_GRID && (
-                    <div className="grid-layout grid-small">
-                        {sortedSongs.map((song) => (
-                            <SongCard
-                                key={song.id}
-                                song={song}
-                                queue={sortedSongs}
-                                cardSize="small"
-                                onDelete={handleDeleteSong}
-                                onRetry={handleRetrySong}
-                            />
-                        ))}
-                    </div>
-                )}
+                        {layoutMode === LAYOUT_MODES.SMALL_GRID && (
+                            <div className="grid-layout grid-small">
+                                {sortedSongs.map((song) => (
+                                    <SongCard
+                                        key={song.id}
+                                        song={song}
+                                        queue={sortedSongs}
+                                        cardSize="small"
+                                        onDelete={handleDeleteSong}
+                                        onRetry={handleRetrySong}
+                                    />
+                                ))}
+                            </div>
+                        )}
 
-                {layoutMode === LAYOUT_MODES.LIST && (
-                    <div className="list-layout">
-                        <div className="list-header">
-                            <span style={{ width: "32px" }}>#</span>
-                            <span style={{ flex: 2 }}>Title & Artist</span>
-                            <span style={{ flex: 1.5 }}>Album</span>
-                            <span style={{ width: "120px" }}>Genre</span>
-                            <span style={{ width: "60px", textAlign: "right" }}>Duration</span>
-                            <span style={{ width: "32px" }}></span>
-                        </div>
-                        {sortedSongs.map((song, idx) => (
-                            <SongRow
-                                key={song.id}
-                                song={song}
-                                queue={sortedSongs}
-                                trackIndex={idx}
-                                onDelete={handleDeleteSong}
-                                onRetry={handleRetrySong}
-                            />
-                        ))}
-                    </div>
-                )}
+                        {layoutMode === LAYOUT_MODES.LIST && (
+                            <div className="list-layout">
+                                <div className="list-header">
+                                    <span style={{ width: "28px" }}></span>
+                                    <span style={{ width: "32px" }}>#</span>
+                                    <span style={{ flex: 2 }}>Title & Artist</span>
+                                    <span style={{ flex: 1.5 }}>Album</span>
+                                    <span style={{ width: "120px" }}>Genre</span>
+                                    <span style={{ width: "60px", textAlign: "right" }}>Duration</span>
+                                    <span style={{ width: "32px" }}></span>
+                                </div>
+                                {sortedSongs.map((song, idx) => (
+                                    <SongRow
+                                        key={song.id}
+                                        song={song}
+                                        queue={sortedSongs}
+                                        trackIndex={idx}
+                                        onDelete={handleDeleteSong}
+                                        onRetry={handleRetrySong}
+                                    />
+                                ))}
+                            </div>
+                        )}
 
-                {layoutMode === LAYOUT_MODES.COMPACT && (
-                    <div className="compact-list-layout">
-                        {sortedSongs.map((song) => (
-                            <SongRow
-                                key={song.id}
-                                song={song}
-                                queue={sortedSongs}
-                                isCompact={true}
-                                onDelete={handleDeleteSong}
-                                onRetry={handleRetrySong}
-                            />
-                        ))}
-                    </div>
+                        {layoutMode === LAYOUT_MODES.COMPACT && (
+                            <div className="compact-list-layout">
+                                {sortedSongs.map((song) => (
+                                    <SongRow
+                                        key={song.id}
+                                        song={song}
+                                        queue={sortedSongs}
+                                        isCompact={true}
+                                        onDelete={handleDeleteSong}
+                                        onRetry={handleRetrySong}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Floating Selection Action Bar */}
+                        <SelectionActionBar
+                            visibleSongs={sortedSongs}
+                            onNotification={(notif) => {
+                                setMessage(notif);
+                                loadData();
+                            }}
+                        />
+                    </>
                 )}
             </div>
         </div>
