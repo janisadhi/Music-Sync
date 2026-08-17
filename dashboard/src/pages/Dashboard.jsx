@@ -166,9 +166,6 @@ export default function Dashboard() {
         ? Math.round((mMetrics.enriched_files / mMetrics.total_files) * 100)
         : 0;
 
-    const greeting = getTimeGreeting();
-    const username = user?.username || "Admin";
-
     return (
         <div className="dashboard-container">
             {/* Header Banner */}
