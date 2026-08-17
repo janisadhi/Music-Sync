@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react";
 import {
     Activity,
     History,
@@ -11,13 +11,11 @@ import {
     User,
 } from "lucide-react";
 import { getUser, logout } from "../services/auth";
+import "../styles/sidebar.css";
 
-function Sidebar() {
+export default function Sidebar() {
     const navigate = useNavigate();
     const user = getUser();
-
-    const getNavClass = ({ isActive }) =>
-        `nav-item ${isActive ? "active" : ""}`;
 
     const handleLogout = () => {
         logout();
@@ -25,104 +23,123 @@ function Sidebar() {
     };
 
     return (
-        <aside className="sidebar">
-            <div className="brand">
-                <div className="brand-icon">
+        <aside className="sidebar" aria-label="Main Navigation">
+            {/* Brand Header */}
+            <Link to="/" className="sidebar-brand" title="Music Sync Overview">
+                <div className="brand-icon-bubble">
                     <Music size={22} color="#ffffff" />
                 </div>
-                <div>
-                    <div className="brand-title">Music Sync</div>
-                    <div className="brand-subtitle">Dashboard Engine</div>
+                <div className="brand-info">
+                    <span className="brand-title">Music Sync</span>
+                    <span className="brand-version-badge">v1.3.1 Engine</span>
                 </div>
-            </div>
+            </Link>
 
-            <nav className="sidebar-nav">
-                <NavLink to="/" end className={getNavClass}>
-                    <LayoutDashboard className="nav-icon" size={18} />
-                    <span>Dashboard</span>
-                </NavLink>
+            {/* Structured Navigation Groups */}
+            <nav className="sidebar-nav-container">
+                <div className="nav-section">
+                    <span className="nav-section-label">Library</span>
+                    <NavLink
+                        to="/"
+                        end
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <LayoutDashboard className="nav-icon" size={18} />
+                        <span>Dashboard</span>
+                    </NavLink>
 
-                <NavLink to="/playlists" className={getNavClass}>
-                    <ListMusic className="nav-icon" size={18} />
-                    <span>Playlists</span>
-                </NavLink>
+                    <NavLink
+                        to="/playlists"
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <ListMusic className="nav-icon" size={18} />
+                        <span>Playlists</span>
+                    </NavLink>
 
-                <NavLink to="/songs" className={getNavClass}>
-                    <Music className="nav-icon" size={18} />
-                    <span>Songs Catalog</span>
-                </NavLink>
+                    <NavLink
+                        to="/songs"
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <Music className="nav-icon" size={18} />
+                        <span>Songs Catalog</span>
+                    </NavLink>
 
-                <NavLink to="/metadata" className={getNavClass}>
-                    <Sparkles className="nav-icon" size={18} />
-                    <span>Metadata</span>
-                </NavLink>
+                    <NavLink
+                        to="/metadata"
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <Sparkles className="nav-icon" size={18} />
+                        <span>Metadata</span>
+                    </NavLink>
+                </div>
 
-                <NavLink to="/history" className={getNavClass}>
-                    <History className="nav-icon" size={18} />
-                    <span>Sync History</span>
-                </NavLink>
+                <div className="nav-section">
+                    <span className="nav-section-label">System</span>
+                    <NavLink
+                        to="/history"
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <History className="nav-icon" size={18} />
+                        <span>Sync History</span>
+                    </NavLink>
 
-                <NavLink to="/settings" className={getNavClass}>
-                    <Settings className="nav-icon" size={18} />
-                    <span>Settings</span>
-                </NavLink>
+                    <NavLink
+                        to="/settings"
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <Settings className="nav-icon" size={18} />
+                        <span>Settings</span>
+                    </NavLink>
 
-                <NavLink to="/health" className={getNavClass}>
-                    <Activity className="nav-icon" size={18} />
-                    <span>System Health</span>
-                </NavLink>
+                    <NavLink
+                        to="/health"
+                        className={({ isActive }) =>
+                            `sidebar-nav-item ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <Activity className="nav-icon" size={18} />
+                        <span>System Health</span>
+                    </NavLink>
+                </div>
             </nav>
 
-            <div className="sidebar-footer" style={{ flexDirection: "column", gap: "12px", alignItems: "stretch" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{
-                            width: "28px",
-                            height: "28px",
-                            borderRadius: "50%",
-                            backgroundColor: "rgba(255,255,255,0.15)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#ffffff"
-                        }}>
-                            <User size={15} />
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                            <strong style={{ fontSize: "13px", color: "#ffffff", lineHeight: "1.2" }}>{user?.username || "admin"}</strong>
-                            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Administrator</span>
-                        </div>
+            {/* Footer Profile & Status */}
+            <div className="sidebar-footer-card">
+                <div className="user-profile-row">
+                    <div className="user-avatar-circle" aria-hidden="true">
+                        {(user?.username || "A").charAt(0).toUpperCase()}
                     </div>
-
+                    <div className="user-details">
+                        <span className="user-name">{user?.username || "administrator"}</span>
+                        <span className="user-role">System Admin</span>
+                    </div>
                     <button
                         onClick={handleLogout}
+                        className="logout-btn"
                         title="Sign Out"
-                        style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "#94a3b8",
-                            cursor: "pointer",
-                            padding: "6px",
-                            borderRadius: "6px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                        }}
+                        aria-label="Sign Out"
                     >
                         <LogOut size={16} />
                     </button>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                    <div className="online-dot" />
-                    <div>
-                        <strong style={{ fontSize: "12px", display: "block", color: "#e2e8f0" }}>Music Sync v1.0.0</strong>
-                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>System Online</span>
-                    </div>
+                <div className="system-status-indicator">
+                    <div className="status-dot-green" />
+                    <span>System Operational</span>
                 </div>
             </div>
         </aside>
     );
 }
-
-export default Sidebar;

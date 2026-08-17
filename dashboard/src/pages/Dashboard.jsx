@@ -5,7 +5,7 @@ import {
     AlertCircle,
     CheckCircle2,
     Clock,
-    Download,
+    DownloadCloud,
     ExternalLink,
     FileText,
     ListMusic,
@@ -18,8 +18,16 @@ import {
     Zap,
 } from "lucide-react";
 import api from "../services/api";
+import { getUser } from "../services/auth";
 import { getMetadataStatus } from "../services/metadata";
 import "../styles/dashboard.css";
+
+function getTimeGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+}
 
 function formatRelativeTime(dateString) {
     if (!dateString) return "Never";
@@ -41,7 +49,8 @@ function formatRelativeTime(dateString) {
     });
 }
 
-function Dashboard() {
+export default function Dashboard() {
+    const user = getUser();
     const [data, setData] = useState(null);
     const [settings, setSettings] = useState(null);
     const [metadataStatus, setMetadataStatus] = useState(null);
@@ -127,7 +136,7 @@ function Dashboard() {
         }
     };
 
-    if (loading) {
+    if (loading && !data) {
         return (
             <div className="dashboard-loading">
                 <RefreshCw className="spin-icon" size={32} />
@@ -139,7 +148,7 @@ function Dashboard() {
     if (!data || !settings) {
         return (
             <div className="dashboard-error">
-                <AlertCircle size={48} className="error-icon" />
+                <AlertCircle size={44} style={{ color: "#ef4444" }} />
                 <h2>Unable to load dashboard</h2>
                 <p>Could not connect to the backend service.</p>
                 <button className="btn btn-primary" onClick={fetchDashboard}>
@@ -157,64 +166,68 @@ function Dashboard() {
         ? Math.round((stats.completed_lyrics / stats.total_songs) * 100)
         : 0;
 
+    const mMetrics = metadataStatus?.metrics || {
+        total_files: stats.total_songs || 0,
+        enriched_files: 0,
+        raw_files: 0,
+    };
+    const metadataPercent = mMetrics.total_files > 0
+        ? Math.round((mMetrics.enriched_files / mMetrics.total_files) * 100)
+        : 0;
+
+    const greeting = getTimeGreeting();
+    const username = user?.username || "Admin";
+
     return (
         <div className="dashboard-container">
-            {/* Header */}
-            <header className="dashboard-header">
-                <div className="header-info">
-                    <h1>Dashboard</h1>
+            {/* Welcoming Hero Header Banner */}
+            <header className="hero-header-banner">
+                <div className="banner-text">
+                    <span className="greeting-badge">
+                        <span className="live-dot" /> System Online · Auto-refreshes 5s
+                    </span>
+                    <h1>{greeting}, {username}! 👋</h1>
                     <p className="subtitle">
-                        Monitor your YouTube Music library, playlists, and background services.
+                        Here is the real-time status of your synchronized YouTube Music library and automation workers.
                     </p>
                 </div>
 
-                <div className="header-actions">
-                    <div className="auto-refresh-pill">
-                        <span className="live-dot" />
-                        <span>Live · Auto-refreshes 5s</span>
-                    </div>
-
+                <div className="banner-cta">
                     <button
-                        className="btn btn-primary"
+                        className="btn btn-primary btn-sync-hero"
                         onClick={syncNow}
                         disabled={syncing || scheduler.sync_running}
                     >
                         <RefreshCw className={syncing || scheduler.sync_running ? "spin-icon" : ""} size={16} />
-                        {scheduler.sync_running ? "Syncing..." : syncing ? "Starting..." : "Sync Now"}
+                        {scheduler.sync_running ? "Scanning Playlists..." : syncing ? "Starting Sync..." : "Sync Library Now"}
                     </button>
                 </div>
             </header>
 
-            {/* Alert Message */}
+            {/* Alert Message Banner */}
             {message && (
-                <div className={`dashboard-alert alert-${message.type}`}>
+                <div className={`playlist-alert-banner alert-${message.type}`}>
                     {message.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
                     <span>{message.text}</span>
                 </div>
             )}
 
-            {/* ----------------------------------------------------------------
-                Services Panel — Scheduler and Downloader side-by-side
-                Makes it visually clear they are independent.
-            ---------------------------------------------------------------- */}
-            <section className="services-panel">
-                {/* Sync Scheduler */}
-                <div className="service-card">
-                    <div className="service-card-header">
-                        <div className="service-card-status">
-                            <span className={`status-beacon ${scheduler.running ? "running" : "stopped"}`} />
+            {/* Service Engine Control Center */}
+            <section className="service-control-center">
+                {/* Sync Scheduler Card */}
+                <div className="engine-card">
+                    <div className="engine-card-header">
+                        <div className="engine-title-group">
+                            <div className="engine-icon-wrap blue">
+                                <Zap size={20} />
+                            </div>
                             <div>
-                                <span className="engine-label">Sync Scheduler</span>
-                                <h3 className="engine-state">
-                                    {scheduler.running
-                                        ? scheduler.sync_running
-                                            ? "Scanning playlists…"
-                                            : "Scheduled & Idle"
-                                        : "Stopped"}
-                                </h3>
+                                <span className="engine-category">Automation</span>
+                                <h3>Sync Scheduler</h3>
                             </div>
                         </div>
-                        <div className="service-card-action">
+
+                        <div className="engine-action-wrap">
                             {scheduler.running ? (
                                 <button
                                     className="btn btn-danger-soft btn-sm"
@@ -234,274 +247,203 @@ function Dashboard() {
                             )}
                         </div>
                     </div>
-                    <div className="service-card-meta">
-                        <div className="meta-pill">
-                            <Clock size={13} />
-                            <span>Interval: <strong>{settings.sync_interval_seconds}s</strong></span>
-                        </div>
-                        <div className="meta-pill">
-                            <Activity size={13} />
-                            <span>Status: <strong>{scheduler.sync_running ? "Syncing" : "Idle"}</strong></span>
-                        </div>
-                        <div className="meta-pill">
-                            <Zap size={13} />
-                            <span>Auto-Start: <strong>{settings.auto_start_scheduler ? "On" : "Off"}</strong></span>
-                        </div>
+
+                    <div className="engine-status-row">
+                        <span className={`status-beacon ${scheduler.running ? "running" : "stopped"}`} />
+                        <span className="status-text">
+                            {scheduler.running
+                                ? scheduler.sync_running
+                                    ? "Scanning playlists…"
+                                    : "Active & Idle"
+                                : "Stopped"}
+                        </span>
                     </div>
-                    {last_sync?.stats && (
-                        <div className="service-card-stats">
-                            <span>Last scan: {last_sync.stats.playlists_scanned ?? "—"} playlists · {last_sync.stats.total_new ?? "—"} new · {last_sync.stats.total_unavailable ?? "—"} unavailable</span>
-                        </div>
-                    )}
+
+                    <div className="engine-meta-chips">
+                        <span className="chip-pill">
+                            <Clock size={13} /> Interval: <strong>{settings.sync_interval_seconds}s</strong>
+                        </span>
+                        <span className="chip-pill">
+                            <Activity size={13} /> Status: <strong>{scheduler.sync_running ? "Scanning" : "Ready"}</strong>
+                        </span>
+                    </div>
                 </div>
 
-                {/* Divider arrow */}
-                <div className="services-divider">
-                    <div className="divider-arrow">→</div>
-                    <span className="divider-label">DB</span>
-                    <div className="divider-arrow">→</div>
-                </div>
-
-                {/* Downloader Worker */}
-                <div className="service-card">
-                    <div className="service-card-header">
-                        <div className="service-card-status">
-                            <span className={`status-beacon ${downloader?.running ? "running" : "stopped"}`} />
+                {/* Downloader Worker Card */}
+                <div className="engine-card">
+                    <div className="engine-card-header">
+                        <div className="engine-title-group">
+                            <div className="engine-icon-wrap amber">
+                                <DownloadCloud size={20} />
+                            </div>
                             <div>
-                                <span className="engine-label">Downloader Worker</span>
-                                <h3 className="engine-state">
-                                    {downloader?.running ? "Polling queue" : "Stopped"}
-                                </h3>
+                                <span className="engine-category">Media Pipeline</span>
+                                <h3>Downloader Worker</h3>
                             </div>
                         </div>
-                        <div className="service-card-action">
-                            <Link to="/settings" className="btn btn-ghost btn-sm">
-                                <SettingsIcon size={13} /> Manage
-                            </Link>
-                        </div>
-                    </div>
-                    <div className="service-card-meta">
-                        <div className="meta-pill">
-                            <Download size={13} />
-                            <span>Concurrency: <strong>{settings.download_limit}</strong></span>
-                        </div>
-                        <div className="meta-pill">
-                            <Activity size={13} />
-                            <span>Last poll: <strong>{formatRelativeTime(downloader?.last_poll_completed_at)}</strong></span>
-                        </div>
-                    </div>
-                    {downloader?.total_downloaded > 0 && (
-                        <div className="service-card-stats">
-                            <span>Downloaded this session: <strong>{downloader.total_downloaded}</strong> tracks</span>
-                        </div>
-                    )}
-                    {downloader?.last_poll_error && (
-                        <div className="service-card-error">
-                            <AlertCircle size={13} />
-                            <span>{downloader.last_poll_error}</span>
-                        </div>
-                    )}
-                </div>
-            </section>
 
-            {/* Stats Grid */}
-            <section className="stats-overview-grid">
-                {/* Audio Downloads */}
-                <div className="metric-card">
-                    <div className="metric-header">
-                        <div className="metric-title">
-                            <Download className="metric-icon blue" size={18} />
-                            <span>Music Library</span>
-                        </div>
-                        <span className="metric-badge blue">{downloadPercent}% Downloaded</span>
-                    </div>
-
-                    <div className="metric-hero">
-                        <span className="hero-number">{stats.downloaded_songs}</span>
-                        <span className="hero-total">/ {stats.total_songs} songs</span>
-                    </div>
-
-                    <div className="progress-bar-track">
-                        <div className="progress-bar-fill blue" style={{ width: `${downloadPercent}%` }} />
-                    </div>
-
-                    <div className="metric-subchips">
-                        <span className="chip warning">{stats.pending_downloads} Pending</span>
-                        {stats.failed_downloads > 0 && (
-                            <span className="chip danger">{stats.failed_downloads} Failed</span>
-                        )}
-                        {stats.unavailable_songs > 0 && (
-                            <span className="chip muted">{stats.unavailable_songs} Unavailable</span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Lyrics */}
-                <div className="metric-card">
-                    <div className="metric-header">
-                        <div className="metric-title">
-                            <FileText className="metric-icon green" size={18} />
-                            <span>Synced Lyrics</span>
-                        </div>
-                        <span className="metric-badge green">{lyricsPercent}% Complete</span>
-                    </div>
-
-                    <div className="metric-hero">
-                        <span className="hero-number">{stats.completed_lyrics}</span>
-                        <span className="hero-total">/ {stats.total_songs} synced</span>
-                    </div>
-
-                    <div className="progress-bar-track">
-                        <div className="progress-bar-fill green" style={{ width: `${lyricsPercent}%` }} />
-                    </div>
-
-                    <div className="metric-subchips">
-                        <span className="chip warning">{stats.pending_lyrics} Pending</span>
-                        <span className="chip muted">{stats.unavailable_lyrics} No Lyrics</span>
-                        {stats.failed_lyrics > 0 && (
-                            <span className="chip danger">{stats.failed_lyrics} Failed</span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Engine Config quick view */}
-                <div className="metric-card">
-                    <div className="metric-header">
-                        <div className="metric-title">
-                            <SettingsIcon className="metric-icon purple" size={18} />
-                            <span>Configuration</span>
-                        </div>
-                        <Link to="/settings" className="metric-link">Manage</Link>
-                    </div>
-
-                    <div className="config-grid">
-                        <div className="config-item">
-                            <span className="config-label">Sync Interval</span>
-                            <span className="config-val">{settings.sync_interval_seconds}s</span>
-                        </div>
-                        <div className="config-item">
-                            <span className="config-label">Download Limit</span>
-                            <span className="config-val">{settings.download_limit}×</span>
-                        </div>
-                        <div className="config-item">
-                            <span className="config-label">Max Retries</span>
-                            <span className="config-val">{settings.max_download_retries}</span>
-                        </div>
-                        <div className="config-item">
-                            <span className="config-label">Watch Mode</span>
-                            <span className="config-val">
-                                {settings.playlist_watch_mode === "last_n"
-                                    ? `Last ${settings.playlist_watch_limit}`
-                                    : "Whole"}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Metadata & Enrichment Overview Card */}
-                {(() => {
-                    const mMetrics = metadataStatus?.metrics || {
-                        total_files: 0,
-                        raw_files: 0,
-                        enriched_files: 0,
-                        low_confidence_files: 0,
-                        failed_files: 0,
-                        beets_edited_count: 0,
-                    };
-                    const mEnriched = mMetrics.enriched_files || mMetrics.beets_edited_count || 0;
-                    const mPercent = mMetrics.total_files > 0
-                        ? Math.round((mEnriched / mMetrics.total_files) * 100)
-                        : 0;
-
-                    return (
-                        <div className="metric-card">
-                            <div className="metric-header">
-                                <div className="metric-title">
-                                    <Sparkles className="metric-icon purple" style={{ color: "#a855f7" }} size={18} />
-                                    <span>Metadata Enrichment</span>
-                                </div>
-                                <span className="metric-badge purple" style={{ backgroundColor: "#f3e8ff", color: "#6b21a8" }}>
-                                    {mPercent}% Enriched
-                                </span>
-                            </div>
-
-                            <div className="metric-hero">
-                                <span className="hero-number">{mEnriched}</span>
-                                <span className="hero-total">/ {mMetrics.total_files} high confidence</span>
-                            </div>
-
-                            <div className="progress-bar-track">
-                                <div
-                                    className="progress-bar-fill purple"
-                                    style={{ width: `${mPercent}%`, backgroundColor: "#a855f7" }}
-                                />
-                            </div>
-
-                            <div className="metric-subchips">
-                                <span className="chip success">{mEnriched} Enriched</span>
-                                <span className="chip warning" style={{ backgroundColor: "#fef3c7", color: "#b45309" }}>
-                                    {mMetrics.low_confidence_files ?? mMetrics.skipped_files ?? 0} Low Conf
-                                </span>
-                                {mMetrics.raw_files > 0 && (
-                                    <span className="chip muted">{mMetrics.raw_files} Raw</span>
-                                )}
-                                {mMetrics.failed_files > 0 && (
-                                    <span className="chip danger">{mMetrics.failed_files} Failed</span>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })()}
-            </section>
-
-            {/* Content Grid: Playlists + Last Sync */}
-            <div className="dashboard-content-grid">
-                {/* Playlists */}
-                <div className="dashboard-panel">
-                    <div className="panel-header">
-                        <div className="panel-title">
-                            <ListMusic size={20} className="panel-icon" />
-                            <h2>Monitored Playlists</h2>
-                        </div>
-                        <Link to="/playlists" className="btn btn-ghost btn-sm">
-                            Manage All
+                        <Link to="/settings" className="btn btn-ghost btn-sm">
+                            <SettingsIcon size={13} /> Settings
                         </Link>
                     </div>
 
-                    <div className="panel-body">
+                    <div className="engine-status-row">
+                        <span className={`status-beacon ${downloader?.running ? "running" : "stopped"}`} />
+                        <span className="status-text">
+                            {downloader?.running ? "Queue Polling Active" : "Stopped"}
+                        </span>
+                    </div>
+
+                    <div className="engine-meta-chips">
+                        <span className="chip-pill">
+                            Limit: <strong>{settings.download_limit} max</strong>
+                        </span>
+                        <span className="chip-pill">
+                            Last poll: <strong>{formatRelativeTime(downloader?.last_poll_completed_at)}</strong>
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            {/* Key Metrics Overview Grid */}
+            <section className="key-metrics-grid">
+                {/* Songs Library */}
+                <div className="metric-overview-card">
+                    <div className="metric-card-top">
+                        <div className="metric-label-group">
+                            <Music size={18} className="icon-blue" />
+                            <span>Music Library</span>
+                        </div>
+                        <span className="badge-pill blue">{downloadPercent}% Downloaded</span>
+                    </div>
+
+                    <div className="metric-hero-number">
+                        <span className="num">{stats.downloaded_songs}</span>
+                        <span className="total">/ {stats.total_songs} songs</span>
+                    </div>
+
+                    <div className="metric-progress-track">
+                        <div className="metric-progress-fill blue" style={{ width: `${downloadPercent}%` }} />
+                    </div>
+
+                    <div className="metric-chips-row">
+                        <span className="chip warning">{stats.pending_downloads} Pending</span>
+                        {stats.failed_downloads > 0 && <span className="chip danger">{stats.failed_downloads} Failed</span>}
+                        {stats.unavailable_songs > 0 && <span className="chip muted">{stats.unavailable_songs} Unavailable</span>}
+                    </div>
+                </div>
+
+                {/* Lyrics Coverage */}
+                <div className="metric-overview-card">
+                    <div className="metric-card-top">
+                        <div className="metric-label-group">
+                            <FileText size={18} className="icon-green" />
+                            <span>Synced Lyrics</span>
+                        </div>
+                        <span className="badge-pill green">{lyricsPercent}% Synced</span>
+                    </div>
+
+                    <div className="metric-hero-number">
+                        <span className="num">{stats.completed_lyrics}</span>
+                        <span className="total">/ {stats.total_songs} tracks</span>
+                    </div>
+
+                    <div className="metric-progress-track">
+                        <div className="metric-progress-fill green" style={{ width: `${lyricsPercent}%` }} />
+                    </div>
+
+                    <div className="metric-chips-row">
+                        <span className="chip warning">{stats.pending_lyrics} Pending</span>
+                        <span className="chip muted">{stats.unavailable_lyrics} No Lyrics</span>
+                        {stats.failed_lyrics > 0 && <span className="chip danger">{stats.failed_lyrics} Failed</span>}
+                    </div>
+                </div>
+
+                {/* Metadata Enrichment */}
+                <div className="metric-overview-card">
+                    <div className="metric-card-top">
+                        <div className="metric-label-group">
+                            <Sparkles size={18} className="icon-purple" />
+                            <span>Metadata Enrichment</span>
+                        </div>
+                        <span className="badge-pill purple">{metadataPercent}% Enriched</span>
+                    </div>
+
+                    <div className="metric-hero-number">
+                        <span className="num">{mMetrics.enriched_files}</span>
+                        <span className="total">/ {mMetrics.total_files || stats.total_songs} autotagged</span>
+                    </div>
+
+                    <div className="metric-progress-track">
+                        <div className="metric-progress-fill purple" style={{ width: `${metadataPercent}%` }} />
+                    </div>
+
+                    <div className="metric-chips-row">
+                        <span className="chip success">{mMetrics.enriched_files} Enriched</span>
+                        {mMetrics.raw_files > 0 && <span className="chip muted">{mMetrics.raw_files} Raw</span>}
+                    </div>
+                </div>
+
+                {/* Active Playlists */}
+                <div className="metric-overview-card">
+                    <div className="metric-card-top">
+                        <div className="metric-label-group">
+                            <ListMusic size={18} className="icon-indigo" />
+                            <span>Monitored Playlists</span>
+                        </div>
+                        <Link to="/playlists" className="metric-link">Manage</Link>
+                    </div>
+
+                    <div className="metric-hero-number">
+                        <span className="num">{playlist.length}</span>
+                        <span className="total">active feeds</span>
+                    </div>
+
+                    <div className="playlist-summary-strip">
+                        <span>Syncing <strong>{stats.total_songs}</strong> total tracks across YouTube playlists.</span>
+                    </div>
+                </div>
+            </section>
+
+            {/* Content Section: Monitored Playlists + Sync Activity */}
+            <div className="dashboard-content-split">
+                {/* Monitored Playlists */}
+                <div className="content-card">
+                    <div className="card-header">
+                        <h2>Monitored Playlists</h2>
+                        <Link to="/playlists" className="btn btn-ghost btn-sm">View All ({playlist.length})</Link>
+                    </div>
+
+                    <div className="card-body">
                         {playlist.length === 0 ? (
-                            <div className="empty-panel">
-                                <Music size={36} className="text-muted" />
-                                <p>No playlists configured yet.</p>
-                                <Link to="/playlists" className="btn btn-primary btn-sm">
-                                    Add Playlist
-                                </Link>
+                            <div className="empty-state">
+                                <ListMusic size={36} />
+                                <p>No YouTube Music playlists configured yet.</p>
+                                <Link to="/playlists" className="btn btn-primary btn-sm">Add Playlist</Link>
                             </div>
                         ) : (
-                            <div className="playlists-list">
-                                {playlist.slice(0, 6).map((pl) => (
-                                    <div key={pl.id} className="playlist-card-row">
-                                        <div className="playlist-main-info">
-                                            <div className="playlist-icon-avatar">
+                            <div className="playlists-table">
+                                {playlist.slice(0, 5).map((pl) => (
+                                    <div key={pl.id} className="playlist-item-row">
+                                        <div className="playlist-left">
+                                            <div className="playlist-icon-bg">
                                                 <ListMusic size={18} />
                                             </div>
-                                            <div>
-                                                <p className="playlist-name">{pl.name}</p>
-                                                <p className="playlist-meta">
-                                                    <code>{pl.youtube_playlist_id}</code>
-                                                </p>
+                                            <div className="playlist-text">
+                                                <span className="pl-title">{pl.name}</span>
+                                                <span className="pl-sub">{pl.song_count} songs · <code>{pl.youtube_playlist_id}</code></span>
                                             </div>
                                         </div>
-                                        <div className="playlist-right-stats">
-                                            <span className="song-count-pill">{pl.song_count} songs</span>
-                                            <span className={`status-tag ${pl.enabled ? "enabled" : "disabled"}`}>
+
+                                        <div className="playlist-right">
+                                            <span className={`status-tag ${pl.enabled ? "active" : "paused"}`}>
                                                 {pl.enabled ? "Active" : "Paused"}
                                             </span>
                                             <a
                                                 href={pl.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="external-link-btn"
+                                                className="btn-icon-link"
                                                 title="Open on YouTube"
                                             >
                                                 <ExternalLink size={14} />
@@ -509,117 +451,56 @@ function Dashboard() {
                                         </div>
                                     </div>
                                 ))}
-                                {playlist.length > 6 && (
-                                    <Link to="/playlists" className="btn btn-ghost btn-sm" style={{ alignSelf: "center" }}>
-                                        View all {playlist.length} playlists
-                                    </Link>
-                                )}
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Last Sync activity */}
-                <div className="dashboard-panel">
-                    <div className="panel-header">
-                        <div className="panel-title">
-                            <Activity size={20} className="panel-icon" />
-                            <h2>Last Synchronization</h2>
-                        </div>
-                        <Link to="/history" className="btn btn-ghost btn-sm">
-                            Full History
-                        </Link>
+                {/* Last Synchronization Activity */}
+                <div className="content-card">
+                    <div className="card-header">
+                        <h2>Last Synchronization</h2>
+                        <Link to="/history" className="btn btn-ghost btn-sm">Full History</Link>
                     </div>
 
-                    <div className="panel-body">
+                    <div className="card-body">
                         {!last_sync?.status ? (
-                            <div className="empty-panel">
-                                <Clock size={36} className="text-muted" />
-                                <p>No synchronization has run yet.</p>
-                                <button
-                                    className="btn btn-primary btn-sm"
-                                    onClick={syncNow}
-                                    disabled={syncing}
-                                >
+                            <div className="empty-state">
+                                <Clock size={36} />
+                                <p>No synchronization activity recorded yet.</p>
+                                <button className="btn btn-primary btn-sm" onClick={syncNow} disabled={syncing}>
                                     Run First Sync
                                 </button>
                             </div>
                         ) : (
-                            <div className="sync-execution-card">
-                                <div className="execution-header-row">
-                                    <div className="execution-status">
-                                        <span className={`status-pill ${last_sync.status}`}>
-                                            {last_sync.status === "success" && <CheckCircle2 size={13} />}
-                                            {last_sync.status === "failed" && <AlertCircle size={13} />}
-                                            {last_sync.status?.toUpperCase()}
-                                        </span>
-                                        <span className="time-ago">
-                                            {formatRelativeTime(last_sync.completed_at)}
-                                        </span>
-                                    </div>
-                                    {last_sync.started_at && last_sync.completed_at && (
-                                        <div className="execution-duration">
-                                            <Clock size={13} />
-                                            <span>
-                                                {(
-                                                    (new Date(last_sync.completed_at) - new Date(last_sync.started_at)) / 1000
-                                                ).toFixed(1)}s
-                                            </span>
-                                        </div>
-                                    )}
+                            <div className="sync-history-detail">
+                                <div className="history-top-bar">
+                                    <span className={`history-status-badge ${last_sync.status}`}>
+                                        {last_sync.status === "success" ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                        {last_sync.status?.toUpperCase()}
+                                    </span>
+                                    <span className="history-time-ago">{formatRelativeTime(last_sync.completed_at)}</span>
                                 </div>
 
-                                <div className="execution-timeline">
-                                    <div className="time-point">
-                                        <span className="point-label">Started</span>
-                                        <span className="point-val">
-                                            {last_sync.started_at
-                                                ? new Date(last_sync.started_at).toLocaleTimeString()
-                                                : "—"}
-                                        </span>
+                                <div className="history-stats-grid">
+                                    <div className="h-stat-box">
+                                        <span className="num">{last_sync.stats?.playlists_scanned ?? 0}</span>
+                                        <span className="lbl">Playlists Scanned</span>
                                     </div>
-                                    <div className="time-divider" />
-                                    <div className="time-point">
-                                        <span className="point-label">Completed</span>
-                                        <span className="point-val">
-                                            {last_sync.completed_at
-                                                ? new Date(last_sync.completed_at).toLocaleTimeString()
-                                                : "—"}
-                                        </span>
+                                    <div className="h-stat-box">
+                                        <span className="num">{last_sync.stats?.total_discovered ?? 0}</span>
+                                        <span className="lbl">Discovered</span>
+                                    </div>
+                                    <div className="h-stat-box">
+                                        <span className="num">{last_sync.stats?.total_new ?? 0}</span>
+                                        <span className="lbl">New Songs</span>
                                     </div>
                                 </div>
-
-                                {/* Scan stats if available */}
-                                {last_sync.stats && (
-                                    <div className="sync-scan-stats">
-                                        <div className="scan-stat">
-                                            <span className="scan-stat-val">{last_sync.stats.playlists_scanned ?? 0}</span>
-                                            <span className="scan-stat-label">Playlists</span>
-                                        </div>
-                                        <div className="scan-stat">
-                                            <span className="scan-stat-val">{last_sync.stats.total_discovered ?? 0}</span>
-                                            <span className="scan-stat-label">Discovered</span>
-                                        </div>
-                                        <div className="scan-stat">
-                                            <span className="scan-stat-val">{last_sync.stats.total_new ?? 0}</span>
-                                            <span className="scan-stat-label">New songs</span>
-                                        </div>
-                                        {(last_sync.stats.total_unavailable ?? 0) > 0 && (
-                                            <div className="scan-stat">
-                                                <span className="scan-stat-val">{last_sync.stats.total_unavailable}</span>
-                                                <span className="scan-stat-label">Unavailable</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
 
                                 {last_sync.error && (
-                                    <div className="execution-error-box">
+                                    <div className="history-error-banner">
                                         <AlertCircle size={16} />
-                                        <div>
-                                            <strong>Error</strong>
-                                            <p>{last_sync.error}</p>
-                                        </div>
+                                        <span>{last_sync.error}</span>
                                     </div>
                                 )}
                             </div>
@@ -630,5 +511,3 @@ function Dashboard() {
         </div>
     );
 }
-
-export default Dashboard;
