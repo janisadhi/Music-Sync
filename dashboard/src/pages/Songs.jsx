@@ -157,7 +157,7 @@ export default function Songs() {
             )}
 
             {/* Navigation Tabs */}
-            <nav className="songs-tabs">
+            <nav className="hierarchy-tabs">
                 <button
                     className={`tab-btn ${activeTab === "songs" ? "active" : ""}`}
                     onClick={() => setActiveTab("songs")}
@@ -237,13 +237,13 @@ export default function Songs() {
                 </div>
 
                 {activeTab === "songs" && (
-                    <LayoutControls currentMode={layoutMode} onModeChange={handleLayoutChange} />
+                    <LayoutControls activeLayout={layoutMode} onChangeLayout={handleLayoutChange} />
                 )}
             </div>
 
             {/* Main Content Area */}
             {loading ? (
-                <div className="songs-loading">
+                <div className="library-loading">
                     <RefreshCw size={32} className="spin-icon" />
                     <p>Loading music library...</p>
                 </div>
@@ -253,7 +253,7 @@ export default function Songs() {
                     {activeTab === "songs" && (
                         <>
                             {sortedSongs.length === 0 ? (
-                                <div className="songs-empty">
+                                <div className="library-empty-state">
                                     <ListMusic size={48} />
                                     <h3>No tracks found</h3>
                                     <p>Try clearing filters or adding YouTube Music playlists to synchronize.</p>
@@ -261,7 +261,16 @@ export default function Songs() {
                             ) : (
                                 <div className={`songs-layout-view mode-${layoutMode}`}>
                                     {layoutMode === LAYOUT_MODES.LIST ? (
-                                        <div className="songs-list-container">
+                                        <div className="list-layout">
+                                            <div className="list-header">
+                                                <span style={{ width: "28px" }}></span>
+                                                <span style={{ width: "32px" }}>#</span>
+                                                <span style={{ flex: 2 }}>Title & Artist</span>
+                                                <span style={{ flex: 1.5 }}>Album</span>
+                                                <span style={{ width: "120px" }}>Genre</span>
+                                                <span style={{ width: "60px", textAlign: "right" }}>Duration</span>
+                                                <span style={{ width: "32px" }}></span>
+                                            </div>
                                             {sortedSongs.map((song, idx) => (
                                                 <SongRow
                                                     key={song.id}
@@ -273,8 +282,8 @@ export default function Songs() {
                                                 />
                                             ))}
                                         </div>
-                                    ) : layoutMode === LAYOUT_MODES.COMPACT_LIST ? (
-                                        <div className="songs-compact-container">
+                                    ) : layoutMode === LAYOUT_MODES.COMPACT ? (
+                                        <div className="compact-list-layout">
                                             {sortedSongs.map((song) => (
                                                 <SongRow
                                                     key={song.id}
@@ -287,7 +296,15 @@ export default function Songs() {
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="songs-grid-container">
+                                        <div
+                                            className={`grid-layout ${
+                                                layoutMode === LAYOUT_MODES.LARGE_GRID
+                                                    ? "grid-large"
+                                                    : layoutMode === LAYOUT_MODES.SMALL_GRID
+                                                    ? "grid-small"
+                                                    : "grid-medium"
+                                            }`}
+                                        >
                                             {sortedSongs.map((song) => (
                                                 <SongCard
                                                     key={song.id}
