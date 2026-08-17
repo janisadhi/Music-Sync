@@ -42,7 +42,6 @@ function formatRelativeTime(dateString) {
 }
 
 export default function Dashboard() {
-    const user = getUser();
     const [data, setData] = useState(null);
     const [settings, setSettings] = useState(null);
     const [metadataStatus, setMetadataStatus] = useState(null);
