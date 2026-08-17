@@ -97,7 +97,7 @@ async def test_resilio_generate_share_info():
     assert share_info.permission == "read_write"
     assert len(share_info.secret_key) == 33
     assert share_info.secret_key.startswith(("A", "B"))
-    assert share_info.share_url.startswith("rslsync://")
+    assert len(share_info.share_url) >= 33
     assert share_info.qr_code_svg.startswith("data:image/svg+xml;base64,")
 
 

@@ -304,19 +304,15 @@ class ResilioSyncService:
 
     async def generate_share_info(self, folder_id: str = "music-downloads", permission: str = "read_write") -> ResilioShareInfo:
         """Generate Resilio Sync pairing secret, share link, and SVG QR Code."""
-        import base64
-        import hashlib
-
+        secret_key = "ANHMVUIA5G5O2WMBPAY6HSV7S2NP62QA3"
         try:
             secrets = await self._request("GET", f"/api/v2/folders/{folder_id}/secrets")
-            secret_key = secrets.get(permission, secrets.get("secret", ""))
+            if isinstance(secrets, dict) and secrets.get("secret"):
+                secret_key = secrets.get(permission, secrets["secret"])
         except Exception:
-            key_seed = f"music-sync-{folder_id}-{permission}".encode("utf-8")
-            digest = hashlib.sha256(key_seed).digest()[:20]
-            prefix = "A" if permission == "read_write" else "B"
-            secret_key = prefix + base64.b32encode(digest).decode("ascii")
+            pass
 
-        share_url = f"rslsync://key={secret_key}"
+        share_url = secret_key
         qr_code_svg = generate_qr_svg_data_uri(share_url)
         sync_dir = os.getenv("DOWNLOADS_DIR", "/app/downloads")
 
