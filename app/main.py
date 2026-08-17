@@ -106,8 +106,11 @@ app.include_router(settings_router)
 app.include_router(metadata_router)
 
 
+import os
+import httpx
+
 @app.get("/health")
-def health_check():
+async def health_check():
     database_status = "ok"
 
     try:
@@ -116,11 +119,63 @@ def health_check():
     except Exception:
         database_status = "error"
 
+    metadata_status = "ok"
+    metadata_stats = {
+        "total_tracks": 0,
+        "enriched_tracks": 0,
+        "raw_tracks": 0,
+        "edited_tracks": 0,
+    }
+
+    try:
+        from app.database.models import DownloadedTrack
+
+        with SessionLocal() as db:
+            metadata_stats["total_tracks"] = db.query(DownloadedTrack).count()
+            metadata_stats["enriched_tracks"] = (
+                db.query(DownloadedTrack)
+                .filter(DownloadedTrack.metadata_state == "enriched")
+                .count()
+            )
+            metadata_stats["raw_tracks"] = (
+                db.query(DownloadedTrack)
+                .filter(DownloadedTrack.metadata_state == "raw")
+                .count()
+            )
+            metadata_stats["edited_tracks"] = (
+                db.query(DownloadedTrack)
+                .filter(DownloadedTrack.beets_metadata_edited == True)
+                .count()
+            )
+    except Exception as exc:
+        print(f"Error querying metadata stats for health check: {exc}")
+        metadata_status = "degraded"
+
+    metadata_scan_job = None
+    try:
+        metadata_url = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(f"{metadata_url}/status")
+            if resp.status_code == 200:
+                metadata_scan_job = resp.json()
+    except Exception:
+        pass
+
+    overall_status = (
+        "ok" if (database_status == "ok" and metadata_status == "ok") else "degraded"
+    )
+
     return {
-        "status": "ok" if database_status == "ok" else "degraded",
+        "status": overall_status,
         "service": settings.app_name,
         "environment": settings.app_env,
         "database": database_status,
         "downloader_worker": downloader_worker.get_status(),
         "lyrics_worker": lyrics_worker.get_status(),
+        "metadata_service": {
+            "status": metadata_status,
+            "stats": metadata_stats,
+            "scan_job": metadata_scan_job,
+        },
     }
+
