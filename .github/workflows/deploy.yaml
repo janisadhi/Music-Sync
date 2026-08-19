@@ -76,7 +76,7 @@ jobs:
       - name: Build and push Metadata Service Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./metadata_service
+          context: .
           file: ./metadata_service/Dockerfile
           push: true
           tags: ${{ steps.meta-metadata.outputs.tags }}
