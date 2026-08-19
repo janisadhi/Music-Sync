@@ -69,7 +69,7 @@ services:
     image: resilio/sync:latest
     container_name: music-sync-resilio
     restart: unless-stopped
-    command: ["rslsync", "--nodaemon", "--config", "/etc/resilio/sync.conf"]
+    entrypoint: ["rslsync", "--nodaemon", "--config", "/etc/resilio/sync.conf"]
     env_file:
       - .env
     ports:

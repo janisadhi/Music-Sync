@@ -5,9 +5,11 @@ import {
     CheckCircle2,
     Clock,
     Download,
+    ExternalLink,
     FileText,
     HardDrive,
     HelpCircle,
+    Info,
     Key,
     Lock,
     RefreshCw,
@@ -21,6 +23,11 @@ import {
     Zap,
 } from "lucide-react";
 import api from "../services/api";
+import {
+    deleteResilioLicense,
+    getResilioLicense,
+    updateResilioLicense,
+} from "../services/rslsync";
 import "../styles/settings.css";
 
 // ---------------------------------------------------------------------------
@@ -68,6 +75,13 @@ function Settings() {
     const [showCookieGuide, setShowCookieGuide] = useState(false);
     const [clearingCookies, setClearingCookies] = useState(false);
 
+    // Resilio License state
+    const [resilioLicense, setResilioLicense] = useState(null);
+    const [licenseInput, setLicenseInput] = useState("");
+    const [updatingLicense, setUpdatingLicense] = useState(false);
+    const [showReplaceLicenseConfirm, setShowReplaceLicenseConfirm] = useState(false);
+    const [showResilioLicenseGuide, setShowResilioLicenseGuide] = useState(false);
+
     // Live status from /sync/status
     const [syncStatus, setSyncStatus] = useState(null);
 
@@ -94,9 +108,10 @@ function Settings() {
         try {
             setLoading(true);
             setError("");
-            const [settingsRes, statusRes] = await Promise.all([
+            const [settingsRes, statusRes, licenseRes] = await Promise.all([
                 api.get("/settings"),
                 api.get("/sync/status"),
+                getResilioLicense().catch(() => null),
             ]);
             setSettings({
                 ...settingsRes.data,
@@ -104,11 +119,57 @@ function Settings() {
             });
             setHasYoutubeCookies(Boolean(settingsRes.data.has_youtube_cookies));
             setSyncStatus(statusRes.data);
+            if (licenseRes) setResilioLicense(licenseRes);
         } catch (err) {
             console.error("Failed to load settings:", err);
             setError("Unable to load application settings.");
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleSaveLicense() {
+        if (!licenseInput.trim()) {
+            setError("Please enter or paste a valid Resilio Sync license key or file content.");
+            return;
+        }
+
+        if (resilioLicense?.has_license_file && !showReplaceLicenseConfirm) {
+            setShowReplaceLicenseConfirm(true);
+            return;
+        }
+
+        try {
+            setUpdatingLicense(true);
+            setMessage("");
+            setError("");
+            const updated = await updateResilioLicense(licenseInput.trim());
+            setResilioLicense(updated);
+            setLicenseInput("");
+            setShowReplaceLicenseConfirm(false);
+            setMessage("Resilio Sync license updated and applied successfully.");
+        } catch (err) {
+            console.error("Failed to update Resilio license:", err);
+            setError(err.response?.data?.detail || "Failed to update Resilio Sync license.");
+        } finally {
+            setUpdatingLicense(false);
+        }
+    }
+
+    async function handleDeleteLicense() {
+        if (!window.confirm("Remove stored Resilio Sync license key?")) return;
+        try {
+            setUpdatingLicense(true);
+            setMessage("");
+            setError("");
+            const updated = await deleteResilioLicense();
+            setResilioLicense(updated);
+            setMessage("Resilio Sync license removed.");
+        } catch (err) {
+            console.error("Failed to remove Resilio license:", err);
+            setError(err.response?.data?.detail || "Failed to remove Resilio Sync license.");
+        } finally {
+            setUpdatingLicense(false);
         }
     }
 
@@ -882,6 +943,115 @@ function Settings() {
                     </div>
                 </div>
 
+                {/* ============================================================
+                    SECTION 9 – Resilio Sync Engine License
+                    ============================================================ */}
+                <div className="settings-card">
+                    <div className="card-section-header">
+                        <Key size={20} className="section-icon blue" style={{ color: "#3b82f6" }} />
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                                <div>
+                                    <h3>Resilio Sync Engine License</h3>
+                                    <p>Configure and manage the headless Resilio Sync P2P engine license.</p>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <span className={`cookie-status-badge ${
+                                        resilioLicense?.status === "activated"
+                                            ? "configured"
+                                            : resilioLicense?.status === "configured"
+                                            ? "configured"
+                                            : resilioLicense?.status === "invalid"
+                                            ? "not-configured"
+                                            : "not-configured"
+                                    }`}>
+                                        {resilioLicense?.status === "activated" ? (
+                                            <>
+                                                <CheckCircle2 size={13} /> ACTIVATED ({resilioLicense.license_type || "Pro"})
+                                            </>
+                                        ) : resilioLicense?.status === "configured" ? (
+                                            <>
+                                                <CheckCircle2 size={13} /> CONFIGURED
+                                            </>
+                                        ) : resilioLicense?.status === "invalid" ? (
+                                            <>
+                                                <AlertCircle size={13} /> INVALID LICENSE
+                                            </>
+                                        ) : (
+                                            "NOT CONFIGURED"
+                                        )}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={() => setShowResilioLicenseGuide(true)}
+                                    >
+                                        <HelpCircle size={14} /> How to get a license?
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="setting-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "12px" }}>
+                        <div className="setting-info" style={{ maxWidth: "100%" }}>
+                            <label htmlFor="resilio_license" className="setting-label">
+                                License Key / File Content
+                            </label>
+                            <p className="setting-desc">
+                                Enter your Resilio Sync Pro license key or paste the contents of your <code>.btskey</code> license file below.
+                                {resilioLicense?.masked_key && (
+                                    <> Currently active key: <code>{resilioLicense.masked_key}</code></>
+                                )}
+                            </p>
+                        </div>
+
+                        <div className="cookie-input-wrapper">
+                            <textarea
+                                id="resilio_license"
+                                name="resilio_license"
+                                rows={4}
+                                className="cookie-textarea"
+                                placeholder={
+                                    resilioLicense?.has_license_file
+                                        ? `License file is configured (${resilioLicense.masked_key}). Paste a new license key to replace.`
+                                        : "Paste your .btskey license key file content here..."
+                                }
+                                value={licenseInput}
+                                onChange={(e) => setLicenseInput(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="cookie-footer-row" style={{ marginTop: "4px" }}>
+                            <div className="cookie-security-notice">
+                                <ShieldCheck size={14} className="security-icon" />
+                                <span>License files are stored locally in the container volume, never logged, and masked in all API responses.</span>
+                            </div>
+
+                            <div style={{ display: "flex", gap: "10px" }}>
+                                {resilioLicense?.has_license_file && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger-soft btn-sm"
+                                        onClick={handleDeleteLicense}
+                                        disabled={updatingLicense}
+                                    >
+                                        <Trash2 size={13} /> Remove License
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm"
+                                    onClick={handleSaveLicense}
+                                    disabled={updatingLicense || !licenseInput.trim()}
+                                >
+                                    {updatingLicense ? <RefreshCw size={13} className="spin-icon" /> : <Save size={13} />} Save & Apply License
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Save Bar */}
                 <div className="settings-save-footer">
                     <button type="submit" disabled={saving} className="btn btn-primary btn-lg">
@@ -890,6 +1060,29 @@ function Settings() {
                     </button>
                 </div>
             </form>
+
+            {/* Confirmation dialog for replacing Resilio License */}
+            {showReplaceLicenseConfirm && (
+                <div className="settings-warning-modal-overlay">
+                    <div className="settings-warning-modal">
+                        <div className="warning-modal-header">
+                            <Key size={22} className="warning-icon" style={{ color: "#3b82f6" }} />
+                            <h3>Replace Resilio Sync License?</h3>
+                        </div>
+                        <p className="warning-modal-body">
+                            An existing Resilio Sync license is already applied. Replacing it will overwrite the stored <code>.btskey</code> file and reconfigure the rslsync engine.
+                        </p>
+                        <div className="warning-modal-actions">
+                            <button className="btn btn-ghost" onClick={() => setShowReplaceLicenseConfirm(false)}>
+                                Cancel
+                            </button>
+                            <button className="btn btn-primary" onClick={handleSaveLicense} disabled={updatingLicense}>
+                                {updatingLicense ? "Applying..." : "Yes, Replace License"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ----------------------------------------------------------------
                 How to get YouTube cookies modal guide
@@ -944,6 +1137,66 @@ function Settings() {
                         </div>
                         <div className="warning-modal-actions">
                             <button className="btn btn-primary" onClick={() => setShowCookieGuide(false)}>
+                                Got it, Close Guide
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ----------------------------------------------------------------
+                How to get Resilio Sync license modal guide
+            ---------------------------------------------------------------- */}
+            {showResilioLicenseGuide && (
+                <div className="settings-warning-modal-overlay">
+                    <div className="settings-warning-modal cookie-guide-modal">
+                        <div className="warning-modal-header">
+                            <Key size={22} className="warning-icon blue" style={{ color: "#3b82f6" }} />
+                            <h3>How to Get a Resilio Sync License</h3>
+                            <button
+                                type="button"
+                                className="modal-close-btn"
+                                onClick={() => setShowResilioLicenseGuide(false)}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="cookie-guide-body">
+                            <div className="guide-callout info">
+                                <ShieldCheck size={16} />
+                                <span>
+                                    <strong>Free Engine Mode Active:</strong> Resilio Sync operates out of the box for standard folder synchronization without a paid key.
+                                </span>
+                            </div>
+
+                            <h4 className="guide-step-title">1. Why get a Resilio Sync Pro License?</h4>
+                            <p className="warning-modal-body">
+                                A Resilio Sync Home Pro / Business license unlocks advanced features including <strong>Selective Sync</strong> (downloading specific tracks on-demand), granular folder access permissions, and unlimited peer speed capabilities.
+                            </p>
+
+                            <h4 className="guide-step-title">2. How to purchase or obtain a license</h4>
+                            <ol className="guide-steps-list">
+                                <li>Visit the official Resilio Sync website at <a href="https://www.resilio.com/individuals/" target="_blank" rel="noreferrer" style={{ color: "#3b82f6", fontWeight: 700 }}>resilio.com/individuals <ExternalLink size={12} /></a>.</li>
+                                <li>Choose a <strong>Sync Home Pro</strong> or Business license plan.</li>
+                                <li>After purchase, Resilio will email you your license key or provide a downloadable <code>.btskey</code> file.</li>
+                            </ol>
+
+                            <h4 className="guide-step-title">3. How to apply it in Music Sync</h4>
+                            <ol className="guide-steps-list">
+                                <li>Open your <code>.btskey</code> file in a text editor (Notepad, VS Code, TextEdit).</li>
+                                <li>Copy the entire key text content.</li>
+                                <li>Paste the content into the <strong>License Key / File Content</strong> area on this page and click <strong>Save & Apply License</strong>.</li>
+                            </ol>
+
+                            <div className="guide-callout security">
+                                <Lock size={16} />
+                                <span>
+                                    <strong>Privacy Guarantee:</strong> License files are saved locally in the container's storage volume, never uploaded to third-party servers, and masked in all API responses.
+                                </span>
+                            </div>
+                        </div>
+                        <div className="warning-modal-actions">
+                            <button className="btn btn-primary" onClick={() => setShowResilioLicenseGuide(false)}>
                                 Got it, Close Guide
                             </button>
                         </div>

@@ -133,3 +133,58 @@ def test_revoke_resilio_peer_endpoint():
         assert data["status"] == "success"
         assert data["peer_id"] == "p-123"
 
+
+def test_get_resilio_license_endpoint():
+    from app.rslsync.schemas import ResilioLicenseStatus
+
+    mock_lic = ResilioLicenseStatus(
+        status="activated",
+        has_license_file=True,
+        masked_key="PRO-****-KEY1",
+        license_type="Pro",
+        valid=True,
+    )
+
+    with patch("app.api.rslsync.resilio_service.get_license_status", new=AsyncMock(return_value=mock_lic)):
+        response = client.get("/api/rslsync/license")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "activated"
+        assert data["masked_key"] == "PRO-****-KEY1"
+
+
+def test_update_resilio_license_endpoint():
+    from app.rslsync.schemas import ResilioLicenseStatus
+
+    mock_lic = ResilioLicenseStatus(
+        status="configured",
+        has_license_file=True,
+        masked_key="ABCD-****-EFGH",
+        valid=False,
+    )
+
+    with patch("app.api.rslsync.resilio_service.update_license", new=AsyncMock(return_value=mock_lic)):
+        response = client.post("/api/rslsync/license", json={"license_key": "ABCD1234EFGH5678"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "configured"
+        assert data["masked_key"] == "ABCD-****-EFGH"
+
+
+def test_delete_resilio_license_endpoint():
+    from app.rslsync.schemas import ResilioLicenseStatus
+
+    mock_lic = ResilioLicenseStatus(
+        status="not_configured",
+        has_license_file=False,
+        valid=False,
+    )
+
+    with patch("app.api.rslsync.resilio_service.delete_license", new=AsyncMock(return_value=mock_lic)):
+        response = client.delete("/api/rslsync/license")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "not_configured"
+        assert data["has_license_file"] is False
+
+

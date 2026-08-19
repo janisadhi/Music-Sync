@@ -1,23 +1,35 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
+    Activity,
     AlertCircle,
-    ArrowDown,
-    ArrowUp,
+    ArrowDownRight,
+    ArrowUpRight,
     Check,
     CheckCircle2,
     Clock,
     Copy,
+    Cpu,
     Download,
+    ExternalLink,
+    FileText,
     Folder,
+    FolderSync,
     HardDrive,
+    Key,
     Laptop,
+    Lock,
     Plus,
     QrCode,
     RefreshCw,
+    Settings,
+    Share2,
+    ShieldAlert,
     ShieldCheck,
     Smartphone,
     Trash2,
     Wifi,
+    WifiOff,
     X,
     Zap,
 } from "lucide-react";
@@ -48,8 +60,9 @@ export default function ResilioSync() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState("overview"); // "overview" | "folders" | "transfers"
 
-    // Add Device Modal State
+    // Add Device Wizard State
     const [showModal, setShowModal] = useState(false);
     const [wizardStep, setWizardStep] = useState(1);
     const [selectedFolderId, setSelectedFolderId] = useState("music-downloads");
@@ -57,8 +70,10 @@ export default function ResilioSync() {
     const [shareInfo, setShareInfo] = useState(null);
     const [generatingShare, setGeneratingShare] = useState(false);
     const [copiedSecret, setCopiedSecret] = useState(false);
+    const [copiedRoSecret, setCopiedRoSecret] = useState(false);
     const [pairingDetected, setPairingDetected] = useState(false);
     const [pairedDeviceName, setPairedDeviceName] = useState(null);
+    const [knownPeerIds, setKnownPeerIds] = useState([]);
 
     const fetchOverview = async (isManual = false) => {
         try {
@@ -68,7 +83,7 @@ export default function ResilioSync() {
             setOverview(data);
         } catch (err) {
             console.error("Failed to fetch Resilio Sync overview:", err);
-            setError("Unable to connect to Resilio Sync API service.");
+            setError("Unable to communicate with Resilio Sync API service.");
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -77,7 +92,7 @@ export default function ResilioSync() {
 
     useEffect(() => {
         fetchOverview();
-        const timer = setInterval(() => fetchOverview(false), 3000);
+        const timer = setInterval(() => fetchOverview(false), 2500);
         return () => clearInterval(timer);
     }, []);
 
@@ -87,7 +102,7 @@ export default function ResilioSync() {
         if (showModal && wizardStep === 2) {
             pollTimer = setInterval(async () => {
                 try {
-                    const status = await getPairingStatus(selectedFolderId);
+                    const status = await getPairingStatus(selectedFolderId, knownPeerIds);
                     if (status.detected && status.device_name) {
                         setPairingDetected(true);
                         setPairedDeviceName(status.device_name);
@@ -102,7 +117,7 @@ export default function ResilioSync() {
         return () => {
             if (pollTimer) clearInterval(pollTimer);
         };
-    }, [showModal, wizardStep, selectedFolderId]);
+    }, [showModal, wizardStep, selectedFolderId, knownPeerIds]);
 
     const handleOpenModal = () => {
         setShowModal(true);
@@ -111,6 +126,9 @@ export default function ResilioSync() {
         setCopiedSecret(false);
         setPairingDetected(false);
         setPairedDeviceName(null);
+        // Snapshot existing peer IDs so pairing status ignores old offline peers
+        const currentPeers = overview?.peers || [];
+        setKnownPeerIds(currentPeers.map((p) => p.id));
     };
 
     const handleGenerateShare = async () => {
@@ -127,18 +145,19 @@ export default function ResilioSync() {
         }
     };
 
-    const handleCopySecret = () => {
-        if (!shareInfo?.secret_key) return;
-        navigator.clipboard.writeText(shareInfo.secret_key);
-        setCopiedSecret(true);
-        setTimeout(() => setCopiedSecret(false), 2000);
+    const handleCopyText = (text, setCopiedFn) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopiedFn(true);
+        setTimeout(() => setCopiedFn(false), 2000);
     };
 
     const handleRevokePeer = async (peerId, peerName) => {
         if (!window.confirm(`Disconnect and revoke paired device "${peerName}"?`)) return;
         try {
-            await revokePeer(peerId);
-            fetchOverview(true);
+            const folderId = overview?.folders?.[0]?.id || "music-downloads";
+            await revokePeer(peerId, folderId);
+            await fetchOverview(true);
         } catch (err) {
             console.error("Failed to revoke peer:", err);
             alert(`Failed to revoke device "${peerName}".`);
@@ -148,15 +167,16 @@ export default function ResilioSync() {
     if (loading && !overview) {
         return (
             <div className="rslsync-container">
-                <div className="health-loading">
-                    <RefreshCw className="spin-icon" size={32} />
-                    <p>Connecting to Resilio Sync engine...</p>
+                <div className="rslsync-loading-skeleton">
+                    <RefreshCw className="spin-icon text-indigo" size={36} />
+                    <p>Initializing P2P Engine Telemetry...</p>
                 </div>
             </div>
         );
     }
 
     const status = overview?.status || {};
+    const license = overview?.license || {};
     const folders = overview?.folders || [];
     const peers = overview?.peers || [];
     const transfers = overview?.transfers || [];
@@ -166,297 +186,490 @@ export default function ResilioSync() {
 
     return (
         <div className="rslsync-container">
-            {/* Header */}
+            {/* Top Navigation / Title Header */}
             <header className="rslsync-header">
-                <div>
-                    <h1>Resilio Sync Engine</h1>
-                    <p className="subtitle">
-                        Headless peer-to-peer music library transport layer & mobile device synchronization.
-                    </p>
-                </div>
-
-                <div className="rslsync-header-actions">
-                    <button
-                        className="btn btn-primary"
-                        onClick={handleOpenModal}
-                        style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                    >
-                        <Plus size={16} /> Add Device
-                    </button>
-
-                    <span className="live-pulse-badge">
-                        <span className="pulse-dot" /> Live (Auto-refreshes 3s)
-                    </span>
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => fetchOverview(true)}
-                        disabled={refreshing}
-                    >
-                        <RefreshCw className={refreshing ? "spin-icon" : ""} size={15} />
-                        {refreshing ? "Refreshing..." : "Refresh"}
-                    </button>
-                </div>
-            </header>
-
-            {/* Resilio Health & Connection Hero Banner */}
-            <div className={`rslsync-hero-banner ${isConnected ? "connected" : "disconnected"}`}>
-                <div className="rslsync-hero-left">
-                    <div className={`rslsync-icon-circle ${isConnected ? "online" : "offline"}`}>
-                        {isConnected ? <CheckCircle2 size={28} /> : <AlertCircle size={28} />}
+                <div className="rslsync-header-left">
+                    <div className="rslsync-brand-badge">
+                        <FolderSync size={24} className="text-indigo" />
                     </div>
-                    <div className="rslsync-title-block">
-                        <h2>{isConnected ? "Resilio Sync Operational" : "Resilio Sync Container Unavailable"}</h2>
-                        <p>
-                            {isConnected
-                                ? "P2P mobile synchronization engine is active and connected to host filesystem."
-                                : status.error_message || "Cannot communicate with the Resilio Sync container instance."}
+                    <div>
+                        <div className="rslsync-title-row">
+                            <h1>Resilio Sync Center</h1>
+                            <span className={`engine-pill ${isConnected ? "online" : "offline"}`}>
+                                <span className="pulse-dot" />
+                                {isConnected ? "ENGINE OPERATIONAL" : "DISCONNECTED"}
+                            </span>
+                        </div>
+                        <p className="subtitle">
+                            Headless P2P transport layer & high-speed mobile music file synchronization.
                         </p>
                     </div>
                 </div>
 
-                <div className="rslsync-hero-right">
-                    <span className={`badge-status ${isConnected ? "online" : "offline"}`}>
-                        {isConnected ? "CONNECTED" : "DISCONNECTED"}
-                    </span>
+                <div className="rslsync-header-actions">
+                    <button
+                        className="btn btn-glow-primary"
+                        onClick={handleOpenModal}
+                        disabled={!isConnected}
+                    >
+                        <Plus size={16} /> Add Device
+                    </button>
+
+                    <Link to="/settings" className="btn btn-secondary">
+                        <Settings size={15} /> License Config
+                    </Link>
+
+                    <button
+                        className="btn btn-icon-only"
+                        onClick={() => fetchOverview(true)}
+                        disabled={refreshing}
+                        title="Refresh metrics"
+                    >
+                        <RefreshCw className={refreshing ? "spin-icon" : ""} size={16} />
+                    </button>
+                </div>
+            </header>
+
+            {/* Glassmorphic Engine Banner */}
+            <div className={`rslsync-glass-banner ${isConnected ? "active" : "down"}`}>
+                <div className="banner-glow-effect" />
+                <div className="banner-content">
+                    <div className="banner-left">
+                        <div className={`banner-status-icon ${isConnected ? "online" : "offline"}`}>
+                            {isConnected ? <Zap size={24} /> : <WifiOff size={24} />}
+                        </div>
+                        <div>
+                            <h2>{isConnected ? "Headless Sync Mesh Active" : "Resilio Sync Container Down"}</h2>
+                            <p>
+                                {isConnected
+                                    ? "Peer-to-peer file synchronization engine is listening on internal port 8888 & UDP 55555."
+                                    : status.error_message || "Unable to establish REST/WebUI API handshake with rslsync service."}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="banner-tags">
+                        <div className="tag-group">
+                            <span className="tag-label">P2P Network</span>
+                            <span className="tag-val">
+                                <Wifi size={13} /> {status.connected_peers_count || 0} Peers Online
+                            </span>
+                        </div>
+
+                        <div className="tag-group">
+                            <span className="tag-label">Engine License</span>
+                            <span className={`tag-val ${license?.status === "activated" ? "pro" : "free"}`}>
+                                <Key size={13} /> {license?.status?.toUpperCase() || "FREE"} MODE
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Key Metrics Overview Cards */}
+            {/* 4 Metric Cards Grid */}
             <div className="rslsync-metrics-grid">
-                {/* Sync Progress */}
-                <div className="rslsync-card">
-                    <div className="rslsync-card-header">
-                        <span className="rslsync-card-title">
-                            <Zap size={18} style={{ color: "#3b82f6" }} /> Sync Progress
+                {/* 1. Sync Progress */}
+                <div className="metric-card shadow-card">
+                    <div className="card-top">
+                        <span className="card-label">
+                            <Activity size={16} className="icon-blue" /> Sync Completion
                         </span>
-                        <span className="badge-status synced">{status.overall_progress_pct || 100}%</span>
+                        <span className={`status-pill ${status.status || "synced"}`}>
+                            {status.status === "syncing" ? "Syncing" : status.status === "indexing" ? "Indexing" : "Synced"}
+                        </span>
                     </div>
-                    <div className="rslsync-card-number">{status.overall_progress_pct || 100}%</div>
-                    <div className="rslsync-progress-track">
+                    <div className="card-big-stat">
+                        {status.overall_progress_pct || 100}
+                        <span className="unit">%</span>
+                    </div>
+                    <div className="progress-bar-container">
                         <div
-                            className="rslsync-progress-fill"
+                            className="progress-bar-fill"
                             style={{ width: `${status.overall_progress_pct || 100}%` }}
                         />
                     </div>
-                </div>
-
-                {/* Transfer Speed */}
-                <div className="rslsync-card">
-                    <div className="rslsync-card-header">
-                        <span className="rslsync-card-title">
-                            <Wifi size={18} style={{ color: "#10b981" }} /> Speed & Bandwidth
-                        </span>
-                        <span className="badge-status syncing">
-                            {status.active_transfers_count || 0} Transfers
-                        </span>
-                    </div>
-                    <div className="rslsync-card-number">
-                        <span style={{ fontSize: "18px", color: "#10b981" }}>
-                            <ArrowDown size={16} /> {formatSpeed(status.download_speed)}
-                        </span>
-                        {" / "}
-                        <span style={{ fontSize: "18px", color: "#3b82f6" }}>
-                            <ArrowUp size={16} /> {formatSpeed(status.upload_speed)}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Paired Mobile Devices */}
-                <div className="rslsync-card">
-                    <div className="rslsync-card-header">
-                        <span className="rslsync-card-title">
-                            <Smartphone size={18} style={{ color: "#8b5cf6" }} /> Connected Devices
-                        </span>
-                        <span className="badge-status online">
-                            {status.connected_peers_count || 0} Online
-                        </span>
-                    </div>
-                    <div className="rslsync-card-number">{status.connected_peers_count || 0} Devices</div>
-                </div>
-            </div>
-
-            {/* Split Dashboard Sections */}
-            <div className="rslsync-dashboard-grid">
-                {/* Monitored Sync Folders */}
-                <div className="rslsync-panel">
-                    <div className="panel-title-row">
-                        <h3><Folder size={18} /> Synchronized Folders</h3>
-                        <span className="badge-status online">{folders.length} Folders</span>
-                    </div>
-
-                    <div className="rslsync-item-list">
-                        {folders.length === 0 ? (
-                            <div className="empty-state">
-                                <Folder size={32} />
-                                <p>No sync folders configured.</p>
-                            </div>
-                        ) : (
-                            folders.map((f) => (
-                                <div key={f.id || f.name} className="rslsync-item-row">
-                                    <div className="item-left">
-                                        <div className="item-icon">
-                                            <HardDrive size={18} />
-                                        </div>
-                                        <div className="item-info">
-                                            <span className="item-title">{f.name}</span>
-                                            <span className="item-subtitle"><code>{f.path}</code></span>
-                                        </div>
-                                    </div>
-                                    <span className={`badge-status ${f.status}`}>{f.status}</span>
-                                </div>
-                            ))
+                    <div className="card-subtext">
+                        <span>Synced: <strong>{status.synced_files || 0}</strong> / {status.total_files || 0} tracks</span>
+                        {status.remaining_files > 0 && (
+                            <span className="text-amber"><strong>{status.remaining_files}</strong> queued</span>
                         )}
                     </div>
                 </div>
 
-                {/* Connected Mobile Devices & Peers */}
-                <div className="rslsync-panel">
-                    <div className="panel-title-row">
-                        <h3><Smartphone size={18} /> Connected Devices</h3>
-                        <span className="badge-status online">{peers.length} Devices</span>
+                {/* 2. Bandwidth Speeds */}
+                <div className="metric-card shadow-card">
+                    <div className="card-top">
+                        <span className="card-label">
+                            <Wifi size={16} className="icon-emerald" /> Live P2P Bandwidth
+                        </span>
+                        <span className="badge-transfers">
+                            {status.active_transfers_count || 0} Active
+                        </span>
                     </div>
+                    <div className="bandwidth-row">
+                        <div className="speed-block down">
+                            <ArrowDownRight size={18} />
+                            <div>
+                                <span className="speed-val">{formatSpeed(status.download_speed)}</span>
+                                <span className="speed-lbl">Download</span>
+                            </div>
+                        </div>
+                        <div className="speed-block up">
+                            <ArrowUpRight size={18} />
+                            <div>
+                                <span className="speed-val">{formatSpeed(status.upload_speed)}</span>
+                                <span className="speed-lbl">Upload</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card-subtext">
+                        <span>P2P Direct Connections active</span>
+                    </div>
+                </div>
 
-                    <div className="rslsync-item-list">
+                {/* 3. Library Disk Storage */}
+                <div className="metric-card shadow-card">
+                    <div className="card-top">
+                        <span className="card-label">
+                            <HardDrive size={16} className="icon-purple" /> Library Payload
+                        </span>
+                        <span className="status-pill synced">Container FS</span>
+                    </div>
+                    <div className="card-big-stat" style={{ fontSize: "22px" }}>
+                        {formatBytes(status.synced_bytes)}
+                    </div>
+                    <div className="card-subtext" style={{ marginTop: "12px" }}>
+                        <span>Total Library: <strong>{formatBytes(status.total_bytes)}</strong></span>
+                    </div>
+                </div>
+
+                {/* 4. Connected Devices */}
+                <div className="metric-card shadow-card">
+                    <div className="card-top">
+                        <span className="card-label">
+                            <Smartphone size={16} className="icon-indigo" /> Paired Mesh Devices
+                        </span>
+                        <span className={`status-pill ${peers.length > 0 ? "online" : "offline"}`}>
+                            {peers.length} Devices
+                        </span>
+                    </div>
+                    <div className="card-big-stat">
+                        {status.connected_peers_count || 0}
+                        <span className="unit" style={{ fontSize: "14px", marginLeft: "6px" }}>Online</span>
+                    </div>
+                    <div className="card-subtext" style={{ marginTop: "12px" }}>
+                        <span>{peers.length} registered mobile sync targets</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="rslsync-tab-bar">
+                <button
+                    className={`tab-item ${activeTab === "overview" ? "active" : ""}`}
+                    onClick={() => setActiveTab("overview")}
+                >
+                    <Smartphone size={16} /> Connected Devices ({peers.length})
+                </button>
+
+                <button
+                    className={`tab-item ${activeTab === "folders" ? "active" : ""}`}
+                    onClick={() => setActiveTab("folders")}
+                >
+                    <Folder size={16} /> Shared Folders ({folders.length})
+                </button>
+
+                <button
+                    className={`tab-item ${activeTab === "transfers" ? "active" : ""}`}
+                    onClick={() => setActiveTab("transfers")}
+                >
+                    <Download size={16} /> Activity & Logs ({transfers.length + errors.length})
+                </button>
+            </div>
+
+            {/* Tab 1: Connected Devices View */}
+            {activeTab === "overview" && (
+                <div className="tab-content-fade">
+                    <div className="panel-box">
+                        <div className="panel-header-row">
+                            <div>
+                                <h3>Mobile Devices & Paired Nodes</h3>
+                                <p className="panel-sub">Devices connected via Resilio BitTorrent P2P protocols.</p>
+                            </div>
+                            <button className="btn btn-sm btn-primary" onClick={handleOpenModal} disabled={!isConnected}>
+                                <Plus size={14} /> Add Device
+                            </button>
+                        </div>
+
                         {peers.length === 0 ? (
-                            <div className="empty-state">
-                                <Smartphone size={32} />
-                                <p>No mobile devices paired yet. Click "Add Device" above to pair your phone.</p>
+                            <div className="empty-state-box">
+                                <div className="empty-icon-circle">
+                                    <Smartphone size={32} />
+                                </div>
+                                <h4>No Devices Paired Yet</h4>
+                                <p>Pair your Android, iOS, or Desktop Resilio Sync app to start auto-syncing music files.</p>
+                                <button className="btn btn-primary" onClick={handleOpenModal} style={{ marginTop: "8px" }}>
+                                    <QrCode size={16} /> Pair New Device via QR Code
+                                </button>
                             </div>
                         ) : (
-                            peers.map((p) => (
-                                <div key={p.id || p.name} className="rslsync-item-row">
-                                    <div className="item-left">
-                                        <div className="item-icon">
-                                            {p.name.toLowerCase().includes("laptop") ? <Laptop size={18} /> : <Smartphone size={18} />}
-                                        </div>
-                                        <div className="item-info">
-                                            <span className="item-title">{p.name}</span>
-                                            <span className="item-subtitle">{p.connection_state} connection</span>
-                                        </div>
-                                    </div>
+                            <div className="peers-grid">
+                                {peers.map((peer) => (
+                                    <div key={peer.id || peer.name} className="peer-card">
+                                        <div className="peer-top">
+                                            <div className="peer-avatar">
+                                                {peer.name.toLowerCase().includes("laptop") || peer.name.toLowerCase().includes("desktop") ? (
+                                                    <Laptop size={22} />
+                                                ) : (
+                                                    <Smartphone size={22} />
+                                                )}
+                                            </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <span className={`badge-status ${p.status}`}>{p.status}</span>
-                                        <button
-                                            className="btn-revoke-peer"
-                                            onClick={() => handleRevokePeer(p.id, p.name)}
-                                            title="Disconnect device"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                            <div className="peer-title-info">
+                                                <h4>{peer.name}</h4>
+                                                <span className="peer-id">ID: {peer.id ? `${peer.id.substring(0, 12)}...` : "Paired Device"}</span>
+                                            </div>
+
+                                            <span className={`status-pill ${peer.status === "online" ? "online" : "offline"}`}>
+                                                {peer.status?.toUpperCase()}
+                                            </span>
+                                        </div>
+
+                                        <div className="peer-details">
+                                            <div className="detail-item">
+                                                <span className="lbl">Connection:</span>
+                                                <span className="val badge-connection">{peer.connection_state}</span>
+                                            </div>
+
+                                            <div className="detail-item">
+                                                <span className="lbl">Sync State:</span>
+                                                <span className="val">{peer.sync_state}</span>
+                                            </div>
+
+                                            {peer.last_seen && (
+                                                <div className="detail-item">
+                                                    <span className="lbl">Last Seen:</span>
+                                                    <span className="val">{peer.last_seen}</span>
+                                                </div>
+                                            )}
+
+                                            {peer.bytes_remaining > 0 && (
+                                                <div className="detail-item">
+                                                    <span className="lbl">Queue Remaining:</span>
+                                                    <span className="val text-amber">{formatBytes(peer.bytes_remaining)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="peer-footer">
+                                            <button
+                                                className="btn-revoke"
+                                                onClick={() => handleRevokePeer(peer.id, peer.name)}
+                                            >
+                                                <Trash2 size={14} /> Disconnect Device
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))
+                                ))}
+                            </div>
                         )}
                     </div>
                 </div>
-            </div>
+            )}
 
-            {/* Active Transfers & Errors */}
-            <div className="rslsync-dashboard-grid">
-                {/* Active Transfers */}
-                <div className="rslsync-panel">
-                    <div className="panel-title-row">
-                        <h3><Download size={18} /> Active File Transfers</h3>
-                        <span className="badge-status syncing">{transfers.length} Active</span>
-                    </div>
-
-                    {transfers.length === 0 ? (
-                        <div className="empty-state">
-                            <Clock size={32} />
-                            <p>No file transfers currently in progress.</p>
+            {/* Tab 2: Shared Sync Folders */}
+            {activeTab === "folders" && (
+                <div className="tab-content-fade">
+                    <div className="panel-box">
+                        <div className="panel-header-row">
+                            <div>
+                                <h3>Synchronized Filesystem Folders</h3>
+                                <p className="panel-sub">Local directories managed by the Resilio Sync engine.</p>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="rslsync-item-list">
-                            {transfers.map((t) => (
-                                <div key={t.id || t.filename} className="transfer-card">
-                                    <div className="transfer-top">
-                                        <span className="transfer-filename">{t.filename}</span>
-                                        <span className="transfer-speed">{formatSpeed(t.speed_bytes_sec)}</span>
+
+                        <div className="folders-list">
+                            {folders.map((folder) => (
+                                <div key={folder.id || folder.name} className="folder-detail-card">
+                                    <div className="folder-header">
+                                        <div className="folder-icon-wrap">
+                                            <HardDrive size={22} />
+                                        </div>
+                                        <div className="folder-title-block">
+                                            <h4>{folder.name}</h4>
+                                            <code className="folder-path">{folder.path}</code>
+                                        </div>
+                                        <span className={`status-pill ${folder.status}`}>{folder.status?.toUpperCase()}</span>
                                     </div>
-                                    <div className="rslsync-progress-track">
-                                        <div
-                                            className="rslsync-progress-fill"
-                                            style={{ width: `${t.progress_pct}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
 
-                {/* Resilio Error Logs */}
-                <div className="rslsync-panel">
-                    <div className="panel-title-row">
-                        <h3><AlertCircle size={18} /> Synchronization Errors</h3>
-                        <span className={`badge-status ${errors.length > 0 ? "error" : "online"}`}>
-                            {errors.length} Errors
-                        </span>
-                    </div>
+                                    <div className="folder-metrics-row">
+                                        <div className="metric-pill">
+                                            <span className="lbl">Total Files</span>
+                                            <span className="val">{folder.synced_files_count} / {folder.files_count}</span>
+                                        </div>
 
-                    {errors.length === 0 ? (
-                        <div className="empty-state">
-                            <ShieldCheck size={32} style={{ color: "#10b981" }} />
-                            <p>No synchronization errors reported.</p>
-                        </div>
-                    ) : (
-                        <div className="rslsync-item-list">
-                            {errors.map((err) => (
-                                <div key={err.id || err.message} className="rslsync-item-row" style={{ background: "#fef2f2" }}>
-                                    <div className="item-left">
-                                        <AlertCircle size={18} style={{ color: "#ef4444" }} />
-                                        <div className="item-info">
-                                            <span className="item-title" style={{ color: "#991b1b" }}>{err.message}</span>
-                                            {err.timestamp && <span className="item-subtitle">{err.timestamp}</span>}
+                                        <div className="metric-pill">
+                                            <span className="lbl">Disk Storage</span>
+                                            <span className="val">{formatBytes(folder.ondisk_size_bytes)} / {formatBytes(folder.size_bytes)}</span>
+                                        </div>
+
+                                        <div className="metric-pill">
+                                            <span className="lbl">Speed</span>
+                                            <span className="val">{formatSpeed(folder.down_speed || folder.up_speed)}</span>
+                                        </div>
+
+                                        <div className="metric-pill">
+                                            <span className="lbl">Peers</span>
+                                            <span className="val">{folder.connected_peers_count} Connected</span>
                                         </div>
                                     </div>
+
+                                    {/* Secret Keys Container */}
+                                    <div className="secrets-container">
+                                        {folder.secret && (
+                                            <div className="secret-row">
+                                                <span className="secret-lbl"><Lock size={13} /> Read-Write Key:</span>
+                                                <code className="secret-code">{folder.secret_masked || folder.secret}</code>
+                                                <button
+                                                    className="btn-icon-copy"
+                                                    onClick={() => handleCopyText(folder.secret, setCopiedSecret)}
+                                                    title="Copy Read-Write Secret"
+                                                >
+                                                    {copiedSecret ? <Check size={14} className="text-emerald" /> : <Copy size={14} />}
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {folder.readonlysecret && (
+                                            <div className="secret-row">
+                                                <span className="secret-lbl"><ShieldCheck size={13} /> Read-Only Key:</span>
+                                                <code className="secret-code">{folder.readonlysecret_masked || folder.readonlysecret}</code>
+                                                <button
+                                                    className="btn-icon-copy"
+                                                    onClick={() => handleCopyText(folder.readonlysecret, setCopiedRoSecret)}
+                                                    title="Copy Read-Only Secret"
+                                                >
+                                                    {copiedRoSecret ? <Check size={14} className="text-emerald" /> : <Copy size={14} />}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    )}
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* Tab 3: Activity & Logs */}
+            {activeTab === "transfers" && (
+                <div className="tab-content-fade">
+                    <div className="split-panel-grid">
+                        {/* Active File Transfers */}
+                        <div className="panel-box">
+                            <div className="panel-header-row">
+                                <h3><Download size={18} /> Active P2P Transfers</h3>
+                                <span className="badge-transfers">{transfers.length} Active</span>
+                            </div>
+
+                            {transfers.length === 0 ? (
+                                <div className="empty-state-box">
+                                    <Clock size={32} style={{ color: "#94a3b8" }} />
+                                    <h4>No Active Transfers</h4>
+                                    <p>All music files are fully synchronized with paired devices.</p>
+                                </div>
+                            ) : (
+                                <div className="transfers-list">
+                                    {transfers.map((t) => (
+                                        <div key={t.id || t.filename} className="transfer-item-row">
+                                            <div className="transfer-info">
+                                                <span className="filename">{t.filename}</span>
+                                                <span className="speed">{formatSpeed(t.speed_bytes_sec)}</span>
+                                            </div>
+                                            <div className="progress-bar-container">
+                                                <div className="progress-bar-fill" style={{ width: `${t.progress_pct}%` }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* System Error Log */}
+                        <div className="panel-box">
+                            <div className="panel-header-row">
+                                <h3><ShieldAlert size={18} /> Engine Error Logs</h3>
+                                <span className={`status-pill ${errors.length > 0 ? "offline" : "online"}`}>
+                                    {errors.length} Errors
+                                </span>
+                            </div>
+
+                            {errors.length === 0 ? (
+                                <div className="empty-state-box">
+                                    <CheckCircle2 size={32} style={{ color: "#10b981" }} />
+                                    <h4>Clean Health Status</h4>
+                                    <p>No filesystem or peer synchronization errors recorded.</p>
+                                </div>
+                            ) : (
+                                <div className="errors-list">
+                                    {errors.map((err) => (
+                                        <div key={err.id || err.message} className="error-item-card">
+                                            <AlertCircle size={18} className="text-rose" />
+                                            <div>
+                                                <p className="err-msg">{err.message}</p>
+                                                {err.timestamp && <span className="err-time">{err.timestamp}</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ==============================================================================
-               Add Device Modal Dialog
+               MODAL: Add New Device Wizard
                ============================================================================== */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2><Smartphone size={20} style={{ color: "#3b82f6" }} /> Add New Mobile Device</h2>
+                    <div className="modal-card-redesign" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header-redesign">
+                            <div>
+                                <h2><Smartphone size={20} className="text-indigo" /> Pair Mobile Device</h2>
+                                <p className="modal-sub">Scan QR code from your phone's Resilio Sync app</p>
+                            </div>
                             <button className="btn-close-modal" onClick={() => setShowModal(false)}>
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="modal-body">
-                            {/* Steps Indicator */}
-                            <div className="wizard-steps">
-                                <div className={`wizard-step-item ${wizardStep === 1 ? "active" : wizardStep > 1 ? "completed" : ""}`}>
-                                    <span className="step-num">{wizardStep > 1 ? "✓" : "1"}</span>
-                                    <span>Folder</span>
+                        <div className="modal-body-redesign">
+                            {/* Wizard Steps Navigation */}
+                            <div className="wizard-stepper">
+                                <div className={`step-item ${wizardStep === 1 ? "active" : wizardStep > 1 ? "done" : ""}`}>
+                                    <span className="step-badge">{wizardStep > 1 ? <Check size={12} /> : "1"}</span>
+                                    <span>Folder Access</span>
                                 </div>
-                                <span>→</span>
-                                <div className={`wizard-step-item ${wizardStep === 2 ? "active" : wizardStep > 2 ? "completed" : ""}`}>
-                                    <span className="step-num">{wizardStep > 2 ? "✓" : "2"}</span>
-                                    <span>Pair Device</span>
+                                <span className="step-line" />
+                                <div className={`step-item ${wizardStep === 2 ? "active" : wizardStep > 2 ? "done" : ""}`}>
+                                    <span className="step-badge">{wizardStep > 2 ? <Check size={12} /> : "2"}</span>
+                                    <span>Scan QR Code</span>
                                 </div>
-                                <span>→</span>
-                                <div className={`wizard-step-item ${wizardStep === 3 ? "active" : ""}`}>
-                                    <span className="step-num">3</span>
-                                    <span>Connected</span>
+                                <span className="step-line" />
+                                <div className={`step-item ${wizardStep === 3 ? "active" : ""}`}>
+                                    <span className="step-badge">3</span>
+                                    <span>Paired</span>
                                 </div>
                             </div>
 
-                            {/* Step 1: Select Sync Folder */}
+                            {/* Step 1: Select Permission */}
                             {wizardStep === 1 && (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    <div className="form-group">
-                                        <label>1. Select Sync Folder</label>
+                                <div className="wizard-step-content">
+                                    <div className="form-group-custom">
+                                        <label>1. Music Sync Folder</label>
                                         <select
-                                            className="form-select"
+                                            className="select-custom"
                                             value={selectedFolderId}
                                             onChange={(e) => setSelectedFolderId(e.target.value)}
                                         >
@@ -464,105 +677,102 @@ export default function ResilioSync() {
                                         </select>
                                     </div>
 
-                                    <div className="form-group">
-                                        <label>2. Device Sync Access Permission</label>
-                                        <select
-                                            className="form-select"
-                                            value={selectedPermission}
-                                            onChange={(e) => setSelectedPermission(e.target.value)}
-                                        >
-                                            <option value="read_write">Read-Write (Sync both ways between phone & server)</option>
-                                            <option value="read_only">Read-Only (Download music to phone only)</option>
-                                        </select>
+                                    <div className="form-group-custom">
+                                        <label>2. Device Permission Mode</label>
+                                        <div className="permission-options-grid">
+                                            <div
+                                                className={`permission-card ${selectedPermission === "read_write" ? "selected" : ""}`}
+                                                onClick={() => setSelectedPermission("read_write")}
+                                            >
+                                                <div className="perm-header">
+                                                    <Lock size={16} /> <strong>Read-Write (Recommended)</strong>
+                                                </div>
+                                                <p>Allows 2-way sync. Music downloads to phone and changes sync back to server.</p>
+                                            </div>
+
+                                            <div
+                                                className={`permission-card ${selectedPermission === "read_only" ? "selected" : ""}`}
+                                                onClick={() => setSelectedPermission("read_only")}
+                                            >
+                                                <div className="perm-header">
+                                                    <ShieldCheck size={16} /> <strong>Read-Only</strong>
+                                                </div>
+                                                <p>Phone only receives music files. Changes on phone will not modify server files.</p>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <button
-                                        className="btn btn-primary"
-                                        style={{ marginTop: "12px" }}
+                                        className="btn btn-glow-primary btn-block"
                                         onClick={handleGenerateShare}
                                         disabled={generatingShare}
                                     >
-                                        {generatingShare ? "Generating Share..." : "Generate Pairing QR Code →"}
+                                        {generatingShare ? "Generating Pairing Key..." : "Generate QR Code →"}
                                     </button>
                                 </div>
                             )}
 
-                            {/* Step 2: QR Code & Secret Key Display */}
+                            {/* Step 2: Display QR Code & Secret */}
                             {wizardStep === 2 && shareInfo && (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    <div className="qr-code-box">
+                                <div className="wizard-step-content align-center">
+                                    <div className="qr-box-container">
                                         {shareInfo.qr_code_svg ? (
-                                            <img
-                                                src={shareInfo.qr_code_svg}
-                                                alt="Resilio Pairing QR"
-                                                className="qr-code-img"
-                                            />
+                                            <img src={shareInfo.qr_code_svg} alt="Resilio Pairing QR" className="qr-code-rendered" />
                                         ) : (
-                                            <QrCode size={120} style={{ color: "#3b82f6" }} />
+                                            <QrCode size={140} className="text-indigo" />
                                         )}
-                                        <p className="qr-instructions">
-                                            Open the <strong>Resilio Sync</strong> app on your mobile device, tap <strong>+</strong>, choose <strong>Scan QR code</strong>, and point your camera at this QR code.
-                                        </p>
                                     </div>
 
-                                    <div className="form-group">
-                                        <label>Or enter Secret Key manually:</label>
-                                        <div className="secret-code-row">
-                                            <span className="secret-code-text">{shareInfo.secret_key}</span>
-                                            <button className="btn-copy" onClick={handleCopySecret}>
-                                                {copiedSecret ? <Check size={14} /> : <Copy size={14} />}
+                                    <p className="qr-help-text">
+                                        Open <strong>Resilio Sync</strong> on your phone, tap <strong>+</strong>, choose <strong>Scan QR code</strong>, and point your camera here.
+                                    </p>
+
+                                    <div className="manual-secret-box">
+                                        <span className="lbl">Or copy manual secret:</span>
+                                        <div className="secret-input-row">
+                                            <code>{shareInfo.secret_key}</code>
+                                            <button
+                                                className="btn-copy-sm"
+                                                onClick={() => handleCopyText(shareInfo.secret_key, setCopiedSecret)}
+                                            >
+                                                {copiedSecret ? <Check size={13} /> : <Copy size={13} />}
                                                 {copiedSecret ? "Copied" : "Copy"}
                                             </button>
                                         </div>
                                     </div>
 
-                                    <div className="waiting-beacon">
-                                        <RefreshCw className="spin-icon" size={16} />
-                                        <span>Waiting for mobile device connection...</span>
+                                    <div className="beacon-loader">
+                                        <RefreshCw className="spin-icon text-indigo" size={16} />
+                                        <span>Listening for incoming P2P connection...</span>
                                     </div>
 
                                     <button
-                                        className="btn btn-primary"
-                                        style={{ width: "100%" }}
+                                        className="btn btn-primary btn-block"
                                         onClick={() => {
                                             setPairedDeviceName(peers[0]?.name || "Mobile Device");
                                             setWizardStep(3);
                                             fetchOverview(true);
                                         }}
                                     >
-                                        I Have Scanned QR Code / Paired Device →
-                                    </button>
-
-                                    <button
-                                        className="btn btn-secondary"
-                                        onClick={() => setShowModal(false)}
-                                    >
-                                        Close
+                                        I Have Scanned QR Code →
                                     </button>
                                 </div>
                             )}
 
                             {/* Step 3: Success State */}
                             {wizardStep === 3 && (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "center" }}>
-                                    <div className="item-icon" style={{ margin: "0 auto", width: "64px", height: "64px", background: "#ecfdf5", color: "#10b981", borderRadius: "20px" }}>
-                                        <CheckCircle2 size={36} />
+                                <div className="wizard-step-content align-center">
+                                    <div className="success-badge-circle">
+                                        <CheckCircle2 size={42} />
                                     </div>
 
-                                    <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#0f172a" }}>
-                                        Device Successfully Paired!
-                                    </h3>
-
-                                    <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
-                                        Mobile device <strong>"{pairedDeviceName || "Mobile Phone"}"</strong> is connected and synchronized with <strong>Music Sync Library</strong>.
+                                    <h3 className="success-title">Device Successfully Paired!</h3>
+                                    <p className="success-sub">
+                                        Mobile device <strong>"{pairedDeviceName || "Mobile Device"}"</strong> is connected to the Music Sync library mesh.
                                     </p>
 
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ marginTop: "12px" }}
-                                        onClick={() => setShowModal(false)}
-                                    >
-                                        Done
+                                    <button className="btn btn-glow-primary btn-block" onClick={() => setShowModal(false)}>
+                                        Done & Return to Dashboard
                                     </button>
                                 </div>
                             )}

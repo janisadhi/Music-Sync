@@ -2,6 +2,20 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class ResilioLicenseStatus(BaseModel):
+    status: str = "not_configured"  # "not_configured" | "configured" | "activated" | "invalid" | "unavailable"
+    has_license_file: bool = False
+    masked_key: str | None = None
+    license_type: str | None = None  # "Pro" | "Free"
+    valid: bool = False
+    expiration: str | None = None
+    error_message: str | None = None
+
+
+class ResilioLicenseRequest(BaseModel):
+    license_key: str
+
+
 class ResilioPeer(BaseModel):
     id: str | None = None
     name: str
@@ -12,6 +26,9 @@ class ResilioPeer(BaseModel):
     upload_speed: int = 0  # bytes/sec
     bytes_remaining: int = 0
     last_seen: str | None = None
+    last_seen_ts: int | None = None
+    synced_files: int = 0
+    total_files: int = 0
 
 
 class ResilioFolder(BaseModel):
@@ -20,10 +37,22 @@ class ResilioFolder(BaseModel):
     path: str
     status: str = "synced"  # "synced" | "syncing" | "indexing" | "error"
     size_bytes: int = 0
+    ondisk_size_bytes: int = 0
     files_count: int = 0
     synced_files_count: int = 0
+    remaining_files_count: int = 0
+    queue_upload_files: int = 0
+    queue_download_files: int = 0
+    queue_upload_size: int = 0
+    queue_download_size: int = 0
+    up_speed: int = 0  # bytes/sec
+    down_speed: int = 0  # bytes/sec
     secret_masked: str | None = None
+    readonlysecret_masked: str | None = None
+    secret: str | None = None
+    readonlysecret: str | None = None
     last_sync: str | None = None
+    connected_peers_count: int = 0
 
 
 class ResilioTransfer(BaseModel):
@@ -58,12 +87,14 @@ class ResilioStatusResponse(BaseModel):
     synced_bytes: int = 0
     total_files: int = 0
     synced_files: int = 0
+    remaining_files: int = 0
     last_sync: str | None = None
     error_message: str | None = None
 
 
 class ResilioDashboardOverview(BaseModel):
     status: ResilioStatusResponse
+    license: ResilioLicenseStatus | None = None
     folders: list[ResilioFolder] = []
     peers: list[ResilioPeer] = []
     transfers: list[ResilioTransfer] = []
@@ -96,4 +127,5 @@ class ResilioPairingStatus(BaseModel):
     connection_type: str | None = None
     sync_progress_pct: float = 0.0
     error_message: str | None = None
+
 
