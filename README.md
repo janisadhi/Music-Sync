@@ -15,17 +15,18 @@
 - **Automated YouTube Playlist Sync**: Multi-playlist support with flat extraction scanning via `yt-dlp`.
 - **High-Quality Audio & Metadata**: Downloads audio in native format (`.opus`), embeds thumbnails/artwork, and maintains rich track metadata in PostgreSQL.
 - **Synchronized Lyrics (.lrc)**: Automatically fetches timed lyrics from [LRCLIB.net](https://lrclib.net/) and organizes tracks with missing lyrics into a dedicated `no-lyrics/` directory.
-- **Interactive Web Dashboard**: React 19 SPA featuring an embedded audio player with synchronized lyric rendering, playlist manager, system status metrics, and settings GUI.
+- **Resilio Sync P2P Synchronization**: Headless, automated peer-to-peer file synchronization between VPS server library and mobile devices (iOS/Android), complete with 3-step device pairing wizard (SVG QR code generator), device revocation, and license management.
+- **Interactive Web Dashboard**: React 19 SPA featuring an embedded audio player with synchronized lyric rendering, playlist manager, Resilio Sync P2P control center (`/rslsync`), system status metrics, and settings GUI.
 - **Robust Background Workers**: Independent, decoupled background daemon threads for audio downloading and lyrics fetching with exponential backoff retries.
 - **Netscape Cookie Support**: Securely manages Netscape-formatted YouTube cookies stored in the database to sync age-restricted or private playlists safely.
-- **Docker Compose Stack**: Fully containerized multi-service deployment (`postgres`, `app`, `dashboard`).
+- **Docker Compose Stack**: Fully containerized multi-service deployment (`postgres`, `app`, `dashboard`, `metadata`, `resilio`).
 
 ---
 
 ## High-Level Architecture
 
 Music-Sync operates on a strict decoupled worker contract:
-> **SYNC DISCOVERS → DOWNLOADER DOWNLOADS → LYRICS PROCESSES → SCHEDULER TRIGGERS**
+> **SYNC DISCOVERS → DOWNLOADER DOWNLOADS → LYRICS PROCESSES → SCHEDULER TRIGGERS → RESILIO P2P SYNCS TO MOBILE**
 
 ![Music-Sync Architecture Diagram](architecture.svg)
 
@@ -36,6 +37,7 @@ For in-depth architectural details, refer to the [System Architecture Wiki](http
 ## Technology Stack
 
 - **Backend**: Python 3.14, FastAPI, SQLAlchemy 2.0 (ORM), Pydantic v2, Alembic (Migrations), APScheduler.
+- **P2P Sync Engine**: Resilio Sync (`resilio/sync:latest` headless Docker container), BitTorrent P2P protocol.
 - **Media Engine**: `yt-dlp` (Audio extraction), Deno JS runtime (YouTube EJS challenge solver), FFmpeg (Media conversion), AtomicParsley / Mutagen (Tagging).
 - **Frontend**: React 19, Vite, Axios, Lucide Icons, Nginx (Production static server & API proxy).
 - **Database**: PostgreSQL 17.
@@ -49,19 +51,20 @@ For in-depth architectural details, refer to the [System Architecture Wiki](http
 Music-Sync/
 ├── alembic/                  # Database migration scripts and configuration
 ├── app/                      # Python FastAPI Backend Application
-│   ├── api/                  # REST endpoints (auth, dashboard, playlists, songs, settings, sync)
+│   ├── api/                  # REST endpoints (auth, dashboard, playlists, rslsync, songs, settings, sync)
 │   ├── core/                 # App configuration, security, path resolution, yt-dlp context
 │   ├── database/             # SQLAlchemy ORM models and session management
 │   ├── downloader/           # Audio download worker service and retry engine
 │   ├── lyrics/               # LRCLIB synced lyrics worker service
 │   ├── reconciler/           # YouTube-to-database state reconciliation engine
+│   ├── rslsync/              # Resilio Sync P2P backend management service & API client
 │   ├── scheduler/            # APScheduler background sync manager
 │   ├── settings/             # Persistent database settings service
 │   ├── sync/                 # Playlist synchronization runner
 │   ├── watcher/              # YouTube playlist scraper using yt-dlp flat extraction
 │   └── main.py               # FastAPI entry point & worker lifespan manager
 ├── dashboard/                # React 19 Frontend Web Dashboard
-│   ├── src/                  # React components, pages, layouts, services
+│   ├── src/                  # React components, pages (ResilioSync, Settings, etc.), layouts, services
 │   ├── Dockerfile            # Multi-stage Docker build (Node builder + Nginx runtime)
 │   └── nginx.conf            # SPA routing and reverse proxy configuration
 ├── data/                     # Persistent mounted storage (bind mount target)
