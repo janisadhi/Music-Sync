@@ -408,9 +408,20 @@ export default function ResilioSync() {
                                 </div>
                                 <h4>No Devices Paired Yet</h4>
                                 <p>Pair your Android, iOS, or Desktop Resilio Sync app to start auto-syncing music files.</p>
-                                <button className="btn btn-primary" onClick={handleOpenModal} style={{ marginTop: "8px" }}>
-                                    <QrCode size={16} /> Pair New Device via QR Code
-                                </button>
+                                <div className="empty-state-actions" style={{ display: "flex", gap: "12px", marginTop: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                                    <button className="btn btn-primary" onClick={handleOpenModal}>
+                                        <QrCode size={16} /> Pair New Device via QR Code
+                                    </button>
+                                    <a
+                                        href="https://play.google.com/store/apps/details?id=com.resilio.sync&pcampaignid=web_share"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-secondary"
+                                        style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
+                                    >
+                                        <Download size={15} /> Download App (Google Play) <ExternalLink size={13} />
+                                    </a>
+                                </div>
                             </div>
                         ) : (
                             <div className="peers-grid">
@@ -726,6 +737,44 @@ export default function ResilioSync() {
                                     <p className="qr-help-text">
                                         Open <strong>Resilio Sync</strong> on your phone, tap <strong>+</strong>, choose <strong>Scan QR code</strong>, and point your camera here.
                                     </p>
+
+                                    {/* Mobile App Download Prompt */}
+                                    <div style={{
+                                        background: "#eff6ff",
+                                        border: "1px solid #bfdbfe",
+                                        borderRadius: "12px",
+                                        padding: "10px 14px",
+                                        width: "100%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: "10px",
+                                        fontSize: "12px"
+                                    }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#1e40af", fontWeight: "600" }}>
+                                            <Smartphone size={16} className="text-indigo" />
+                                            <span>Don't have the mobile app?</span>
+                                        </div>
+                                        <a
+                                            href="https://play.google.com/store/apps/details?id=com.resilio.sync&pcampaignid=web_share"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                background: "#2563eb",
+                                                color: "#ffffff",
+                                                padding: "5px 10px",
+                                                borderRadius: "8px",
+                                                fontWeight: "700",
+                                                textDecoration: "none",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                whiteSpace: "nowrap"
+                                            }}
+                                        >
+                                            <Download size={12} /> Get on Google Play <ExternalLink size={10} />
+                                        </a>
+                                    </div>
 
                                     <div className="manual-secret-box">
                                         <span className="lbl">Or copy manual secret:</span>
