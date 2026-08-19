@@ -113,6 +113,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Create dummy .env file
+        run: |
+          cp .env.example .env
+
       - name: Validate docker-compose.yml
         run: |
           docker compose -f docker-compose.yml config --quiet
