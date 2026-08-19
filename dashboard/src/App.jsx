@@ -12,6 +12,7 @@ import PlaylistDetailPage from "./pages/PlaylistDetailPage";
 import SyncHistory from "./pages/SyncHistory";
 import Settings from "./pages/Settings";
 import SystemHealth from "./pages/SystemHealth";
+import ResilioSync from "./pages/ResilioSync";
 import Metadata from "./pages/Metadata";
 import TrackDetail from "./pages/TrackDetail";
 import Login from "./pages/Login";
@@ -46,6 +47,7 @@ function App() {
                                 <Route path="/metadata" element={<Metadata />} />
                                 <Route path="/metadata/tracks/:id" element={<TrackDetail />} />
                                 <Route path="/history" element={<SyncHistory />} />
+                                <Route path="/rslsync" element={<ResilioSync />} />
                                 <Route path="/settings" element={<Settings />} />
                                 <Route path="/health" element={<SystemHealth />} />
                             </Route>
