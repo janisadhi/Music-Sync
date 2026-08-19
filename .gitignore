@@ -5,10 +5,6 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-data/postgres/*
-data/music/*
-!data/music/.gitkeep
-
 data/*
 
 beets.md
