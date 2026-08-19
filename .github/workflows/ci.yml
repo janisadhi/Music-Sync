@@ -99,7 +99,7 @@ jobs:
 
       - name: Build Metadata Service Docker Image
         run: |
-          docker build -f metadata_service/Dockerfile -t music-sync-metadata:ci .
+          docker build -t music-sync-metadata:ci metadata_service/
 
   # ---------------------------------------------------------------------------
   # 4. Docker Compose Stack Validation
@@ -112,10 +112,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Create dummy .env file
-        run: |
-          cp .env.example .env
 
       - name: Validate docker-compose.yml
         run: |
