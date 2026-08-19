@@ -1,62 +1,83 @@
-name: CI for Music-Sync
+name: Continuous Deployment
+
 on:
   push:
-    branches:
-      - main
-
-permissions:
-  contents: read
-  packages: write
+    branches: [ main ]
+    tags: [ "v*" ]
 
 env:
-    DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USR }}
-    DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-    ENV_FILE: .env
-  
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}
+
 jobs:
-    build-backend:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v7
-              
-            - name: Docker Login in GHCR
-              uses: docker/login-action@v4
-              with:
-                username: ${{ env.DOCKER_USERNAME }}
-                password: ${{ env.DOCKER_PASSWORD }}
-                registry: ghcr.io
-            
-            - name: Build Backend Docker Image
-              run: docker build -t music-sync-backend:latest .
+  build-and-push:
+    name: Build & Push GHCR Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
-            - name: Push Backend to GHCR
-              run: | 
-                docker tag music-sync-backend:latest ghcr.io/${{ github.repository_owner }}/music-sync-backend:${GITHUB_SHA}
-                docker push ghcr.io/${{ github.repository_owner }}/music-sync-backend:${GITHUB_SHA}
-                docker tag music-sync-backend:latest ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
-                docker push ghcr.io/${{ github.repository_owner }}/music-sync-backend:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    build-frontend:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v7
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Docker Login in GHCR
-              uses: docker/login-action@v4
-              with:
-                username: ${{ env.DOCKER_USERNAME }}
-                password: ${{ env.DOCKER_PASSWORD }}
-                registry: ghcr.io
+      - name: Extract metadata (tags, labels) for App
+        id: meta-app
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/music-sync-app
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
 
-            - name: Build Frontend Docker Image
-              run: docker build -t music-sync-frontend:latest ./dashboard
+      - name: Build and push App Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta-app.outputs.tags }}
+          labels: ${{ steps.meta-app.outputs.labels }}
 
-            - name: Push Frontend to GHCR
-              run: | 
-                docker tag music-sync-frontend:latest ghcr.io/${{ github.repository_owner }}/music-sync-frontend:${GITHUB_SHA}
-                docker push ghcr.io/${{ github.repository_owner }}/music-sync-frontend:${GITHUB_SHA}
-                docker tag music-sync-frontend:latest ghcr.io/${{ github.repository_owner }}/music-sync-frontend:latest
-                docker push ghcr.io/${{ github.repository_owner }}/music-sync-frontend:latest
+      - name: Extract metadata (tags, labels) for Dashboard
+        id: meta-dashboard
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/music-sync-dashboard
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
 
+      - name: Build and push Dashboard Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./dashboard
+          file: ./dashboard/Dockerfile
+          push: true
+          tags: ${{ steps.meta-dashboard.outputs.tags }}
+          labels: ${{ steps.meta-dashboard.outputs.labels }}
+
+      - name: Extract metadata (tags, labels) for Metadata Service
+        id: meta-metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/music-sync-metadata
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+
+      - name: Build and push Metadata Service Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./metadata_service
+          file: ./metadata_service/Dockerfile
+          push: true
+          tags: ${{ steps.meta-metadata.outputs.tags }}
+          labels: ${{ steps.meta-metadata.outputs.labels }}

@@ -1,6 +1,7 @@
 # Music Sync
 
-[![CI for Music-Sync](https://github.com/janisadhi/Music-Sync/actions/workflows/deploy.yaml/badge.svg)](https://github.com/janisadhi/Music-Sync/actions/workflows/deploy.yaml)
+[![CI Pipeline](https://github.com/janisadhi/Music-Sync/actions/workflows/ci.yml/badge.svg)](https://github.com/janisadhi/Music-Sync/actions/workflows/ci.yml)
+[![CD Deployment](https://github.com/janisadhi/Music-Sync/actions/workflows/deploy.yaml/badge.svg)](https://github.com/janisadhi/Music-Sync/actions/workflows/deploy.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.14](https://img.shields.io/badge/Python-3.14-blue.svg)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
