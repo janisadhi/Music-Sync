@@ -99,7 +99,7 @@ jobs:
 
       - name: Build Metadata Service Docker Image
         run: |
-          docker build -t music-sync-metadata:ci metadata_service/
+          docker build -f metadata_service/Dockerfile -t music-sync-metadata:ci .
 
   # ---------------------------------------------------------------------------
   # 4. Docker Compose Stack Validation
