@@ -12,7 +12,6 @@ router = APIRouter(
 )
 
 PRIMARY_METADATA_URL = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
-FALLBACK_METADATA_URL = "http://localhost:8001"
 
 
 async def _forward_request(
@@ -21,9 +20,11 @@ async def _forward_request(
     json: dict | None = None,
     params: dict | None = None,
 ) -> Any:
-    urls_to_try = [PRIMARY_METADATA_URL]
-    if PRIMARY_METADATA_URL != FALLBACK_METADATA_URL:
-        urls_to_try.append(FALLBACK_METADATA_URL)
+    urls_to_try = [
+        PRIMARY_METADATA_URL,
+        "http://127.0.0.1:8001",
+        "http://localhost:8001",
+    ]
 
     last_error = None
     for target_base in urls_to_try:
