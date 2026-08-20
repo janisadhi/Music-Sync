@@ -112,26 +112,60 @@ def get_results(
         .all()
     )
 
-    items = [
-        TrackMetadataItem(
-            id=t.id,
-            song_id=t.song_id,
-            youtube_video_id=t.youtube_video_id,
-            file_path=t.file_path,
-            title=t.title,
-            artist=t.artist,
-            album=t.album,
-            album_artist=t.album_artist,
-            genre=t.genre,
-            track_number=t.track_number,
-            duration_seconds=t.duration_seconds,
-            release_year=t.release_year,
-            metadata_state=t.metadata_state,
-            beets_metadata_edited=t.beets_metadata_edited,
-            updated_at=t.updated_at,
-        )
-        for t in tracks
-    ]
+def _to_track_item(t: DownloadedTrack) -> TrackMetadataItem:
+    return TrackMetadataItem(
+        id=t.id,
+        song_id=t.song_id,
+        youtube_video_id=t.youtube_video_id,
+        file_path=t.file_path,
+        title=t.title,
+        artist=t.artist,
+        album=t.album,
+        album_artist=t.album_artist,
+        genre=t.genre,
+        track_number=t.track_number,
+        duration_seconds=t.duration_seconds,
+        release_year=t.release_year,
+        musicbrainz_recording_id=getattr(t, "musicbrainz_recording_id", None),
+        musicbrainz_artist_id=getattr(t, "musicbrainz_artist_id", None),
+        musicbrainz_release_id=getattr(t, "musicbrainz_release_id", None),
+        musicbrainz_release_group_id=getattr(t, "musicbrainz_release_group_id", None),
+        acoustid_id=getattr(t, "acoustid_id", None),
+        fingerprint=getattr(t, "fingerprint", None),
+        spotify_track_id=getattr(t, "spotify_track_id", None),
+        spotify_artist_id=getattr(t, "spotify_artist_id", None),
+        spotify_album_id=getattr(t, "spotify_album_id", None),
+        metadata_state=t.metadata_state,
+        beets_metadata_edited=t.beets_metadata_edited,
+        updated_at=t.updated_at,
+    )
+
+
+@app.get("/results", response_model=TrackResultsResponse, tags=["Metadata"])
+def get_results(
+    db: Annotated[Session, Depends(get_db)],
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    state: str | None = Query(None),
+    beets_edited: bool | None = Query(None),
+):
+    """Returns paginated metadata track results."""
+    query = db.query(DownloadedTrack)
+
+    if state:
+        query = query.filter(DownloadedTrack.metadata_state == state)
+    if beets_edited is not None:
+        query = query.filter(DownloadedTrack.beets_metadata_edited == beets_edited)
+
+    total = query.count()
+    tracks = (
+        query.order_by(DownloadedTrack.updated_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    items = [_to_track_item(t) for t in tracks]
 
     return TrackResultsResponse(
         items=items,
@@ -154,28 +188,10 @@ def enrich_track(
     success = processor.enrich_single_track(db, track)
     db.refresh(track)
 
-    track_item = TrackMetadataItem(
-        id=track.id,
-        song_id=track.song_id,
-        youtube_video_id=track.youtube_video_id,
-        file_path=track.file_path,
-        title=track.title,
-        artist=track.artist,
-        album=track.album,
-        album_artist=track.album_artist,
-        genre=track.genre,
-        track_number=track.track_number,
-        duration_seconds=track.duration_seconds,
-        release_year=track.release_year,
-        metadata_state=track.metadata_state,
-        beets_metadata_edited=track.beets_metadata_edited,
-        updated_at=track.updated_at,
-    )
-
     return EnrichTrackResponse(
         success=success,
         message="Enrichment completed" if success else "Enrichment failed or skipped",
-        track=track_item,
+        track=_to_track_item(track),
     )
 
 
@@ -200,23 +216,7 @@ def get_track_detail(
         .all()
     )
 
-    track_item = TrackMetadataItem(
-        id=track.id,
-        song_id=track.song_id,
-        youtube_video_id=track.youtube_video_id,
-        file_path=track.file_path,
-        title=track.title,
-        artist=track.artist,
-        album=track.album,
-        album_artist=track.album_artist,
-        genre=track.genre,
-        track_number=track.track_number,
-        duration_seconds=track.duration_seconds,
-        release_year=track.release_year,
-        metadata_state=track.metadata_state,
-        beets_metadata_edited=track.beets_metadata_edited,
-        updated_at=track.updated_at,
-    )
+    track_item = _to_track_item(track)
 
     from metadata_service.normalizer import parse_youtube_title
     parsed_art, parsed_tit = parse_youtube_title(track.title)
@@ -239,6 +239,8 @@ def get_track_detail(
                 match_confidence=h.match_confidence,
                 musicbrainz_recording_id=getattr(h, "musicbrainz_recording_id", None),
                 musicbrainz_artist_id=getattr(h, "musicbrainz_artist_id", None),
+                acoustid_id=getattr(h, "acoustid_id", None),
+                spotify_track_id=getattr(h, "spotify_track_id", None),
                 status=h.status,
                 error_message=h.error_message,
                 created_at=h.created_at,

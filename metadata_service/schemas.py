@@ -49,6 +49,15 @@ class TrackMetadataItem(BaseModel):
     track_number: int | None = None
     duration_seconds: int | None = None
     release_year: int | None = None
+    musicbrainz_recording_id: str | None = None
+    musicbrainz_artist_id: str | None = None
+    musicbrainz_release_id: str | None = None
+    musicbrainz_release_group_id: str | None = None
+    acoustid_id: str | None = None
+    fingerprint: str | None = None
+    spotify_track_id: str | None = None
+    spotify_artist_id: str | None = None
+    spotify_album_id: str | None = None
     metadata_state: str
     beets_metadata_edited: bool
     updated_at: datetime
@@ -80,6 +89,8 @@ class MetadataHistoryItem(BaseModel):
     match_confidence: str | None = None
     musicbrainz_recording_id: str | None = None
     musicbrainz_artist_id: str | None = None
+    acoustid_id: str | None = None
+    spotify_track_id: str | None = None
     status: str
     error_message: str | None = None
     created_at: datetime

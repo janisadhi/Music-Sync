@@ -12,6 +12,10 @@ import {
     Tag,
     Layers,
     ArrowRight,
+    Fingerprint,
+    ExternalLink,
+    Copy,
+    Check,
 } from "lucide-react";
 import { getTrackDetail, enrichTrack } from "../services/metadata";
 import "../styles/metadata.css";
@@ -98,6 +102,16 @@ const TrackDetail = () => {
     const lyricsFilename = getFilenameOnly(lyrics_path || latestHistory?.new_lyrics_filename);
     const prevLyricsFilename = getFilenameOnly(latestHistory?.previous_lyrics_filename);
 
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyFingerprint = () => {
+        if (track?.fingerprint) {
+            navigator.clipboard.writeText(track.fingerprint);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     return (
         <div className="metadata-container">
             <div>
@@ -176,6 +190,80 @@ const TrackDetail = () => {
                     <div style={{ fontSize: "12px", textTransform: "uppercase", fontWeight: "700", color: "var(--text-secondary)" }}>Lyrics File (.lrc)</div>
                     <div style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-primary)", wordBreak: "break-all" }}>
                         {lyricsFilename !== "—" ? lyricsFilename : "No LRC file"}
+                    </div>
+                </div>
+            </div>
+
+            {/* Audio Fingerprint & Identifiers Card */}
+            <div className="metadata-table-card" style={{ padding: "24px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                    <h2 style={{ fontSize: "18px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Fingerprint size={20} className="text-primary" />
+                        Audio Fingerprint & Identification
+                    </h2>
+                    {track.acoustid_id && (
+                        <a
+                            href={`https://acoustid.org/track/${track.acoustid_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "13px", color: "var(--primary-blue)", fontWeight: "600", textDecoration: "none" }}
+                        >
+                            View on AcoustID <ExternalLink size={14} />
+                        </a>
+                    )}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", marginBottom: "16px" }}>
+                    <div style={{ background: "var(--bg-card-subtle)", padding: "12px 16px", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "700", textTransform: "uppercase", marginBottom: "4px" }}>AcoustID Track ID</div>
+                        <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)", wordBreak: "break-all" }}>
+                            {track.acoustid_id ? (
+                                <a href={`https://acoustid.org/track/${track.acoustid_id}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary-blue)" }}>
+                                    {track.acoustid_id}
+                                </a>
+                            ) : "Not identified via AcoustID"}
+                        </div>
+                    </div>
+
+                    <div style={{ background: "var(--bg-card-subtle)", padding: "12px 16px", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "700", textTransform: "uppercase", marginBottom: "4px" }}>MusicBrainz Recording ID</div>
+                        <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)", wordBreak: "break-all" }}>
+                            {track.musicbrainz_recording_id ? (
+                                <a href={`https://musicbrainz.org/recording/${track.musicbrainz_recording_id}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary-blue)" }}>
+                                    {track.musicbrainz_recording_id}
+                                </a>
+                            ) : "No MusicBrainz Recording ID"}
+                        </div>
+                    </div>
+
+                    <div style={{ background: "var(--bg-card-subtle)", padding: "12px 16px", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "700", textTransform: "uppercase", marginBottom: "4px" }}>Spotify Track ID</div>
+                        <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)", wordBreak: "break-all" }}>
+                            {track.spotify_track_id ? (
+                                <a href={`https://open.spotify.com/track/${track.spotify_track_id}`} target="_blank" rel="noopener noreferrer" style={{ color: "#1db954" }}>
+                                    {track.spotify_track_id}
+                                </a>
+                            ) : "No Spotify Track ID"}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Fingerprint Hash Code Block */}
+                <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: "700", textTransform: "uppercase" }}>Chromaprint Fingerprint Hash</span>
+                        {track.fingerprint && (
+                            <button
+                                onClick={handleCopyFingerprint}
+                                style={{ background: "none", border: "none", color: "var(--primary-blue)", cursor: "pointer", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px", fontWeight: "600" }}
+                            >
+                                {copied ? <Check size={14} color="#15803d" /> : <Copy size={14} />}
+                                {copied ? "Copied!" : "Copy Fingerprint"}
+                            </button>
+                        )}
+                    </div>
+                    <div style={{ background: "var(--bg-sidebar)", padding: "12px", borderRadius: "6px", fontFamily: "monospace", fontSize: "12px", color: "var(--text-secondary)", wordBreak: "break-all", maxHeight: "100px", overflowY: "auto", border: "1px solid var(--border-color)" }}>
+                        {track.fingerprint || "No audio fingerprint generated for this track."}
                     </div>
                 </div>
             </div>
