@@ -11,7 +11,8 @@ router = APIRouter(
     tags=["Metadata"],
 )
 
-METADATA_SERVICE_URL = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
+PRIMARY_METADATA_URL = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
+FALLBACK_METADATA_URL = "http://localhost:8001"
 
 
 async def _forward_request(
@@ -20,22 +21,43 @@ async def _forward_request(
     json: dict | None = None,
     params: dict | None = None,
 ) -> Any:
-    url = f"{METADATA_SERVICE_URL}{path}"
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method=method, url=url, json=json, params=params)
-            if resp.status_code >= 400:
-                raise HTTPException(
-                    status_code=resp.status_code,
-                    detail=resp.json().get("detail", f"Metadata service error ({resp.status_code})"),
-                )
-            return resp.json()
-    except httpx.RequestError as exc:
-        logger.error(f"Error connecting to Metadata Service at {url}: {exc}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Metadata service unavailable: {exc}",
-        )
+    urls_to_try = [PRIMARY_METADATA_URL]
+    if PRIMARY_METADATA_URL != FALLBACK_METADATA_URL:
+        urls_to_try.append(FALLBACK_METADATA_URL)
+
+    last_error = None
+    for target_base in urls_to_try:
+        url = f"{target_base}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.request(method=method, url=url, json=json, params=params)
+                if resp.status_code >= 400:
+                    try:
+                        data = resp.json()
+                        detail = data.get("detail", f"Metadata service error ({resp.status_code})")
+                    except Exception:
+                        detail = resp.text or f"Metadata service error ({resp.status_code})"
+                    raise HTTPException(
+                        status_code=resp.status_code,
+                        detail=detail,
+                    )
+                return resp.json()
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            logger.warning(f"Failed to connect to Metadata Service at {url}: {exc}")
+            last_error = exc
+            continue
+        except httpx.RequestError as exc:
+            logger.error(f"Error communicating with Metadata Service at {url}: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Metadata service communication error: {exc}",
+            )
+
+    logger.error(f"Metadata Service unreachable across all endpoints: {last_error}")
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=f"Metadata service unavailable: {last_error}",
+    )
 
 
 @router.post("/scan", status_code=status.HTTP_202_ACCEPTED)
