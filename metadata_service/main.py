@@ -114,30 +114,6 @@ def get_status():
     return processor.get_status()
 
 
-@app.get("/results", response_model=TrackResultsResponse, tags=["Metadata"])
-def get_results(
-    db: Annotated[Session, Depends(get_db)],
-    page: int = Query(1, ge=1),
-    limit: int = Query(50, ge=1, le=200),
-    state: str | None = Query(None),
-    beets_edited: bool | None = Query(None),
-):
-    """Returns paginated metadata track results."""
-    query = db.query(DownloadedTrack)
-
-    if state:
-        query = query.filter(DownloadedTrack.metadata_state == state)
-    if beets_edited is not None:
-        query = query.filter(DownloadedTrack.beets_metadata_edited == beets_edited)
-
-    total = query.count()
-    tracks = (
-        query.order_by(DownloadedTrack.updated_at.desc())
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
-    )
-
 def _to_track_item(t: DownloadedTrack) -> TrackMetadataItem:
     return TrackMetadataItem(
         id=t.id,
