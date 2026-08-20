@@ -26,6 +26,10 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "postgresql://music_sync:music_sync_pass@localhost:5432/music_sync"
     )
+    acoustid_api_key: str | None = os.getenv("ACOUSTID_API_KEY", None)
+    spotify_client_id: str | None = os.getenv("SPOTIFY_CLIENT_ID", None)
+    spotify_client_secret: str | None = os.getenv("SPOTIFY_CLIENT_SECRET", None)
+    min_confidence_threshold: str = os.getenv("METADATA_CONFIDENCE_THRESHOLD", "MEDIUM")
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

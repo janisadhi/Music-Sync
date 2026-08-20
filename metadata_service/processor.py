@@ -24,6 +24,10 @@ from metadata_service.matcher import CandidateMatcher, MatchResult
 from metadata_service.tag_writer import TagWriter
 from metadata_service.organizer import FileOrganizer
 
+from metadata_service.beets_adapter import BeetsAdapter
+from metadata_service.fingerprint import AudioFingerprinter
+from metadata_service.spotify_client import SpotifyEnricher
+
 logger = logging.getLogger("metadata_service.processor")
 
 # Database session factory for background jobs
@@ -32,7 +36,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 class MetadataProcessor:
-    """Orchestrates scan jobs, state transitions, MusicBrainz enrichment, tag writing, and history."""
+    """Orchestrates scan jobs, state transitions, Beets, AcoustID fingerprinting, MusicBrainz & Spotify enrichment, tag writing, and history."""
 
     def __init__(self):
         self.scanner = DirectoryScanner()
@@ -40,6 +44,12 @@ class MetadataProcessor:
         self.matcher = CandidateMatcher()
         self.tag_writer = TagWriter()
         self.organizer = FileOrganizer()
+        self.beets = BeetsAdapter()
+        self.fingerprinter = AudioFingerprinter(api_key=settings.acoustid_api_key)
+        self.spotify = SpotifyEnricher(
+            client_id=settings.spotify_client_id,
+            client_secret=settings.spotify_client_secret,
+        )
         self._lock = threading.Lock()
         self.is_scanning: bool = False
         self.current_job: ScanJobStatus | None = None
@@ -226,53 +236,80 @@ class MetadataProcessor:
             min_confidence = app_settings.min_confidence_threshold if app_settings else "MEDIUM"
             clean_noise = app_settings.clean_youtube_titles if app_settings else True
 
-            # 1. ARTIST RESOLUTION & TITLE PARSING
+            # 1. AUDIO FINGERPRINTING & ACOUSTID LOOKUP
+            fp_res = self.fingerprinter.lookup_acoustid(resolved_path)
+            if fp_res.fingerprint:
+                setattr(track, "fingerprint", fp_res.fingerprint)
+            if fp_res.acoustid_id:
+                setattr(track, "acoustid_id", fp_res.acoustid_id)
+
+            # 2. BEETS IMPORT & AUTOTAGGING ENGINE
+            beets_success = self.beets.run_beets_import(resolved_path)
+            beets_tags = self.beets.extract_tags(resolved_path)
+
+            # 3. ARTIST RESOLUTION & TITLE PARSING
             artist_from_title, title_from_title = parse_youtube_title(track.title)
 
-            # Strict artist priority hierarchy:
-            # - Title-extracted artist takes precedence over DB track.artist (which is often uploader channel like CapturedTracks)
-            resolved_artist = artist_from_title
+            resolved_artist = beets_tags.get("artist") or artist_from_title or fp_res.artist
             if not resolved_artist:
-                # Check DB track.artist if not a known record label or topic channel
                 if track.artist and not is_known_record_label_or_channel(track.artist):
                     resolved_artist = clean_artist(track.artist)
 
             if clean_noise:
-                clean_song_title = title_from_title or clean_title(track.title)
+                clean_song_title = beets_tags.get("title") or title_from_title or fp_res.title or clean_title(track.title)
             else:
-                clean_song_title = title_from_title or track.title
+                clean_song_title = beets_tags.get("title") or title_from_title or fp_res.title or track.title
 
             target_dict = {
                 "title": clean_song_title,
                 "artist": resolved_artist,
-                "album": track.album,
+                "album": beets_tags.get("album") or track.album,
                 "duration_seconds": track.duration_seconds,
-                "release_year": track.release_year,
+                "release_year": beets_tags.get("release_year") or track.release_year,
             }
 
             fallback_dict = {
                 "title": clean_song_title,
                 "artist": resolved_artist or "Unknown Artist",
-                "album": track.album,
-                "genre": track.genre,
-                "track_number": track.track_number,
-                "release_year": track.release_year,
+                "album": beets_tags.get("album") or track.album,
+                "genre": beets_tags.get("genre") or track.genre,
+                "track_number": beets_tags.get("track_number") or track.track_number,
+                "release_year": beets_tags.get("release_year") or track.release_year,
             }
 
-            # 2. Query MusicBrainz API
-            mb_candidates = self.musicbrainz.search_recordings(
-                title=target_dict["title"],
-                artist=target_dict["artist"],
-            )
+            # 4. MUSICBRAINZ RESOLUTION
+            mb_recording_id = fp_res.recording_id or beets_tags.get("musicbrainz_recording_id")
+            mb_candidates = []
 
-            # 3. Score & Validate Candidates
+            if mb_recording_id:
+                mb_candidates = self.musicbrainz.search_recordings(recording_id=mb_recording_id)
+
+            if not mb_candidates:
+                mb_candidates = self.musicbrainz.search_recordings(
+                    title=target_dict["title"],
+                    artist=target_dict["artist"],
+                )
+
+            # Evaluate Candidate Match
             match_result: MatchResult = self.matcher.evaluate(
                 target=target_dict,
                 candidates=mb_candidates,
                 fallback_metadata=fallback_dict,
             )
 
-            # 4. Determine if match confidence meets configured threshold
+            # 5. SPOTIFY METADATA ENRICHMENT
+            spotify_res = self.spotify.search_track(
+                title=match_result.title or clean_song_title,
+                artist=match_result.artist or resolved_artist,
+                album=match_result.album,
+            )
+
+            if spotify_res.spotify_track_id:
+                setattr(track, "spotify_track_id", spotify_res.spotify_track_id)
+                setattr(track, "spotify_artist_id", spotify_res.spotify_artist_id)
+                setattr(track, "spotify_album_id", spotify_res.spotify_album_id)
+
+            # Determine match confidence against configured threshold
             allowed_confidences = ("HIGH",) if min_confidence == "HIGH" else ("HIGH", "MEDIUM")
             is_enriched = match_result.confidence in allowed_confidences
 
@@ -287,9 +324,14 @@ class MetadataProcessor:
 
                 if match_result.album:
                     track.album = match_result.album
-                    track.release_year = match_result.release_year
-                else:
-                    track.album = None
+                    track.release_year = match_result.release_year or spotify_res.release_year
+                elif spotify_res.album:
+                    track.album = spotify_res.album
+                    track.release_year = spotify_res.release_year
+
+                # Persist MusicBrainz identifiers
+                setattr(track, "musicbrainz_recording_id", match_result.recording_id or beets_tags.get("musicbrainz_recording_id"))
+                setattr(track, "musicbrainz_artist_id", match_result.artist_id or beets_tags.get("musicbrainz_artist_id"))
 
                 resolved_tags = {
                     "title": track.title,
@@ -301,12 +343,12 @@ class MetadataProcessor:
                     "release_year": track.release_year,
                 }
 
-                # 5. Embed audio tags & post-write verification
+                # Write audio tags
                 tag_success = self.tag_writer.write_tags(resolved_path, resolved_tags)
                 if tag_success:
                     self.tag_writer.verify_written_tags(resolved_path, resolved_tags)
 
-                # 6. Lockstep Audio & Lyrics File Renaming ONLY IF ENRICHED
+                # Lockstep Audio & Lyrics File Renaming ONLY IF ENRICHED
                 rename_res = self.organizer.rename_track_and_lyrics(
                     session=session,
                     downloaded_track=track,
@@ -330,9 +372,12 @@ class MetadataProcessor:
                 "track_number": track.track_number,
                 "release_year": track.release_year,
                 "artwork_embedded": track.artwork_embedded,
+                "musicbrainz_recording_id": getattr(track, "musicbrainz_recording_id", None),
+                "acoustid_id": getattr(track, "acoustid_id", None),
+                "spotify_track_id": getattr(track, "spotify_track_id", None),
             }
 
-            # 8. Record audit history
+            # Record audit history
             history_entry = TrackMetadataHistory(
                 downloaded_track_id=track.id,
                 action=f"metadata_enrichment_{match_result.confidence.lower()}",
@@ -342,10 +387,12 @@ class MetadataProcessor:
                 new_filename=track.file_path,
                 previous_lyrics_filename=previous_lyrics_filename,
                 new_lyrics_filename=song.lyrics_path if song else None,
-                match_source=match_result.source,
+                match_source=match_result.source if match_result.confidence != "FALLBACK" else ("beets" if beets_success else "acoustid" if fp_res.acoustid_id else "youtube"),
                 match_confidence=match_result.confidence,
-                musicbrainz_recording_id=match_result.recording_id,
-                musicbrainz_artist_id=match_result.artist_id,
+                musicbrainz_recording_id=getattr(track, "musicbrainz_recording_id", None),
+                musicbrainz_artist_id=getattr(track, "musicbrainz_artist_id", None),
+                acoustid_id=getattr(track, "acoustid_id", None),
+                spotify_track_id=getattr(track, "spotify_track_id", None),
                 status="success" if match_result.confidence in ("HIGH", "MEDIUM") else "low_confidence",
                 error_message=match_result.reason,
             )

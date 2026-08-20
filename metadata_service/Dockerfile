@@ -10,6 +10,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
         atomicparsley \
+        libchromaprint-tools \
     && rm -rf /var/lib/apt/lists/*
 
 COPY metadata_service/requirements.txt ./metadata_service/requirements.txt
