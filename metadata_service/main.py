@@ -49,10 +49,20 @@ async def lifespan(app: FastAPI):
     logger.info(f"Shutting down {settings.service_name}")
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Music-Sync Metadata Service",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
