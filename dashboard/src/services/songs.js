@@ -63,6 +63,16 @@ export const batchRetryLyrics = async (songIds) => {
     return response.data;
 };
 
+export const retryEnrichedLyrics = async (songId) => {
+    const response = await api.post(`/songs/${songId}/retry-enriched-lyrics`);
+    return response.data;
+};
+
+export const batchRetryEnrichedLyrics = async (songIds) => {
+    const response = await api.post("/songs/retry-enriched-lyrics", { song_ids: songIds });
+    return response.data;
+};
+
 export const deleteSong = async (songId) => {
     const response = await api.delete(
         `/songs/${songId}`

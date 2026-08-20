@@ -19,7 +19,7 @@ import SelectionActionBar from "../components/SelectionActionBar";
 import SongCard from "../components/SongCard";
 import SongRow from "../components/SongRow";
 import { usePlayer } from "../context/PlayerContext";
-import { deleteSong, getAlbums, getArtists, getGenres, getSongs, retryDownload } from "../services/songs";
+import { deleteSong, getAlbums, getArtists, getGenres, getSongs, retryDownload, retryEnrichedLyrics } from "../services/songs";
 import "../styles/songsPage.css";
 
 export default function Songs() {
@@ -87,6 +87,16 @@ export default function Songs() {
             await loadData();
         } catch (err) {
             alert("Failed to retry download.");
+        }
+    };
+
+    const handleRetryEnrichedLyrics = async (songId) => {
+        try {
+            await retryEnrichedLyrics(songId);
+            setNotification({ type: "success", text: "Enriched lyrics lookup triggered." });
+            await loadData();
+        } catch (err) {
+            alert("Failed to retry enriched lyrics.");
         }
     };
 
@@ -279,6 +289,7 @@ export default function Songs() {
                                                     trackIndex={idx}
                                                     onDelete={handleDeleteSong}
                                                     onRetry={handleRetrySong}
+                                                    onRetryEnrichedLyrics={handleRetryEnrichedLyrics}
                                                 />
                                             ))}
                                         </div>
@@ -292,6 +303,7 @@ export default function Songs() {
                                                     isCompact
                                                     onDelete={handleDeleteSong}
                                                     onRetry={handleRetrySong}
+                                                    onRetryEnrichedLyrics={handleRetryEnrichedLyrics}
                                                 />
                                             ))}
                                         </div>
@@ -319,6 +331,7 @@ export default function Songs() {
                                                     }
                                                     onDelete={handleDeleteSong}
                                                     onRetry={handleRetrySong}
+                                                    onRetryEnrichedLyrics={handleRetryEnrichedLyrics}
                                                 />
                                             ))}
                                         </div>

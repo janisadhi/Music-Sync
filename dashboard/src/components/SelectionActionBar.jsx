@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { CheckSquare, FileText, RotateCcw, Square, X, AlertCircle } from "lucide-react";
+import { CheckSquare, FileText, RotateCcw, Sparkles, Square, X, AlertCircle } from "lucide-react";
 import { useSongSelection } from "../context/SongSelectionContext";
-import { batchRetryDownload, batchRetryLyrics } from "../services/songs";
+import { batchRetryDownload, batchRetryLyrics, batchRetryEnrichedLyrics } from "../services/songs";
 import "../styles/selectionActionBar.css";
 
 function RetryConfirmModal({ operation, selectedSongs, onClose, onSuccess }) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
 
-    const isLyrics = operation === "lyrics";
+    const isEnrichedLyrics = operation === "enriched_lyrics";
+    const isLyrics = operation === "lyrics" || isEnrichedLyrics;
     const songCount = selectedSongs.length;
     const previewSongs = selectedSongs.slice(0, 3);
     const remainingCount = songCount - previewSongs.length;
@@ -18,7 +19,9 @@ function RetryConfirmModal({ operation, selectedSongs, onClose, onSuccess }) {
             setSubmitting(true);
             setError(null);
             const songIds = selectedSongs.map((s) => s.id);
-            const res = isLyrics
+            const res = isEnrichedLyrics
+                ? await batchRetryEnrichedLyrics(songIds)
+                : isLyrics
                 ? await batchRetryLyrics(songIds)
                 : await batchRetryDownload(songIds);
 
@@ -45,7 +48,7 @@ function RetryConfirmModal({ operation, selectedSongs, onClose, onSuccess }) {
         >
             <div className="selection-confirm-modal">
                 <div className="modal-header">
-                    <h2>{isLyrics ? "Retry Lyrics Download?" : "Retry Songs Download?"}</h2>
+                    <h2>{isEnrichedLyrics ? "Retry Enriched Lyrics?" : isLyrics ? "Retry Lyrics Download?" : "Retry Songs Download?"}</h2>
                     <button type="button" className="modal-close-btn" onClick={onClose}>
                         <X size={18} />
                     </button>
@@ -53,9 +56,13 @@ function RetryConfirmModal({ operation, selectedSongs, onClose, onSuccess }) {
 
                 <div className="modal-body">
                     <p className="modal-intro">
-                        {isLyrics ? (
+                        {isEnrichedLyrics ? (
                             <>
-                                You are about to retry lyrics lookup for <strong>{songCount} selected song(s)</strong> using their latest canonical Beets-enriched metadata.
+                                You are about to retry lyrics search for <strong>{songCount} selected song(s)</strong> using their updated/enriched Beets metadata (canonical title, artist, album).
+                            </>
+                        ) : isLyrics ? (
+                            <>
+                                You are about to retry lyrics lookup for <strong>{songCount} selected song(s)</strong>.
                             </>
                         ) : (
                             <>
@@ -82,7 +89,7 @@ function RetryConfirmModal({ operation, selectedSongs, onClose, onSuccess }) {
                             <ul>
                                 <li>Lookup uses current enriched metadata (title, artist, album).</li>
                                 <li>Processed asynchronously in the background.</li>
-                                <li>Valid existing lyrics are preserved if no new match is found.</li>
+                                <li>Replaces or creates .lrc lyrics file next to audio file.</li>
                             </ul>
                         ) : (
                             <ul>
@@ -105,7 +112,7 @@ function RetryConfirmModal({ operation, selectedSongs, onClose, onSuccess }) {
                         Cancel
                     </button>
                     <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={submitting}>
-                        {submitting ? "Enqueueing..." : isLyrics ? "Confirm & Retry Lyrics" : "Confirm & Retry Download"}
+                        {submitting ? "Enqueueing..." : isEnrichedLyrics ? "Confirm & Fetch Enriched Lyrics" : isLyrics ? "Confirm & Retry Lyrics" : "Confirm & Retry Download"}
                     </button>
                 </div>
             </div>
@@ -115,7 +122,7 @@ function RetryConfirmModal({ operation, selectedSongs, onClose, onSuccess }) {
 
 export default function SelectionActionBar({ visibleSongs = [], onNotification }) {
     const { selectedSongIds, clearSelection, isAllSelected, toggleSelectAll } = useSongSelection();
-    const [confirmModal, setConfirmModal] = useState(null); // null | "lyrics" | "download"
+    const [confirmModal, setConfirmModal] = useState(null); // null | "lyrics" | "enriched_lyrics" | "download"
 
     if (!selectedSongIds || selectedSongIds.length === 0) {
         return null;
@@ -128,7 +135,7 @@ export default function SelectionActionBar({ visibleSongs = [], onNotification }
 
     const handleSuccess = ({ operation, queued, skipped }) => {
         clearSelection();
-        const opName = operation === "lyrics" ? "Retry lyrics" : "Download retry";
+        const opName = operation === "enriched_lyrics" ? "Enriched lyrics retry" : operation === "lyrics" ? "Retry lyrics" : "Download retry";
         let message = `${opName} queued for ${queued} song(s).`;
         if (skipped > 0) {
             message += ` (${skipped} skipped - already processing or uneligible).`;
@@ -159,8 +166,17 @@ export default function SelectionActionBar({ visibleSongs = [], onNotification }
                     <button
                         type="button"
                         className="btn btn-secondary btn-sm"
+                        onClick={() => setConfirmModal("enriched_lyrics")}
+                        title="Search and replace lyrics using enriched metadata"
+                        style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981", borderColor: "rgba(16, 185, 129, 0.3)" }}
+                    >
+                        <Sparkles size={14} /> Retry Enriched Lyrics
+                    </button>
+                    <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
                         onClick={() => setConfirmModal("lyrics")}
-                        title="Retry lyrics using enriched metadata"
+                        title="Retry lyrics using metadata"
                     >
                         <FileText size={14} /> Retry Lyrics
                     </button>

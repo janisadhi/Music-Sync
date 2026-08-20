@@ -95,3 +95,31 @@ def test_batch_retry_lyrics():
     db.refresh(song1)
     assert song1.lyrics_status == "pending"
     db.close()
+
+
+def test_batch_retry_enriched_lyrics():
+    app, TestingSessionLocal = setup_test_app()
+    client = TestClient(app)
+    db = TestingSessionLocal()
+
+    playlist = Playlist(youtube_playlist_id="PL123", name="Test PL", url="http://example.com")
+    db.add(playlist)
+    db.commit()
+
+    song1 = Song(playlist_id=playlist.id, youtube_video_id="v1", title="Song 1", download_status="downloaded", lyrics_status="downloaded")
+    song2 = Song(playlist_id=playlist.id, youtube_video_id="v2", title="Song 2", download_status="pending", lyrics_status="pending")
+    db.add_all([song1, song2])
+    db.commit()
+
+    resp = client.post("/songs/retry-enriched-lyrics", json={"song_ids": [song1.id, song2.id]})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["queued"] == 1
+    assert data["skipped"] == 1
+    assert data["total"] == 2
+
+    db.refresh(song1)
+    assert song1.lyrics_status == "pending"
+    db.close()
+
