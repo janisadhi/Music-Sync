@@ -58,6 +58,8 @@ class TrackMetadataItem(BaseModel):
     spotify_track_id: str | None = None
     spotify_artist_id: str | None = None
     spotify_album_id: str | None = None
+    thumbnail_url: str | None = None
+    artwork_embedded: bool = False
     metadata_state: str
     beets_metadata_edited: bool
     updated_at: datetime

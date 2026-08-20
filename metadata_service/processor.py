@@ -223,6 +223,7 @@ class MetadataProcessor:
             "track_number": track.track_number,
             "release_year": track.release_year,
             "artwork_embedded": track.artwork_embedded,
+            "thumbnail_url": track.thumbnail_url,
         }
         previous_filename = resolved_path
         previous_lyrics_filename = song.lyrics_path if song else None
@@ -387,6 +388,30 @@ class MetadataProcessor:
                 if tag_success:
                     self.tag_writer.verify_written_tags(resolved_path, resolved_tags)
 
+                # Auto-find and replace album cover art if available from Spotify/Beets
+                artwork_url = spotify_res.artwork_url
+                if artwork_url:
+                    try:
+                        import httpx
+                        with httpx.Client(timeout=10.0) as http_client:
+                            art_resp = http_client.get(artwork_url)
+                            if art_resp.status_code == 200 and art_resp.content:
+                                mime_type = art_resp.headers.get("content-type", "image/jpeg")
+                                art_ok = self.tag_writer.embed_artwork(
+                                    file_path=resolved_path,
+                                    image_bytes=art_resp.content,
+                                    mime_type=mime_type,
+                                )
+                                if art_ok:
+                                    track.artwork_embedded = True
+                                    track.thumbnail_url = artwork_url
+                                    logger.info(f"Auto-replaced cover art for track {track.id} from {artwork_url}")
+                    except Exception as art_err:
+                        logger.warning(f"Auto artwork embedding warning for track {track.id}: {art_err}")
+
+                if beets_tags.get("artwork_embedded"):
+                    track.artwork_embedded = True
+
                 # Lockstep Audio & Lyrics File Renaming ONLY IF ENRICHED
                 rename_res = self.organizer.rename_track_and_lyrics(
                     session=session,
@@ -411,6 +436,7 @@ class MetadataProcessor:
                 "track_number": track.track_number,
                 "release_year": track.release_year,
                 "artwork_embedded": track.artwork_embedded,
+                "thumbnail_url": track.thumbnail_url,
                 "musicbrainz_recording_id": getattr(track, "musicbrainz_recording_id", None),
                 "acoustid_id": getattr(track, "acoustid_id", None),
                 "spotify_track_id": getattr(track, "spotify_track_id", None),

@@ -429,6 +429,43 @@ const TrackDetail = () => {
                             <td>{prevMeta.release_year || "—"}</td>
                             <td>{track.release_year || "—"}</td>
                         </tr>
+                        <tr>
+                            <td><strong>Album Cover Art</strong></td>
+                            <td>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "8px", background: "var(--bg-sidebar)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-color)" }}>
+                                        {prevMeta.thumbnail_url || track.thumbnail_url ? (
+                                            <img src={prevMeta.thumbnail_url || track.thumbnail_url} alt="Previous Art" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                        ) : (
+                                            <Disc size={24} style={{ opacity: 0.4 }} />
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                                        <div style={{ fontWeight: "600" }}>Original YouTube Artwork</div>
+                                        <div style={{ color: "var(--text-muted)", fontSize: "11px" }}>
+                                            {prevMeta.artwork_embedded ? "Embedded: YES" : "Embedded: NO"}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "8px", background: "var(--bg-sidebar)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-color)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+                                        {track.thumbnail_url ? (
+                                            <img src={track.thumbnail_url} alt="Enriched Art" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                        ) : (
+                                            <Disc size={24} style={{ opacity: 0.4 }} />
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: "12px" }}>
+                                        <div style={{ fontWeight: "700", color: "#15803d" }}>Enriched Beets/Spotify Cover Art</div>
+                                        <span className={`status-state-pill ${track.artwork_embedded ? "enriched" : "raw"}`} style={{ fontSize: "11px", padding: "2px 8px", marginTop: "4px", display: "inline-block" }}>
+                                            {track.artwork_embedded ? "Embedded in File: YES" : "Embedded in File: NO"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -444,6 +481,15 @@ const TrackDetail = () => {
                                 <span style={{ color: "#c2410c", textDecoration: "line-through" }}>{prevMeta.artist}</span>
                                 <ArrowRight size={14} />
                                 <span style={{ color: "#15803d", fontWeight: "700" }}>{track.artist}</span>
+                            </div>
+                        )}
+
+                        {prevMeta.thumbnail_url && prevMeta.thumbnail_url !== track.thumbnail_url && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "14px" }}>
+                                <span style={{ fontWeight: "600", width: "120px" }}>Cover Art:</span>
+                                <span style={{ color: "#c2410c" }}>YouTube Video Thumbnail</span>
+                                <ArrowRight size={14} />
+                                <span style={{ color: "#15803d", fontWeight: "700" }}>Beets/Spotify Album Cover (Auto-Replaced & Embedded)</span>
                             </div>
                         )}
 

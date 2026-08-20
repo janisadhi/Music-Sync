@@ -137,6 +137,8 @@ def _to_track_item(t: DownloadedTrack) -> TrackMetadataItem:
         spotify_track_id=getattr(t, "spotify_track_id", None),
         spotify_artist_id=getattr(t, "spotify_artist_id", None),
         spotify_album_id=getattr(t, "spotify_album_id", None),
+        thumbnail_url=getattr(t, "thumbnail_url", None),
+        artwork_embedded=getattr(t, "artwork_embedded", False),
         metadata_state=t.metadata_state,
         beets_metadata_edited=t.beets_metadata_edited,
         updated_at=t.updated_at,
