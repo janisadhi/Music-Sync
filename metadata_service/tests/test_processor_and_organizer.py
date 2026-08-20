@@ -143,7 +143,7 @@ def test_low_confidence_track_not_renamed_in_processor(tmp_path):
         artist_id=None,
     )
     # Mock musicbrainz search to return empty list
-    processor.musicbrainz.search_recordings = lambda title, artist: []
+    processor.musicbrainz.search_recordings = lambda *args, **kwargs: []
     # Mock tag writer
     processor.tag_writer.write_tags = lambda path, tags: False
 

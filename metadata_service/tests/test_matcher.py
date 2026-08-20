@@ -85,7 +85,8 @@ def test_duration_based_verification():
 def test_musicbrainz_cache_hit(tmp_path):
     cache_file = tmp_path / "mb_cache.json"
     client = MusicBrainzClient(cache_path=cache_file)
-    client._cache["mac demarco:::my kind of woman"] = [
+    cache_key = "rec::::art::mac demarco::title::my kind of woman::alb::"
+    client._cache[cache_key] = [
         {
             "recording_id": "cached-123",
             "title": "My Kind of Woman",

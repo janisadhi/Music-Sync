@@ -1,6 +1,6 @@
 import difflib
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from metadata_service.normalizer import normalize_string, clean_title, clean_artist
@@ -22,7 +22,10 @@ class MatchResult:
     release_year: int | None = None
     recording_id: str | None = None
     artist_id: str | None = None
+    release_id: str | None = None
+    release_group_id: str | None = None
     reason: str = ""
+    debug_log: list[str] = field(default_factory=list)
 
 
 class CandidateMatcher:
@@ -137,6 +140,10 @@ class CandidateMatcher:
                 best_candidate = cand
                 best_breakdown = breakdown
 
+        debug_log = []
+        if best_candidate and "debug_log" in best_candidate:
+            debug_log = best_candidate["debug_log"]
+
         if best_candidate and best_score >= 0.82:
             return MatchResult(
                 score=round(best_score, 3),
@@ -149,7 +156,10 @@ class CandidateMatcher:
                 release_year=best_candidate.get("release_year"),
                 recording_id=best_candidate.get("recording_id"),
                 artist_id=best_candidate.get("artist_id"),
+                release_id=best_candidate.get("release_id"),
+                release_group_id=best_candidate.get("release_group_id"),
                 reason=f"Strong external MusicBrainz match (Score: {best_score:.2f})",
+                debug_log=debug_log,
             )
 
         if best_candidate and best_score >= 0.65:
@@ -166,7 +176,10 @@ class CandidateMatcher:
                     release_year=best_candidate.get("release_year"),
                     recording_id=best_candidate.get("recording_id"),
                     artist_id=best_candidate.get("artist_id"),
+                    release_id=best_candidate.get("release_id"),
+                    release_group_id=best_candidate.get("release_group_id"),
                     reason=f"Moderate external MusicBrainz match (Score: {best_score:.2f})",
+                    debug_log=debug_log,
                 )
 
         # Fallback to cleaned metadata (YouTube hints / embedded fallback)
@@ -185,4 +198,5 @@ class CandidateMatcher:
             track_number=fallback_metadata.get("track_number"),
             release_year=fallback_metadata.get("release_year"),
             reason="No high-confidence external match found; safe fallback to normalized metadata",
+            debug_log=debug_log,
         )
