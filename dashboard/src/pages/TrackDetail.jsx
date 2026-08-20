@@ -16,16 +16,29 @@ import {
     ExternalLink,
     Copy,
     Check,
+    Image,
+    Link2,
+    Disc,
 } from "lucide-react";
-import { getTrackDetail, enrichTrack } from "../services/metadata";
+import {
+    getTrackDetail,
+    enrichTrack,
+    embedArtworkUrl,
+    fetchBeetsArtwork,
+} from "../services/metadata";
 import "../styles/metadata.css";
 
 const TrackDetail = () => {
     const { id } = useParams();
+    // ALL useState hooks declared unconditionally at top of component
     const [detail, setDetail] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [enriching, setEnriching] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [artworkUrl, setArtworkUrl] = useState("");
+    const [updatingArt, setUpdatingArt] = useState(false);
+    const [artMessage, setArtMessage] = useState("");
 
     const fetchDetail = async () => {
         setLoading(true);
@@ -57,6 +70,46 @@ const TrackDetail = () => {
         }
     };
 
+    const handleCopyFingerprint = () => {
+        if (detail?.track?.fingerprint) {
+            navigator.clipboard.writeText(detail.track.fingerprint);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleFetchBeetsArt = async () => {
+        setUpdatingArt(true);
+        setArtMessage("");
+        try {
+            const res = await fetchBeetsArtwork(id);
+            setArtMessage(res.message);
+            await fetchDetail();
+        } catch (err) {
+            console.error("Failed to fetch artwork via Beets/Spotify:", err);
+            setArtMessage("Error fetching artwork from Beets/Spotify engine.");
+        } finally {
+            setUpdatingArt(false);
+        }
+    };
+
+    const handleEmbedUrlArt = async () => {
+        if (!artworkUrl.trim()) return;
+        setUpdatingArt(true);
+        setArtMessage("");
+        try {
+            const res = await embedArtworkUrl(id, artworkUrl.trim());
+            setArtMessage(res.message);
+            setArtworkUrl("");
+            await fetchDetail();
+        } catch (err) {
+            console.error("Failed to embed artwork from URL:", err);
+            setArtMessage("Error embedding artwork from specified URL.");
+        } finally {
+            setUpdatingArt(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="metadata-container" style={{ padding: "40px", textAlign: "center" }}>
@@ -82,15 +135,6 @@ const TrackDetail = () => {
     const { track, lyrics_path, history } = detail;
     const latestHistory = history && history.length > 0 ? history[0] : null;
     const prevMeta = latestHistory?.previous_metadata || {};
-    const newMeta = latestHistory?.new_metadata || {
-        artist: track.artist,
-        title: track.title,
-        album: track.album,
-        album_artist: track.album_artist,
-        genre: track.genre,
-        release_year: track.release_year,
-        track_number: track.track_number,
-    };
 
     const getFilenameOnly = (fullPath) => {
         if (!fullPath) return "—";
@@ -101,16 +145,6 @@ const TrackDetail = () => {
     const prevFilename = getFilenameOnly(latestHistory?.previous_filename || track.file_path);
     const lyricsFilename = getFilenameOnly(lyrics_path || latestHistory?.new_lyrics_filename);
     const prevLyricsFilename = getFilenameOnly(latestHistory?.previous_lyrics_filename);
-
-    const [copied, setCopied] = useState(false);
-
-    const handleCopyFingerprint = () => {
-        if (track?.fingerprint) {
-            navigator.clipboard.writeText(track.fingerprint);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
 
     return (
         <div className="metadata-container">
@@ -190,6 +224,80 @@ const TrackDetail = () => {
                     <div style={{ fontSize: "12px", textTransform: "uppercase", fontWeight: "700", color: "var(--text-secondary)" }}>Lyrics File (.lrc)</div>
                     <div style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-primary)", wordBreak: "break-all" }}>
                         {lyricsFilename !== "—" ? lyricsFilename : "No LRC file"}
+                    </div>
+                </div>
+            </div>
+
+            {/* Album Cover Art Management Card (Beets / Spotify / Custom URL) */}
+            <div className="metadata-table-card" style={{ padding: "24px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "16px", marginBottom: "16px" }}>
+                    <h2 style={{ fontSize: "18px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Image size={20} className="text-primary" />
+                        Cover Art & Album Artwork (Beets / Spotify)
+                    </h2>
+                    <span className={`status-state-pill ${track.artwork_embedded ? "enriched" : "raw"}`} style={{ fontSize: "12px", padding: "4px 12px" }}>
+                        {track.artwork_embedded ? "Cover Art Embedded: YES" : "Cover Art Embedded: NO"}
+                    </span>
+                </div>
+
+                {artMessage && (
+                    <div style={{ padding: "10px 14px", borderRadius: "6px", marginBottom: "16px", fontSize: "13px", fontWeight: "600", background: artMessage.includes("Error") || artMessage.includes("Failed") ? "#fef2f2" : "#f0fdf4", color: artMessage.includes("Error") || artMessage.includes("Failed") ? "#b91c1c" : "#15803d", border: "1px solid currentColor" }}>
+                        {artMessage}
+                    </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", alignItems: "center" }}>
+                    {/* Artwork Preview */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ width: "110px", height: "110px", borderRadius: "10px", background: "var(--bg-sidebar)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-color)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
+                            {track.thumbnail_url ? (
+                                <img src={track.thumbnail_url} alt="Cover Art" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                                <Disc size={44} style={{ color: "var(--text-muted)", opacity: 0.5 }} />
+                            )}
+                        </div>
+                        <div>
+                            <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)" }}>
+                                {track.album || track.title || "Track Cover Art"}
+                            </div>
+                            <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                                {track.artist || "Unknown Artist"}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>
+                                {track.artwork_embedded ? "Embedded into audio file tags" : "No cover art embedded"}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Controls */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <button
+                            className="btn-scan"
+                            onClick={handleFetchBeetsArt}
+                            disabled={updatingArt}
+                            style={{ justifyContent: "center", width: "100%" }}
+                        >
+                            <Sparkles size={16} className={updatingArt ? "spin" : ""} />
+                            {updatingArt ? "Fetching Cover Art..." : "Fetch & Embed via Beets / Spotify"}
+                        </button>
+
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            <input
+                                type="url"
+                                placeholder="Paste image URL (https://...)"
+                                value={artworkUrl}
+                                onChange={(e) => setArtworkUrl(e.target.value)}
+                                style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border-color)", background: "var(--bg-card-subtle)", color: "var(--text-primary)", fontSize: "13px" }}
+                            />
+                            <button
+                                className="btn-scan"
+                                onClick={handleEmbedUrlArt}
+                                disabled={updatingArt || !artworkUrl.trim()}
+                                style={{ whiteSpace: "nowrap" }}
+                            >
+                                <Link2 size={15} /> Embed URL
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

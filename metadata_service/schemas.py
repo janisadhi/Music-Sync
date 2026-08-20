@@ -96,6 +96,17 @@ class MetadataHistoryItem(BaseModel):
     created_at: datetime
 
 
+class EmbedArtworkUrlRequest(BaseModel):
+    image_url: str
+
+
+class ArtworkResponse(BaseModel):
+    success: bool
+    message: str
+    artwork_embedded: bool = False
+    artwork_url: str | None = None
+
+
 class TrackDetailResponse(BaseModel):
     track: TrackMetadataItem
     lyrics_path: str | None = None

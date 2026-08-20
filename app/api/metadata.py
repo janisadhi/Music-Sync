@@ -98,3 +98,15 @@ async def enrich_track(track_id: int):
 async def get_track_detail(track_id: int):
     """Returns detailed metadata, lyrics path, and change history for a single track."""
     return await _forward_request("GET", f"/tracks/{track_id}")
+
+
+@router.post("/artwork/{track_id}/url")
+async def embed_artwork_url(track_id: int, image_url: str = Query(...)):
+    """Embeds cover art from image URL into track tags."""
+    return await _forward_request("POST", f"/artwork/{track_id}/url", json={"image_url": image_url})
+
+
+@router.post("/artwork/{track_id}/fetch-beets")
+async def fetch_beets_artwork(track_id: int):
+    """Fetches cover art via Beets / Spotify and embeds into track tags."""
+    return await _forward_request("POST", f"/artwork/{track_id}/fetch-beets")

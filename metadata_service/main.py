@@ -258,6 +258,140 @@ def get_track_detail(
     )
 
 
+from fastapi import UploadFile, File
+from metadata_service.schemas import EmbedArtworkUrlRequest, ArtworkResponse
+from metadata_service.tag_writer import TagWriter
+
+
+@app.post("/artwork/{track_id}/url", response_model=ArtworkResponse, tags=["Artwork"])
+async def embed_artwork_url(
+    track_id: int,
+    req: EmbedArtworkUrlRequest,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Downloads image from URL and embeds it into track's audio tags."""
+    track = db.query(DownloadedTrack).filter(DownloadedTrack.id == track_id).first()
+    if not track or not track.file_path:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found or has no file path")
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(req.image_url)
+            resp.raise_for_status()
+            image_bytes = resp.content
+            mime_type = resp.headers.get("content-type", "image/jpeg")
+
+        success = TagWriter.embed_artwork(track.file_path, image_bytes, mime_type=mime_type)
+        if success:
+            track.artwork_embedded = True
+            track.thumbnail_url = req.image_url
+            db.commit()
+            return ArtworkResponse(
+                success=True,
+                message="Successfully embedded artwork from URL",
+                artwork_embedded=True,
+                artwork_url=req.image_url,
+            )
+        else:
+            return ArtworkResponse(
+                success=False,
+                message="Failed to write artwork tags to audio file",
+                artwork_embedded=track.artwork_embedded,
+            )
+    except Exception as e:
+        logger.exception(f"Error fetching/embedding artwork URL for track {track_id}: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to embed artwork: {e}")
+
+
+@app.post("/artwork/{track_id}/upload", response_model=ArtworkResponse, tags=["Artwork"])
+async def embed_artwork_upload(
+    track_id: int,
+    file: UploadFile = File(...),
+    db: Annotated[Session, Depends(get_db)] = None,
+):
+    """Embeds uploaded cover art image file into track's audio tags."""
+    track = db.query(DownloadedTrack).filter(DownloadedTrack.id == track_id).first()
+    if not track or not track.file_path:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found or has no file path")
+
+    try:
+        image_bytes = await file.read()
+        mime_type = file.content_type or "image/jpeg"
+        success = TagWriter.embed_artwork(track.file_path, image_bytes, mime_type=mime_type)
+        if success:
+            track.artwork_embedded = True
+            db.commit()
+            return ArtworkResponse(
+                success=True,
+                message="Successfully embedded uploaded artwork image",
+                artwork_embedded=True,
+            )
+        else:
+            return ArtworkResponse(
+                success=False,
+                message="Failed to write uploaded artwork to audio file",
+                artwork_embedded=track.artwork_embedded,
+            )
+    except Exception as e:
+        logger.exception(f"Error embedding uploaded artwork for track {track_id}: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to embed uploaded artwork: {e}")
+
+
+@app.post("/artwork/{track_id}/fetch-beets", response_model=ArtworkResponse, tags=["Artwork"])
+async def fetch_beets_artwork(
+    track_id: int,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Uses Beets and Spotify enrichment to fetch & embed canonical cover art."""
+    track = db.query(DownloadedTrack).filter(DownloadedTrack.id == track_id).first()
+    if not track or not track.file_path:
+        raise HTTPException(status_code=404, detail=f"Track {track_id} not found or has no file path")
+
+    try:
+        # 1. Try Spotify cover art URL
+        spotify_res = processor.spotify.search_track(
+            title=track.title or "",
+            artist=track.artist or "",
+            album=track.album or "",
+        )
+        if spotify_res.artwork_url:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(spotify_res.artwork_url)
+                if resp.status_code == 200:
+                    success = TagWriter.embed_artwork(track.file_path, resp.content, mime_type="image/jpeg")
+                    if success:
+                        track.artwork_embedded = True
+                        track.thumbnail_url = spotify_res.artwork_url
+                        db.commit()
+                        return ArtworkResponse(
+                            success=True,
+                            message="Successfully fetched and embedded artwork from Spotify",
+                            artwork_embedded=True,
+                            artwork_url=spotify_res.artwork_url,
+                        )
+
+        # 2. Try Beets import / autotagging fetchart engine
+        beets_ok = processor.beets.run_beets_import(track.file_path)
+        beets_tags = processor.beets.extract_tags(track.file_path)
+        if beets_tags.get("artwork_embedded"):
+            track.artwork_embedded = True
+            db.commit()
+            return ArtworkResponse(
+                success=True,
+                message="Successfully fetched and embedded artwork via Beets",
+                artwork_embedded=True,
+            )
+
+        return ArtworkResponse(
+            success=False,
+            message="No artwork found via Spotify or Beets fetchart engine",
+            artwork_embedded=track.artwork_embedded,
+        )
+    except Exception as e:
+        logger.exception(f"Error fetching Beets/Spotify artwork for track {track_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch artwork: {e}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=settings.service_port, reload=True)
