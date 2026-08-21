@@ -222,8 +222,8 @@ class MetadataProcessor:
             "genre": track.genre,
             "track_number": track.track_number,
             "release_year": track.release_year,
-            "artwork_embedded": track.artwork_embedded,
-            "thumbnail_url": track.thumbnail_url,
+            "artwork_embedded": getattr(track, "artwork_embedded", False),
+            "thumbnail_url": getattr(track, "thumbnail_url", None),
         }
         previous_filename = resolved_path
         previous_lyrics_filename = song.lyrics_path if song else None
@@ -435,8 +435,8 @@ class MetadataProcessor:
                 "genre": track.genre,
                 "track_number": track.track_number,
                 "release_year": track.release_year,
-                "artwork_embedded": track.artwork_embedded,
-                "thumbnail_url": track.thumbnail_url,
+                "artwork_embedded": getattr(track, "artwork_embedded", False),
+                "thumbnail_url": getattr(track, "thumbnail_url", None),
                 "musicbrainz_recording_id": getattr(track, "musicbrainz_recording_id", None),
                 "acoustid_id": getattr(track, "acoustid_id", None),
                 "spotify_track_id": getattr(track, "spotify_track_id", None),
