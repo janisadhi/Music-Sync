@@ -1,8 +1,9 @@
 import logging
+import httpx
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Depends, Query, status
+from fastapi import FastAPI, HTTPException, Depends, Query, File, UploadFile, status
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
 
