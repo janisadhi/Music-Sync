@@ -102,9 +102,16 @@ async def get_track_detail(track_id: int):
 
 
 @router.post("/artwork/{track_id}/url")
-async def embed_artwork_url(track_id: int, image_url: str = Query(...)):
+async def embed_artwork_url(
+    track_id: int,
+    image_url: str | None = Query(None),
+    body: dict | None = None,
+):
     """Embeds cover art from image URL into track tags."""
-    return await _forward_request("POST", f"/artwork/{track_id}/url", json={"image_url": image_url})
+    url = (body.get("image_url") if body and isinstance(body, dict) else None) or image_url
+    if not url:
+        raise HTTPException(status_code=400, detail="image_url is required")
+    return await _forward_request("POST", f"/artwork/{track_id}/url", json={"image_url": url}, params={"image_url": url})
 
 
 @router.post("/artwork/{track_id}/fetch-beets")

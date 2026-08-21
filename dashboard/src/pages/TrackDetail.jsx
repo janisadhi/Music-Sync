@@ -88,7 +88,8 @@ const TrackDetail = () => {
             await fetchDetail();
         } catch (err) {
             console.error("Failed to fetch artwork via Beets/Spotify:", err);
-            setArtMessage("Error fetching artwork from Beets/Spotify engine.");
+            const msg = err.response?.data?.detail || err.message || "Error fetching artwork from Beets/Spotify engine.";
+            setArtMessage(msg);
         } finally {
             setUpdatingArt(false);
         }
@@ -105,7 +106,8 @@ const TrackDetail = () => {
             await fetchDetail();
         } catch (err) {
             console.error("Failed to embed artwork from URL:", err);
-            setArtMessage("Error embedding artwork from specified URL.");
+            const msg = err.response?.data?.detail || err.message || "Error embedding artwork from specified URL.";
+            setArtMessage(msg);
         } finally {
             setUpdatingArt(false);
         }

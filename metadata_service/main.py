@@ -268,13 +268,18 @@ from metadata_service.tag_writer import TagWriter
 @app.post("/artwork/{track_id}/url", response_model=ArtworkResponse, tags=["Artwork"])
 async def embed_artwork_url(
     track_id: int,
-    req: EmbedArtworkUrlRequest,
     db: Annotated[Session, Depends(get_db)],
+    req: EmbedArtworkUrlRequest | None = None,
+    image_url: str | None = Query(None),
 ):
     """Downloads image from URL and embeds it into track's audio tags."""
     track = db.query(DownloadedTrack).filter(DownloadedTrack.id == track_id).first()
     if not track or not track.file_path:
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found or has no file path")
+
+    target_url = (req.image_url if req and req.image_url else None) or image_url
+    if not target_url:
+        raise HTTPException(status_code=400, detail="image_url is required")
 
     try:
         resolved_path = str(resolve_file_path(track.file_path))
@@ -283,7 +288,7 @@ async def embed_artwork_url(
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
-            resp = await client.get(req.image_url)
+            resp = await client.get(target_url)
             resp.raise_for_status()
             image_bytes = resp.content
             mime_type = resp.headers.get("content-type", "image/jpeg")
@@ -293,13 +298,13 @@ async def embed_artwork_url(
         success = TagWriter.embed_artwork(resolved_path, image_bytes, mime_type=mime_type)
         if success:
             track.artwork_embedded = True
-            track.thumbnail_url = req.image_url
+            track.thumbnail_url = target_url
             db.commit()
             return ArtworkResponse(
                 success=True,
                 message="Successfully embedded artwork from URL",
                 artwork_embedded=True,
-                artwork_url=req.image_url,
+                artwork_url=target_url,
             )
         else:
             return ArtworkResponse(
