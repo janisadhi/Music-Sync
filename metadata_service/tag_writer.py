@@ -113,12 +113,20 @@ class TagWriter:
         """
         resolved_path = str(resolve_file_path(file_path))
         if not os.path.exists(resolved_path) or not image_bytes:
-            logger.error(f"Cannot embed artwork: file not found or empty image bytes at {file_path}")
+            logger.error(f"Cannot embed artwork: file not found or empty image bytes at {file_path} (resolved: {resolved_path})")
             return False
+
+        clean_mime = "image/jpeg"
+        if mime_type:
+            low = mime_type.lower()
+            if "png" in low:
+                clean_mime = "image/png"
+            elif "webp" in low:
+                clean_mime = "image/webp"
 
         try:
             import mutagen
-            from mutagen.id3 import ID3, APIC
+            from mutagen.id3 import ID3, APIC, ID3NoHeaderError
             from mutagen.mp4 import MP4, MP4Cover
             from mutagen.flac import FLAC, Picture
             from mutagen.oggopus import OggOpus
@@ -128,23 +136,21 @@ class TagWriter:
             ext = Path(resolved_path).suffix.lower()
 
             if ext == ".mp3":
-                audio = mutagen.File(resolved_path)
-                if audio is None:
-                    return False
-                if not hasattr(audio, "tags") or audio.tags is None:
-                    audio.add_tags()
-                if hasattr(audio.tags, "delall"):
-                    audio.tags.delall("APIC")
-                audio.tags.add(
+                try:
+                    id3 = ID3(resolved_path)
+                except ID3NoHeaderError:
+                    id3 = ID3()
+                id3.delall("APIC")
+                id3.add(
                     APIC(
                         encoding=3,
-                        mime=mime_type,
+                        mime=clean_mime,
                         type=3,
                         desc="Cover",
                         data=image_bytes,
                     )
                 )
-                audio.save()
+                id3.save(resolved_path)
 
             elif ext == ".flac":
                 audio = FLAC(resolved_path)
@@ -152,25 +158,34 @@ class TagWriter:
                 p = Picture()
                 p.data = image_bytes
                 p.type = 3
-                p.mime = mime_type
+                p.mime = clean_mime
                 audio.add_picture(p)
                 audio.save()
 
-            elif ext in (".opus", ".ogg"):
+            elif ext in (".opus", ".ogg", ".oga"):
                 audio = OggOpus(resolved_path) if ext == ".opus" else OggVorbis(resolved_path)
                 p = Picture()
                 p.data = image_bytes
                 p.type = 3
-                p.mime = mime_type
+                p.mime = clean_mime
                 picture_data = base64.b64encode(p.write()).decode("ascii")
                 audio["METADATA_BLOCK_PICTURE"] = [picture_data]
                 audio.save()
 
             elif ext in (".m4a", ".mp4"):
                 audio = MP4(resolved_path)
-                fmt = MP4Cover.FORMAT_PNG if "png" in mime_type.lower() else MP4Cover.FORMAT_JPEG
+                fmt = MP4Cover.FORMAT_PNG if clean_mime == "image/png" else MP4Cover.FORMAT_JPEG
                 audio["covr"] = [MP4Cover(image_bytes, imageformat=fmt)]
                 audio.save()
+
+            else:
+                audio = mutagen.File(resolved_path)
+                if audio is not None:
+                    if not hasattr(audio, "tags") or audio.tags is None:
+                        audio.add_tags()
+                    if hasattr(audio.tags, "add"):
+                        audio.tags.add(APIC(encoding=3, mime=clean_mime, type=3, desc="Cover", data=image_bytes))
+                        audio.save()
 
             logger.info(f"Successfully embedded {len(image_bytes)} bytes artwork into {resolved_path}")
             return True

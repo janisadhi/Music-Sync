@@ -277,13 +277,20 @@ async def embed_artwork_url(
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found or has no file path")
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        resolved_path = str(resolve_file_path(track.file_path))
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
             resp = await client.get(req.image_url)
             resp.raise_for_status()
             image_bytes = resp.content
             mime_type = resp.headers.get("content-type", "image/jpeg")
+            if ";" in mime_type:
+                mime_type = mime_type.split(";")[0].strip()
 
-        success = TagWriter.embed_artwork(track.file_path, image_bytes, mime_type=mime_type)
+        success = TagWriter.embed_artwork(resolved_path, image_bytes, mime_type=mime_type)
         if success:
             track.artwork_embedded = True
             track.thumbnail_url = req.image_url
@@ -299,6 +306,7 @@ async def embed_artwork_url(
                 success=False,
                 message="Failed to write artwork tags to audio file",
                 artwork_embedded=track.artwork_embedded,
+                artwork_url=track.thumbnail_url,
             )
     except Exception as e:
         logger.exception(f"Error fetching/embedding artwork URL for track {track_id}: {e}")
@@ -317,9 +325,10 @@ async def embed_artwork_upload(
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found or has no file path")
 
     try:
+        resolved_path = str(resolve_file_path(track.file_path))
         image_bytes = await file.read()
         mime_type = file.content_type or "image/jpeg"
-        success = TagWriter.embed_artwork(track.file_path, image_bytes, mime_type=mime_type)
+        success = TagWriter.embed_artwork(resolved_path, image_bytes, mime_type=mime_type)
         if success:
             track.artwork_embedded = True
             db.commit()
@@ -344,50 +353,123 @@ async def fetch_beets_artwork(
     track_id: int,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """Uses Beets and Spotify enrichment to fetch & embed canonical cover art."""
+    """Uses Spotify, iTunes, MusicBrainz, and Beets enrichment to fetch & embed canonical cover art."""
     track = db.query(DownloadedTrack).filter(DownloadedTrack.id == track_id).first()
     if not track or not track.file_path:
         raise HTTPException(status_code=404, detail=f"Track {track_id} not found or has no file path")
 
     try:
-        # 1. Try Spotify cover art URL
-        spotify_res = processor.spotify.search_track(
-            title=track.title or "",
-            artist=track.artist or "",
-            album=track.album or "",
-        )
-        if spotify_res.artwork_url:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.get(spotify_res.artwork_url)
-                if resp.status_code == 200:
-                    success = TagWriter.embed_artwork(track.file_path, resp.content, mime_type="image/jpeg")
-                    if success:
-                        track.artwork_embedded = True
-                        track.thumbnail_url = spotify_res.artwork_url
-                        db.commit()
-                        return ArtworkResponse(
-                            success=True,
-                            message="Successfully fetched and embedded artwork from Spotify",
-                            artwork_embedded=True,
-                            artwork_url=spotify_res.artwork_url,
-                        )
+        resolved_path = str(resolve_file_path(track.file_path))
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
 
-        # 2. Try Beets import / autotagging fetchart engine
-        beets_ok = processor.beets.run_beets_import(track.file_path)
-        beets_tags = processor.beets.extract_tags(track.file_path)
+        # 1. Try Spotify cover art URL
+        try:
+            spotify_res = processor.spotify.search_track(
+                title=track.title or "",
+                artist=track.artist or "",
+                album=track.album or "",
+            )
+            if spotify_res.artwork_url:
+                async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
+                    resp = await client.get(spotify_res.artwork_url)
+                    if resp.status_code == 200 and resp.content:
+                        mime_type = resp.headers.get("content-type", "image/jpeg")
+                        if ";" in mime_type:
+                            mime_type = mime_type.split(";")[0].strip()
+                        success = TagWriter.embed_artwork(resolved_path, resp.content, mime_type=mime_type)
+                        if success:
+                            track.artwork_embedded = True
+                            track.thumbnail_url = spotify_res.artwork_url
+                            db.commit()
+                            return ArtworkResponse(
+                                success=True,
+                                message="Successfully fetched and embedded artwork from Spotify",
+                                artwork_embedded=True,
+                                artwork_url=spotify_res.artwork_url,
+                            )
+        except Exception as spot_err:
+            logger.warning(f"Spotify cover art fetch warning: {spot_err}")
+
+        # 2. Try iTunes Search API (High Quality 600x600 Cover Art, Free, No API Key needed)
+        try:
+            search_query = f"{track.artist or ''} {track.title or ''}".strip()
+            if search_query:
+                async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
+                    itunes_res = await client.get(
+                        "https://itunes.apple.com/search",
+                        params={"term": search_query, "media": "music", "limit": 1},
+                    )
+                    if itunes_res.status_code == 200:
+                        data = itunes_res.json()
+                        results = data.get("results", [])
+                        if results and results[0].get("artworkUrl100"):
+                            art_url_100 = results[0]["artworkUrl100"]
+                            art_url_600 = art_url_100.replace("100x100bb", "600x600bb")
+                            art_resp = await client.get(art_url_600)
+                            if art_resp.status_code == 200 and art_resp.content:
+                                success = TagWriter.embed_artwork(resolved_path, art_resp.content, mime_type="image/jpeg")
+                                if success:
+                                    track.artwork_embedded = True
+                                    track.thumbnail_url = art_url_600
+                                    db.commit()
+                                    return ArtworkResponse(
+                                        success=True,
+                                        message="Successfully fetched and embedded high-res artwork from iTunes",
+                                        artwork_embedded=True,
+                                        artwork_url=art_url_600,
+                                    )
+        except Exception as itunes_err:
+            logger.warning(f"iTunes cover art search warning: {itunes_err}")
+
+        # 3. Try MusicBrainz Cover Art Archive if recording ID is available
+        mb_rec_id = getattr(track, "musicbrainz_recording_id", None)
+        if mb_rec_id:
+            try:
+                mb_candidates = processor.musicbrainz.search_recordings(
+                    title=track.title or "",
+                    artist=track.artist or "",
+                    recording_id=mb_rec_id,
+                )
+                if mb_candidates and mb_candidates[0].release_id:
+                    rel_id = mb_candidates[0].release_id
+                    mb_art_url = f"https://coverartarchive.org/release/{rel_id}/front-500"
+                    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
+                        resp = await client.get(mb_art_url)
+                        if resp.status_code == 200 and resp.content:
+                            success = TagWriter.embed_artwork(resolved_path, resp.content, mime_type="image/jpeg")
+                            if success:
+                                track.artwork_embedded = True
+                                track.thumbnail_url = mb_art_url
+                                db.commit()
+                                return ArtworkResponse(
+                                    success=True,
+                                    message="Successfully fetched and embedded artwork from MusicBrainz Cover Art Archive",
+                                    artwork_embedded=True,
+                                    artwork_url=mb_art_url,
+                                )
+            except Exception as mb_err:
+                logger.warning(f"MusicBrainz cover art archive fetch error: {mb_err}")
+
+        # 4. Try Beets import / autotagging fetchart engine
+        beets_ok = processor.beets.run_beets_import(resolved_path)
+        beets_tags = processor.beets.extract_tags(resolved_path)
         if beets_tags.get("artwork_embedded"):
             track.artwork_embedded = True
             db.commit()
             return ArtworkResponse(
                 success=True,
-                message="Successfully fetched and embedded artwork via Beets",
+                message="Successfully fetched and embedded artwork via Beets engine",
                 artwork_embedded=True,
+                artwork_url=track.thumbnail_url,
             )
 
         return ArtworkResponse(
             success=False,
-            message="No artwork found via Spotify or Beets fetchart engine",
+            message="No artwork found via Spotify, iTunes, MusicBrainz, or Beets",
             artwork_embedded=track.artwork_embedded,
+            artwork_url=track.thumbnail_url,
         )
     except Exception as e:
         logger.exception(f"Error fetching Beets/Spotify artwork for track {track_id}: {e}")
