@@ -11,7 +11,7 @@ router = APIRouter(
     tags=["Metadata"],
 )
 
-METADATA_SERVICE_URL = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
+PRIMARY_METADATA_URL = os.getenv("METADATA_SERVICE_URL", "http://metadata:8001")
 
 
 async def _forward_request(
@@ -20,22 +20,45 @@ async def _forward_request(
     json: dict | None = None,
     params: dict | None = None,
 ) -> Any:
-    url = f"{METADATA_SERVICE_URL}{path}"
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method=method, url=url, json=json, params=params)
-            if resp.status_code >= 400:
-                raise HTTPException(
-                    status_code=resp.status_code,
-                    detail=resp.json().get("detail", f"Metadata service error ({resp.status_code})"),
-                )
-            return resp.json()
-    except httpx.RequestError as exc:
-        logger.error(f"Error connecting to Metadata Service at {url}: {exc}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Metadata service unavailable: {exc}",
-        )
+    urls_to_try = [
+        PRIMARY_METADATA_URL,
+        "http://127.0.0.1:8001",
+        "http://localhost:8001",
+    ]
+
+    last_error = None
+    for target_base in urls_to_try:
+        url = f"{target_base}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.request(method=method, url=url, json=json, params=params)
+                if resp.status_code >= 400:
+                    try:
+                        data = resp.json()
+                        detail = data.get("detail", f"Metadata service error ({resp.status_code})")
+                    except Exception:
+                        detail = resp.text or f"Metadata service error ({resp.status_code})"
+                    raise HTTPException(
+                        status_code=resp.status_code,
+                        detail=detail,
+                    )
+                return resp.json()
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            logger.warning(f"Failed to connect to Metadata Service at {url}: {exc}")
+            last_error = exc
+            continue
+        except httpx.RequestError as exc:
+            logger.error(f"Error communicating with Metadata Service at {url}: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Metadata service communication error: {exc}",
+            )
+
+    logger.error(f"Metadata Service unreachable across all endpoints: {last_error}")
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=f"Metadata service unavailable: {last_error}",
+    )
 
 
 @router.post("/scan", status_code=status.HTTP_202_ACCEPTED)
@@ -76,3 +99,22 @@ async def enrich_track(track_id: int):
 async def get_track_detail(track_id: int):
     """Returns detailed metadata, lyrics path, and change history for a single track."""
     return await _forward_request("GET", f"/tracks/{track_id}")
+
+
+@router.post("/artwork/{track_id}/url")
+async def embed_artwork_url(
+    track_id: int,
+    image_url: str | None = Query(None),
+    body: dict | None = None,
+):
+    """Embeds cover art from image URL into track tags."""
+    url = (body.get("image_url") if body and isinstance(body, dict) else None) or image_url
+    if not url:
+        raise HTTPException(status_code=400, detail="image_url is required")
+    return await _forward_request("POST", f"/artwork/{track_id}/url", json={"image_url": url}, params={"image_url": url})
+
+
+@router.post("/artwork/{track_id}/fetch-beets")
+async def fetch_beets_artwork(track_id: int):
+    """Fetches cover art via Beets / Spotify and embeds into track tags."""
+    return await _forward_request("POST", f"/artwork/{track_id}/fetch-beets")

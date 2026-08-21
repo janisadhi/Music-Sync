@@ -8,6 +8,7 @@ import {
     Play,
     Plus,
     RefreshCw,
+    Sparkles,
     Square,
     Trash2,
 } from "lucide-react";
@@ -22,7 +23,7 @@ function formatDuration(seconds) {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
 }
 
-export default function SongCard({ song, queue = [], cardSize = "medium", onDelete, onRetry }) {
+export default function SongCard({ song, queue = [], cardSize = "medium", onDelete, onRetry, onRetryEnrichedLyrics }) {
     const { currentSong, isPlaying, playSong, togglePlay, addToQueue } = usePlayer();
     const { isSelected, toggleSelectSong } = useSongSelection();
     const [showMenu, setShowMenu] = useState(false);
@@ -126,6 +127,11 @@ export default function SongCard({ song, queue = [], cardSize = "medium", onDele
                                 <Link to={`/songs/${song.id}/detail`} onClick={() => setShowMenu(false)}>
                                     <Music size={14} /> Song Details
                                 </Link>
+                                {song.download_status === "downloaded" && onRetryEnrichedLyrics && (
+                                    <button onClick={() => { onRetryEnrichedLyrics(song.id); setShowMenu(false); }}>
+                                        <Sparkles size={14} /> Retry Enriched Lyrics
+                                    </button>
+                                )}
                                 {song.download_status === "failed" && onRetry && (
                                     <button onClick={() => { onRetry(song.id); setShowMenu(false); }}>
                                         <RefreshCw size={14} /> Retry Download

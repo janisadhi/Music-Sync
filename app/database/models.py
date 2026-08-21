@@ -275,6 +275,24 @@ class DownloadedTrack(Base):
     artwork_embedded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # ------------------------------------------------------------------
+    # Authoritative MusicBrainz & AcoustID Identifiers
+    # ------------------------------------------------------------------
+    musicbrainz_recording_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    musicbrainz_artist_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    musicbrainz_release_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    musicbrainz_release_group_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    musicbrainz_track_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    acoustid_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ------------------------------------------------------------------
+    # Spotify Metadata Enrichment Identifiers
+    # ------------------------------------------------------------------
+    spotify_track_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    spotify_artist_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    spotify_album_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # ------------------------------------------------------------------
     # Metadata processing state
     # Ready for future Beets integration:
     #   raw       – freshly downloaded, metadata not yet enriched
@@ -346,6 +364,8 @@ class TrackMetadataHistory(Base):
     match_confidence: Mapped[str | None] = mapped_column(String(50), nullable=True)
     musicbrainz_recording_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     musicbrainz_artist_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    acoustid_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    spotify_track_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="success", nullable=False)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 

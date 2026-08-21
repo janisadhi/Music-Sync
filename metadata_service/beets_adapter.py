@@ -153,6 +153,14 @@ class BeetsAdapter:
             tags["album_artist"] = fetch_tag(["albumartist", "album artist", "performer", "TPE2", "aART"]) or tags["artist"]
             tags["genre"] = fetch_tag(["genre", "TCON", "©gen"])
 
+            tags["musicbrainz_recording_id"] = fetch_tag(["musicbrainz_trackid", "UFID:http://musicbrainz.org", "MusicBrainz Track Id", "mbid"])
+            tags["musicbrainz_artist_id"] = fetch_tag(["musicbrainz_artistid", "MusicBrainz Artist Id"])
+            tags["musicbrainz_release_id"] = fetch_tag(["musicbrainz_albumid", "MusicBrainz Album Id"])
+            tags["musicbrainz_release_group_id"] = fetch_tag(["musicbrainz_releasegroupid", "MusicBrainz Release Group Id"])
+            tags["musicbrainz_track_id"] = fetch_tag(["musicbrainz_releasetrackid", "MusicBrainz Release Track Id"])
+            tags["acoustid_id"] = fetch_tag(["acoustid_id", "Acoustid Id"])
+            tags["spotify_track_id"] = fetch_tag(["spotify_track_id", "Spotify Track Id"])
+
             track_val = fetch_tag(["tracknumber", "TRCK", "trkn"])
             if track_val:
                 try:

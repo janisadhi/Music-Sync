@@ -296,18 +296,30 @@ class LyricsService:
         # Pull artist/album from the Music Library DB (DownloadedTrack)
         # if available — Song no longer carries those fields.
         track = song.downloaded_track
+        search_title = track.title if (track and track.title) else song.title
         artist = track.artist if track else None
         album = track.album if track else None
 
-        print(f"Searching lyrics for: {song.title}")
+        print(f"Searching lyrics for: {search_title} (raw: {song.title})")
         if artist:
             print(f"  Artist hint: {artist}")
 
         result = self._find_synced_lyrics(
-            title=song.title,
+            title=search_title,
             artist=artist,
             album=album,
         )
+
+        # Fallback to raw song title if enriched title search yielded no synced lyrics
+        if result.status != "available" and search_title != song.title:
+            print(f"Enriched title lookup produced no lyrics. Trying raw title: {song.title}")
+            fallback_res = self._find_synced_lyrics(
+                title=song.title,
+                artist=artist,
+                album=album,
+            )
+            if fallback_res.status == "available":
+                result = fallback_res
 
         # ---------------------------------------------------------
         # Lyrics found

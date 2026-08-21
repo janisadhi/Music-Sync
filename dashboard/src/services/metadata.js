@@ -26,3 +26,15 @@ export const getTrackDetail = async (trackId) => {
     const response = await api.get(`/api/metadata/tracks/${trackId}`);
     return response.data;
 };
+
+export const embedArtworkUrl = async (trackId, imageUrl) => {
+    const response = await api.post(`/api/metadata/artwork/${trackId}/url`, null, {
+        params: { image_url: imageUrl },
+    });
+    return response.data;
+};
+
+export const fetchBeetsArtwork = async (trackId) => {
+    const response = await api.post(`/api/metadata/artwork/${trackId}/fetch-beets`);
+    return response.data;
+};

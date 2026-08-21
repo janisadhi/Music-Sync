@@ -12,9 +12,23 @@ import:
   singletons: yes
 
 plugins:
+  - chroma
   - fetchart
   - embedart
   - ftintitle
+  - spotify
 
 musicbrainz:
   searchlimit: 5
+  genres: yes
+
+acoustid:
+  apikey: ""
+
+spotify:
+  mode: track
+  tiebreak: popularity
+
+match:
+  strong_rec: 0.04
+  medium_rec: 0.25
