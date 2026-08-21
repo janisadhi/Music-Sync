@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Depends, Query, status
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
 
+from app.core.paths import resolve_file_path
 from app.database.models import DownloadedTrack
 from metadata_service.config import settings
 from metadata_service.schemas import (
