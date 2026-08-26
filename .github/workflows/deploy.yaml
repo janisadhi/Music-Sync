@@ -36,7 +36,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Backend
         id: meta-backend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/music-sync-backend
           tags: |
@@ -55,7 +55,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Frontend
         id: meta-frontend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/music-sync-frontend
           tags: |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Metadata Service
         id: meta-metadata
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/music-sync-metadata
           tags: |
