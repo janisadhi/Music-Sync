@@ -1,7 +1,7 @@
 fastapi>=0.141.1
 uvicorn[standard]>=0.52.4
 sqlalchemy>=2.0.0
-psycopg[binary]>=3.3.4
+psycopg[binary]>=3.3.5
 pydantic>=2.7.0
 pydantic-settings>=2.15.0
 beets>=2.14.0
