@@ -67,7 +67,7 @@ services:
       - /bin/sh
       - -c
       - |
-        if [ ! -f /etc/resilio/sync.conf ]; then
+        if [ ! -f /etc/resilio/sync.conf ] || grep -q "shared_folders" /etc/resilio/sync.conf; then
           mkdir -p /etc/resilio
           cat > /etc/resilio/sync.conf << 'EOF'
         {

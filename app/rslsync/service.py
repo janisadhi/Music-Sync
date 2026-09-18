@@ -46,6 +46,7 @@ class ResilioSyncService:
         self._token: str | None = None
         self._cookies: dict = {}
         self._token_fetch_time: float = 0.0
+        self._eula_agreed: bool = False
         self._cache_data: ResilioDashboardOverview | None = None
         self._last_cache_time: float = 0.0
         self.cache_ttl_seconds: float = 1.0
@@ -70,15 +71,18 @@ class ResilioSyncService:
             self._cookies = dict(resp.cookies)
             self._token_fetch_time = now
 
-            # Ensure EULA/terms agreement is set
-            try:
-                await client.get(
-                    f"{self.base_url}/gui/?token={self._token}&action=setlicenseagreed&value=1",
-                    auth=auth,
-                    cookies=self._cookies,
-                )
-            except Exception:
-                pass
+            # Ensure EULA/terms agreement is set once
+            if not self._eula_agreed:
+                try:
+                    resp_eula = await client.get(
+                        f"{self.base_url}/gui/?token={self._token}&action=setlicenseagreed&value=1",
+                        auth=auth,
+                        cookies=self._cookies,
+                    )
+                    if resp_eula.status_code in (200, 500):
+                        self._eula_agreed = True
+                except Exception:
+                    pass
 
             return self._token
 
@@ -301,6 +305,16 @@ class ResilioSyncService:
         try:
             data = await self._webui_request("getsyncfolders")
             if isinstance(data, dict) and "folders" in data:
+                if not data["folders"]:
+                    # Auto-register default sync folder in WebUI mode
+                    sync_dir = os.getenv("DOWNLOADS_DIR", "/app/downloads")
+                    default_secret = "ANHMVUIA5G5O2WMBPAY6HSV7S2NP62QA3"
+                    try:
+                        await self._webui_request("addsyncfolder", {"path": sync_dir, "secret": default_secret})
+                        data = await self._webui_request("getsyncfolders")
+                    except Exception as add_err:
+                        logger.warning(f"Could not auto-add folder via WebUI API: {add_err}")
+
                 result = []
                 for item in data["folders"]:
                     files_cnt = int(item.get("files", 0))
@@ -323,7 +337,7 @@ class ResilioSyncService:
                         ResilioFolder(
                             id=str(item.get("folderid", item.get("id", "music-downloads"))),
                             name=item.get("name", "Music Sync Library"),
-                            path=item.get("path", "/app/downloads"),
+                            path=item.get("path", item.get("dir", "/app/downloads")),
                             status=st,
                             size_bytes=int(item.get("size", item.get("tree_size", 0))),
                             ondisk_size_bytes=int(item.get("ondisk_size", item.get("local_size", 0))),
@@ -343,7 +357,8 @@ class ResilioSyncService:
                             connected_peers_count=len(item.get("peers", [])),
                         )
                     )
-                return result
+                if result:
+                    return result
         except Exception as exc:
             logger.debug(f"Error fetching getsyncfolders: {exc}")
 
@@ -369,7 +384,14 @@ class ResilioSyncService:
                 for f in data["folders"]:
                     for p in f.get("peers", []):
                         pid = p.get("id", p.get("name"))
-                        is_online = bool(p.get("isonline", False))
+                        is_online = (
+                            bool(p.get("isonline"))
+                            or bool(p.get("online"))
+                            or p.get("status") in (1, "1", "online", "connected")
+                            or p.get("connection") in ("up", "direct", "relay")
+                            or bool(p.get("direct"))
+                            or bool(p.get("relay"))
+                        )
                         conn_type = "direct" if p.get("direct", True) else "relay"
                         
                         downdiff = int(p.get("downdiff", 0))
@@ -385,14 +407,17 @@ class ResilioSyncService:
                         if last_seen_ts and last_seen_ts > 0:
                             last_seen_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(last_seen_ts))
 
+                        down_spd = int(p.get("downspeed", p.get("download", 0)))
+                        up_spd = int(p.get("upspeed", p.get("upload", 0)))
+
                         peers_map[pid] = ResilioPeer(
                             id=pid,
                             name=p.get("name", "Mobile Device"),
                             status="online" if is_online else "offline",
                             connection_state=conn_type if is_online else "disconnected",
                             sync_state=p_sync_st,
-                            download_speed=0,
-                            upload_speed=0,
+                            download_speed=down_spd,
+                            upload_speed=up_spd,
                             bytes_remaining=downdiff + updiff,
                             last_seen=last_seen_str,
                             last_seen_ts=last_seen_ts,
