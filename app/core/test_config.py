@@ -24,3 +24,10 @@ def test_cors_origins_wildcard(monkeypatch):
     monkeypatch.setenv("CORS_ORIGINS", "*")
     s = Settings(database_url="postgresql://user:pass@localhost/db")
     assert s.cors_origins == ["*"]
+
+
+def test_cors_origins_trailing_slashes_and_quotes(monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", "'https://music.janis.com.np/', \"http://localhost:3000/\"")
+    s = Settings(database_url="postgresql://user:pass@localhost/db")
+    assert s.cors_origins == ["https://music.janis.com.np", "http://localhost:3000"]
+

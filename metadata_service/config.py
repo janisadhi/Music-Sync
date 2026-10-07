@@ -38,8 +38,17 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Any) -> list[str]:
+        def clean_origin(origin: str) -> str:
+            cleaned = origin.strip().strip("'\"")
+            if cleaned != "*":
+                cleaned = cleaned.rstrip("/")
+            return cleaned
+
         if isinstance(v, list):
-            return [str(i).strip() for i in v if str(i).strip()]
+            cleaned_list = [clean_origin(str(i)) for i in v if str(i).strip()]
+            if "*" in cleaned_list or not cleaned_list:
+                return ["*"]
+            return cleaned_list
         if isinstance(v, str):
             v_stripped = v.strip()
             if not v_stripped or v_stripped == "*":
@@ -48,10 +57,16 @@ class Settings(BaseSettings):
                 try:
                     parsed = json.loads(v_stripped)
                     if isinstance(parsed, list):
-                        return [str(item).strip() for item in parsed if str(item).strip()]
+                        cleaned_list = [clean_origin(str(item)) for item in parsed if str(item).strip()]
+                        if "*" in cleaned_list or not cleaned_list:
+                            return ["*"]
+                        return cleaned_list
                 except Exception:
                     pass
-            return [i.strip() for i in v_stripped.split(",") if i.strip()]
+            cleaned_list = [clean_origin(i) for i in v_stripped.split(",") if clean_origin(i)]
+            if "*" in cleaned_list or not cleaned_list:
+                return ["*"]
+            return cleaned_list
         return ["*"]
 
     model_config = SettingsConfigDict(
