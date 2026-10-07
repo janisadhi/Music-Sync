@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Union
+from typing import Any
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "postgresql://music_sync:music_sync_pass@localhost:5432/music_sync"
     )
-    cors_origins: list[str] = ["*"]
+    cors_origins: Any = "*"
     acoustid_api_key: str | None = os.getenv("ACOUSTID_API_KEY", None)
     spotify_client_id: str | None = os.getenv("SPOTIFY_CLIENT_ID", None)
     spotify_client_secret: str | None = os.getenv("SPOTIFY_CLIENT_SECRET", None)
@@ -37,10 +37,12 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
+    def assemble_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            return [str(i).strip() for i in v if str(i).strip()]
         if isinstance(v, str):
             v_stripped = v.strip()
-            if not v_stripped:
+            if not v_stripped or v_stripped == "*":
                 return ["*"]
             if v_stripped.startswith("[") and v_stripped.endswith("]"):
                 try:
@@ -50,8 +52,6 @@ class Settings(BaseSettings):
                 except Exception:
                     pass
             return [i.strip() for i in v_stripped.split(",") if i.strip()]
-        elif isinstance(v, list):
-            return [str(i).strip() for i in v if str(i).strip()]
         return ["*"]
 
     model_config = SettingsConfigDict(
