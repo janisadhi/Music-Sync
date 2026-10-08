@@ -108,12 +108,15 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ github.repository_owner }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT != '' && secrets.DEPLOY_PORT || 22 }}
-          script_stop: true
+          envs: GHCR_TOKEN,GHCR_USER
           script: |
             set -euo pipefail
 
@@ -124,14 +127,18 @@ jobs:
             echo " Deploying Music Sync — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "=========================================="
 
-            # Log in to GHCR (pull-only, uses a PAT stored on the server's .env or secret)
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+            # Log in to GHCR if token is provided (required for private packages)
+            if [ -n "$GHCR_TOKEN" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            else
+              echo "GHCR_TOKEN not set — skipping login (public packages only)"
+            fi
 
             # Pull the latest images
             echo "Pulling latest images..."
             docker compose pull app metadata dashboard
 
-            # Recreate only the services that changed (zero-downtime rolling)
+            # Recreate only the services that changed
             echo "Recreating containers..."
             docker compose up -d --remove-orphans app metadata dashboard
 
